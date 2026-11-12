@@ -1,0 +1,8 @@
+# Local HTTP smoke testing only. Coolify uses compose.yaml without this override.
+services:
+  web:
+    ports:
+      - "127.0.0.1:3000:3000"
+  api:
+    environment:
+      COOKIE_SECURE: "false"

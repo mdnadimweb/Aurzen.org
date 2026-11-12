@@ -1,0 +1,37 @@
+{
+  "name": "aurzen-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": "26.13.0",
+    "npm": "11.20.0"
+  },
+  "packageManager": "npm@11.20.0",
+  "scripts": {
+    "setup": "node scripts/setup.cjs",
+    "dev": "npm run build -w @aurzen/shared && npm run build -w @aurzen/api && node --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/dev.cjs",
+    "build": "npm run build -w @aurzen/shared && npm run build -w @aurzen/api && npm run build -w @aurzen/web",
+    "typecheck": "npm run build -w @aurzen/shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build -w @aurzen/shared && npm run build -w @aurzen/api && node --test tests/*.test.cjs",
+    "test:integration": "node scripts/integration-test.cjs",
+    "test:commerce": "node scripts/check-commerce.cjs",
+    "test:presentation": "node scripts/check-presentation.cjs",
+    "test:intro": "node scripts/check-brand-intro.cjs",
+    "test:deployment": "node scripts/check-deployment.cjs",
+    "backup": "node --env-file-if-exists=.env scripts/backup.cjs",
+    "migrate:turso": "node --env-file-if-exists=.env scripts/migrate-turso.cjs",
+    "migrate:postgres": "node --env-file-if-exists=.env scripts/migrate-postgres.cjs",
+    "package": "node scripts/package.cjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.12",
+    "@electric-sql/pglite-socket": "0.2.15",
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  AWS_LAMBDA_JS_RUNTIME = "nodejs22.x"
+
+# Next.js is detected by Netlify. Database credentials must be set privately
+# in Netlify environment variables, including the Functions runtime scope.

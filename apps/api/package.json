@@ -1,0 +1,16 @@
+{
+  "name": "@aurzen/api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aurzen/shared": "1.0.0",
+    "@libsql/client": "0.18.0",
+    "pg": "8.23.1",
+    "sharp": "0.35.5"
+  }
+}

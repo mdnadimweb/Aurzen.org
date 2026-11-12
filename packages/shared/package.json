@@ -1,0 +1,31 @@
+{
+  "name": "@aurzen/shared",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    "./security": {
+      "types": "./dist/security.d.ts",
+      "default": "./dist/security.js"
+    },
+    "./catalog": {
+      "types": "./dist/catalog.d.ts",
+      "default": "./dist/catalog.js"
+    },
+    "./phone": {
+      "types": "./dist/phone.d.ts",
+      "default": "./dist/phone.js"
+    },
+    "./upload-limits": {
+      "types": "./dist/upload-limits.d.ts",
+      "default": "./dist/upload-limits.js"
+    },
+    "./tracking": {
+      "types": "./dist/tracking.d.ts",
+      "default": "./dist/tracking.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

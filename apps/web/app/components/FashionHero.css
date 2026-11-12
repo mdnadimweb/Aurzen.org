@@ -1,0 +1,427 @@
+.lux-hero {
+  --paper: #f2ede6;
+  --ink: #352b29;
+  --wine: #50343e;
+
+  padding: clamp(18px, 3vw, 36px) 5% 0;
+  color: var(--ink);
+  background: #fbfaf7;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.lux-hero__stage {
+  max-width: 1440px;
+  min-height: 580px;
+  margin: auto;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 15% 20%, #fff9f0 0, transparent 42%),
+    var(--paper);
+  isolation: isolate;
+}
+
+.lux-hero__viewport {
+  overflow: hidden;
+}
+
+.lux-hero__track {
+  display: flex;
+  transition: transform 750ms cubic-bezier(.2, .7, .2, 1);
+}
+
+.lux-hero__slide {
+  position: relative;
+  display: grid;
+  flex: 0 0 100%;
+  grid-template-columns: .92fr 1.08fr;
+  min-width: 0;
+  min-height: 580px;
+  align-items: stretch;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.lux-hero__slide::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background: radial-gradient(ellipse at 20% 20%, #fffaf5 0, transparent 56%);
+}
+
+.lux-hero__slide[data-tone="rose"] {
+  background: #f2e7e2;
+}
+
+.lux-hero__slide[data-tone="sand"] {
+  background: #eee8dd;
+}
+
+.lux-hero__slide[data-tone="plum"] {
+  background: #eee6e0;
+}
+
+.lux-hero__copy {
+  z-index: 2;
+  align-self: center;
+  padding: clamp(32px, 5vw, 78px);
+  animation: lux-copy-in 700ms both cubic-bezier(.2, .7, .2, 1);
+}
+
+.lux-hero__eyebrow,
+.lux-hero__image-caption span {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  letter-spacing: .15em;
+}
+
+.lux-hero__eyebrow {
+  display: inline-block;
+  color: #80645e;
+  font-weight: 600;
+}
+
+.lux-hero__copy h1 {
+  margin: 22px 0 18px;
+  font-size: clamp(2.5rem, 1.2rem + 3.2vw, 4rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.lux-hero__copy h1 em {
+  display: block;
+  margin-top: .22em;
+  color: #80696a;
+  font-size: .88em;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.lux-hero__copy p {
+  max-width: 38ch;
+  margin: 0 0 28px;
+  color: #665e5a;
+  font: 400 1rem/1.75 var(--font-body);
+}
+
+.lux-hero__button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  color: #fff;
+  background: var(--wine);
+  font: 600 var(--text-nav)/1.5 var(--font-body);
+  text-decoration: none;
+  transition: background .25s, transform .25s;
+}
+
+.lux-hero__button:hover {
+  transform: translateY(-2px);
+  background: #38242b;
+}
+
+.lux-hero__art {
+  position: relative;
+  min-height: 580px;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.lux-hero__backdrop {
+  position: absolute;
+  inset: 8% 8% 8% 3%;
+  background: #dfd1c3;
+  box-shadow: 0 35px 80px #392b241f;
+  transform: rotate(-3deg);
+}
+
+.lux-hero__image-card {
+  position: absolute;
+  inset: 5% 7% 7% 5%;
+  overflow: hidden;
+  background: #d4c5b7;
+  box-shadow: 0 28px 70px #34251f33;
+  animation: lux-image-in 850ms both cubic-bezier(.2, .7, .2, 1);
+}
+
+.lux-hero__photo.product-media,
+.lux-hero__box-art {
+  width: 100%;
+  height: 100%;
+}
+
+.lux-hero__photo.product-media > img {
+  object-fit: cover;
+  padding: 0;
+}
+
+.lux-hero__box-art > .boxart {
+  height: 100%;
+}
+
+.lux-hero__image-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 45%, rgb(22 18 17 / 65%));
+}
+
+.lux-hero__image-caption {
+  position: absolute;
+  right: 28px;
+  bottom: 30px;
+  left: 28px;
+  color: white;
+  text-shadow: 0 1px 14px rgb(22 18 17 / 45%);
+}
+
+.lux-hero__image-caption strong {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(20px, 2.5vw, 34px);
+  font-weight: 400;
+}
+
+.lux-hero__orbit {
+  position: absolute;
+  top: 14%;
+  right: 2%;
+  display: grid;
+  width: 110px;
+  height: 110px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 75%);
+  border-radius: 50%;
+  color: white;
+  font: 7px Arial, sans-serif;
+  letter-spacing: .14em;
+  text-align: center;
+  animation: lux-orbit 24s linear infinite;
+}
+
+.lux-hero__floating-note {
+  position: absolute;
+  right: 1%;
+  bottom: 15%;
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 4px 9px;
+  align-items: center;
+  padding: 14px 17px;
+  color: #fff;
+  background: rgb(255 255 255 / 15%);
+  border: 1px solid rgb(255 255 255 / 40%);
+  box-shadow: 0 14px 40px #22181133;
+  backdrop-filter: blur(14px);
+  font: var(--text-small) var(--font-body);
+  animation: lux-float 5s ease-in-out infinite;
+}
+
+.lux-hero__floating-note strong {
+  grid-column: 2;
+  font-size: var(--text-caption);
+  font-weight: 400;
+  letter-spacing: .15em;
+  opacity: .85;
+}
+
+.lux-hero__note-dot {
+  grid-row: span 2;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e2c9a9;
+  box-shadow: 0 0 12px #f2d9b9;
+}
+
+.lux-hero__side-label {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  color: rgb(255 255 255 / 85%);
+  font: 8px Arial, sans-serif;
+  letter-spacing: .2em;
+  writing-mode: vertical-rl;
+}
+
+.lux-hero__controls {
+  display: flex;
+  max-width: 1440px;
+  min-height: 62px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto;
+  color: #81756f;
+  font: var(--text-caption)/1.5 var(--font-body);
+}
+
+.lux-hero__index,
+.lux-hero__control-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lux-hero__visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lux-hero__index i {
+  width: 48px;
+  height: 1px;
+  background: #b8aaa1;
+}
+
+.lux-hero__control-group {
+  gap: 8px;
+}
+
+.lux-hero__control-group button {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid #d6cbc3;
+  border-radius: 50%;
+  color: var(--wine);
+  font: 600 1rem/1 var(--font-body);
+  transition: background .2s, color .2s, border-color .2s;
+}
+
+.lux-hero__control-group button:hover {
+  color: white;
+  background: var(--wine);
+  border-color: var(--wine);
+}
+
+.lux-hero__control-group .lux-hero__dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  background: #c9bcb4;
+  border: 0;
+}
+
+.lux-hero__control-group .lux-hero__dot[aria-current="true"] {
+  background: var(--wine);
+}
+
+.lux-hero__control-group .lux-hero__play {
+  margin-left: 4px;
+  font-size: .8rem;
+}
+
+@keyframes lux-copy-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lux-image-in {
+  from { opacity: 0; clip-path: inset(0 0 0 100%); }
+  to { opacity: 1; clip-path: inset(0); }
+}
+
+@keyframes lux-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -10px; }
+}
+
+@keyframes lux-orbit {
+  to { rotate: 360deg; }
+}
+
+@media (max-width: 900px) {
+  .lux-hero__stage,
+  .lux-hero__slide {
+    min-height: 0;
+  }
+
+  .lux-hero__slide {
+    grid-template-columns: 1fr;
+  }
+
+  .lux-hero__copy {
+    padding: 36px 28px 28px;
+  }
+
+  .lux-hero__art {
+    min-height: 390px;
+  }
+
+  .lux-hero__image-card {
+    inset: 0 10% 8% 5%;
+  }
+}
+
+@media (max-width: 480px) {
+  .lux-hero__copy {
+    padding: 30px 22px 24px;
+  }
+
+  .lux-hero__copy h1 {
+    font-size: clamp(2.25rem, 9vw, 2.8rem);
+  }
+
+  .lux-hero__copy p {
+    margin-bottom: 22px;
+  }
+
+  .lux-hero__art {
+    min-height: 320px;
+  }
+
+  .lux-hero__orbit {
+    width: 84px;
+    height: 84px;
+    font-size: 6px;
+  }
+
+  .lux-hero__floating-note {
+    display: none;
+  }
+
+  .lux-hero__side-label {
+    display: none;
+  }
+
+  .lux-hero__controls {
+    min-height: 58px;
+  }
+
+  .lux-hero__control-group {
+    gap: 6px;
+  }
+
+  .lux-hero__control-group button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .lux-hero__index i {
+    width: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lux-hero *,
+  .lux-hero *::before,
+  .lux-hero *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

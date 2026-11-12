@@ -1,0 +1,55 @@
+name: Validate monorepo and containers
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+      ADMIN_PASSWORD: ci-only-disposable-password-123456
+      INTERNAL_API_TOKEN: ci-only-disposable-token-at-least-32-characters
+      CHECKOUT_ENABLED: "false"
+      POSTGRES_PASSWORD: ciOnlyDisposableDatabasePassword123
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
+        env:
+          POSTGRES_PASSWORD: ci-only-postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck && npm test && npm run build
+      - name: PostgreSQL tests against a real server
+        run: node --test tests/postgres.test.cjs
+        env:
+          TEST_DATABASE_URL: postgres://postgres:ci-only-postgres@127.0.0.1:5432/postgres
+      - run: npm run test:integration && npm run test:deployment
+      - run: npm run test:commerce && npm run test:presentation && npm run test:intro
+      - run: npm audit --omit=dev --audit-level=high
+      - run: node scripts/check-compose.cjs
+      - run: docker compose -f compose.yaml -f compose.local.yaml up --build -d --wait
+      - run: node scripts/container-smoke.cjs
+      - run: docker compose -f compose.yaml -f compose.local.yaml restart postgres api
+      - name: Verify persistence after restart
+        run: |
+          sleep 5
+          node -e "fetch('http://127.0.0.1:3000/api/catalog/').then(r=>r.json()).then(d=>{if(!d.products.some(p=>p.name==='Persistent container fixture'))process.exit(1)})"
+      - run: npm run package
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: aurzen-coolify-source
+          path: artifacts/aurzen-coolify.zip
+      - if: always()
+        run: docker compose -f compose.yaml -f compose.local.yaml logs --no-color
+      - if: always()
+        run: docker compose -f compose.yaml -f compose.local.yaml down --volumes

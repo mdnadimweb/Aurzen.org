@@ -1,0 +1,43 @@
+.brand-intro{
+  position:fixed;inset:0;z-index:10000;display:grid;place-items:center;
+  background:#121012;outline:none;overscroll-behavior:contain;touch-action:none;
+  /* CSS also releases the overlay if a later JS error interrupts its lifecycle. */
+  animation:brand-intro-failsafe 1ms step-end 2499ms forwards;
+}
+.brand-intro__logo{position:relative;width:clamp(560px,48vw,720px);max-width:90vw;opacity:0}
+.brand-intro__logo>img{display:block;width:100%;height:auto;object-fit:contain}
+.brand-intro__mask{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;
+  mask-image:url('/aurzen-logo.png');-webkit-mask-image:url('/aurzen-logo.png');
+  mask-size:100% 100%;-webkit-mask-size:100% 100%;
+  mask-repeat:no-repeat;-webkit-mask-repeat:no-repeat;
+  mask-mode:alpha;
+}
+.brand-intro__shine{
+  position:absolute;top:-50%;left:-32%;width:28%;height:200%;opacity:0;
+  background:linear-gradient(90deg,
+    transparent 0%,rgba(255,232,188,.06) 18%,rgba(255,239,207,.22) 34%,
+    rgba(255,247,227,.62) 45%,rgba(255,253,245,.98) 49%,
+    rgba(255,253,245,.98) 51%,rgba(255,247,227,.62) 55%,
+    rgba(255,239,207,.22) 66%,rgba(255,232,188,.06) 82%,transparent 100%);
+  transform:translateX(0) skewX(-18deg);
+}
+.brand-intro--playing{will-change:opacity;animation:brand-intro-exit 250ms cubic-bezier(.4,0,.2,1) 2050ms forwards,brand-intro-failsafe 1ms step-end 2499ms forwards}
+.brand-intro--playing .brand-intro__logo{will-change:opacity;animation:brand-intro-entrance 200ms cubic-bezier(.22,1,.36,1) forwards}
+.brand-intro--playing .brand-intro__shine{will-change:transform,opacity;animation:brand-intro-shine 1700ms cubic-bezier(.35,.25,.65,.75) 200ms both}
+@keyframes brand-intro-entrance{from{opacity:0}to{opacity:1}}
+@keyframes brand-intro-shine{
+  0%{transform:translateX(0) skewX(-18deg);opacity:0}
+  5%{opacity:.35}
+  12%{opacity:1}
+  88%{opacity:1}
+  95%{opacity:.35}
+  100%{transform:translateX(586%) skewX(-18deg);opacity:0}
+}
+@keyframes brand-intro-exit{from{opacity:1}to{opacity:0;visibility:hidden;pointer-events:none}}
+@keyframes brand-intro-failsafe{to{opacity:0;visibility:hidden;pointer-events:none}}
+@media(max-width:750px){.brand-intro__logo{width:clamp(400px,130vw,520px);max-width:90vw}}
+@media(prefers-reduced-motion:reduce){
+  .brand-intro{display:none}
+  .brand-intro__shine{display:none;animation:none}
+}
