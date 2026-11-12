@@ -38,7 +38,10 @@ async function run(){
   server=spawn(process.execPath,['scripts/test-server.cjs','3104'],{env:{...process.env,CHECKOUT_ENABLED:'true',SEED_DEMO:'true',ADMIN_PASSWORD:adminPassword},stdio:['ignore','pipe','pipe'],windowsHide:true});
   server.stdout.on('data',chunk=>output+=chunk);server.stderr.on('data',chunk=>output+=chunk);
   await poll(()=>{if(server.exitCode!==null)throw new Error(output);return output.includes('Ready in');});
-  browser=spawn(process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=0',`--user-data-dir=${path.join(dir,'profile')}`,'--no-first-run','--no-default-browser-check','--disable-background-networking','about:blank'],{stdio:'ignore',windowsHide:true});
+  browser=spawn(process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new',
+    // Report a mouse that can hover on every OS. Headless Chrome on Linux CI otherwise has no hover/fine pointer;
+    // phone widths still switch to touch through Emulation.setTouchEmulationEnabled.
+    '--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4','--remote-debugging-port=0',`--user-data-dir=${path.join(dir,'profile')}`,'--no-first-run','--no-default-browser-check','--disable-background-networking','about:blank'],{stdio:'ignore',windowsHide:true});
   const portFile=path.join(dir,'profile','DevToolsActivePort');await poll(()=>{if(browser.exitCode!==null)throw new Error('Headless Chrome exited before remote debugging became available.');return fs.existsSync(portFile);});
   const [port,endpoint]=fs.readFileSync(portFile,'utf8').trim().split('\n');socket=new WebSocket(`ws://127.0.0.1:${port}${endpoint}`);await Promise.race([once(socket,'open'),pause(10000).then(()=>{throw new Error('Headless Chrome remote debugging did not connect.');})]);
   socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const waiter=pending.get(message.id);if(waiter){pending.delete(message.id);message.error?waiter.reject(new Error(JSON.stringify(message.error))):waiter.resolve(message.result);}}});

@@ -13,8 +13,8 @@
   "packageManager": "npm@11.20.0",
   "scripts": {
     "setup": "node scripts/setup.cjs",
-    "dev": "npm run build -w @aurzen/shared && npm run build -w @aurzen/api && node --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/dev.cjs",
-    "build": "npm run build -w @aurzen/shared && npm run build -w @aurzen/api && npm run build -w @aurzen/web",
+    "dev": "node init && npm run build -w @aurzen/shared && npm run build -w @aurzen/api && node --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/dev.cjs",
+    "build": "node init && npm run build -w @aurzen/shared && npm run build -w @aurzen/api && npm run build -w @aurzen/web",
     "typecheck": "npm run build -w @aurzen/shared && npm run typecheck --workspaces --if-present",
     "test": "npm run build -w @aurzen/shared && npm run build -w @aurzen/api && node --test tests/*.test.cjs",
     "test:integration": "node scripts/integration-test.cjs",
@@ -32,6 +32,8 @@
     "@electric-sql/pglite-socket": "0.2.15",
     "@types/node": "26.6.6",
     "@types/pg": "8.23.1",
+    "dotenv": "^8.2.0",
+    "node-fetch": "^3.3.2",
     "typescript": "7.0.2"
   }
 }
