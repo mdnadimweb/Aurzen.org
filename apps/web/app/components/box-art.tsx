@@ -1,1 +1,1 @@
-export default function BoxArt(){return <div className="boxart" aria-label="AURZÉN gift box"><span className="spark one">✧</span><div className="gift"><div>AURZÉN<small>A LITTLE SOMETHING, JUST FOR YOU</small></div></div><span className="spark two">✧</span></div>;}
+export default function BoxArt(){return <div className="boxart" role="img" aria-label="AURZÉN gift box"><span className="spark one">✧</span><div className="gift"><div>AURZÉN<small>A LITTLE SOMETHING, JUST FOR YOU</small></div></div><span className="spark two">✧</span></div>;}

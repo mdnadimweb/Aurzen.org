@@ -108,17 +108,6 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px soli
 .shop-toolbar{gap:16px}
 .shop-toolbar .chips{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
 .shop-toolbar input,.shop-toolbar select{min-width:0;max-width:100%}
-.admin-edit-dialog{width:min(620px,calc(100% - 32px));max-width:100%;max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
-.admin-edit-dialog .form-modal{width:100%;max-height:none;overflow:visible;border:0;padding:32px;position:relative}
-.admin-edit-dialog .close{width:44px;height:44px;right:8px;top:8px;display:grid;place-items:center}
-.admin-photo-actions .text-link{min-height:44px;display:inline-flex;align-items:center}
-.admin-edit-dialog .form-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
-.admin-edit-dialog .primary{width:100%}
-.admin-edit-dialog .photo-field input[type=file]{min-width:0;font-size:.875rem}
-.admin-photo-preview{width:90px;height:112px;aspect-ratio:4/5}
-.admin-photo-preview .product-media__fallback{font-size:.625rem;padding:5px;gap:4px}
-.admin-photo-preview .product-media__fallback svg{width:24px;height:24px}
-.admin-photo-preview .product-media__loading{display:none}
 body:has(input:focus,textarea:focus,select:focus) .mobile-purchase{display:none}
 
 @media(max-width:750px){
@@ -149,11 +138,6 @@ body:has(input:focus,textarea:focus,select:focus) .mobile-purchase{display:none}
   .product-page .detail-copy{padding:28px 22px}
   .tracking-page{padding-bottom:calc(44px + env(safe-area-inset-bottom))}
   .checkout{padding-bottom:calc(44px + env(safe-area-inset-bottom))}
-  .admin-edit-dialog .form-modal{padding:28px 20px}
-  .admin-photo-item{grid-template-columns:70px minmax(0,1fr);padding:10px;gap:10px}
-  .admin-photo-item>img{width:70px;height:88px}
-  .admin-photo-preview{width:70px;height:88px}
-  .admin-photo-actions{gap:4px 10px}
 }
 @media(max-width:480px){
   .viewer-toolbar{display:grid;grid-template-columns:44px 50px 44px minmax(0,1fr) 44px;gap:6px}
@@ -169,6 +153,5 @@ body:has(input:focus,textarea:focus,select:focus) .mobile-purchase{display:none}
 @media(max-width:340px){
   .product-grid{grid-template-columns:minmax(0,1fr)}
   .product-info h3{font-size:1rem}
-  .admin-edit-dialog .form-pair{grid-template-columns:minmax(0,1fr)}
 }
 @media(prefers-reduced-motion:reduce){.product .product-image .product-media>img{transition:none}}

@@ -4,12 +4,15 @@
 @keyframes aurzen-page{from{opacity:.65}to{opacity:1}}
 @keyframes aurzen-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes aurzen-toast{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
-@keyframes aurzen-bag{0%,100%{transform:scale(1)}45%{transform:scale(1.16)}}
+@keyframes aurzen-bag{0%,100%{transform:scale(1)}45%{transform:scale(1.08)}}
+@keyframes aurzen-page-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes aurzen-drawer{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes aurzen-label{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @keyframes aurzen-overlay{from{opacity:0}to{opacity:1}}
 
 @media(prefers-reduced-motion:no-preference){
   html{scroll-behavior:smooth}
-  .page-enter{animation:aurzen-page .3s ease-out}
+  .page-enter{animation:aurzen-page-enter .45s var(--ease-premium) backwards}
   .hero-copy>*{animation:aurzen-rise .75s var(--ease-premium) both}
   .hero-copy>:nth-child(2){animation-delay:.07s}
   .hero-copy>:nth-child(3){animation-delay:.14s}
@@ -17,9 +20,8 @@
   .hero-copy>:nth-child(5){animation-delay:.28s}
   .hero-photo{animation:aurzen-page .9s ease-out}
   .toast{animation:aurzen-toast .35s var(--ease-premium)}
-  .bag span{animation:aurzen-bag .3s ease-out}
+  .bag span{animation:aurzen-bag .45s var(--ease-premium)}
   .overlay{animation:aurzen-overlay .2s ease-out}
-  .form-modal{animation:aurzen-rise .3s var(--ease-premium)}
   .primary,.chips button,.bag{transition:background-color .25s ease,color .25s ease,border-color .25s ease,transform .25s var(--ease-premium),box-shadow .25s ease}
   .primary span,.collection h3 span{display:inline-block;transition:transform .4s var(--ease-premium)}
   .product-image img,.collection img{transition:transform .75s var(--ease-premium),filter .5s ease}
@@ -45,7 +47,46 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{border-color:#95
   .chips button:hover:not(.chosen){background:#eee4df;border-color:#cdbbb8}
   .collection:hover .gift,.mystery:hover .gift{transform:rotate(-7deg) translateY(-4px)}
 }
+/* Sticky header: compact and translucent once the page scrolls.
+   Explicit heights per breakpoint; the bottom margin keeps the page from shifting. */
+.store-header-wrap{display:contents}
+.store-header-wrap header.store-header{--header-h:117px;--header-compact:84px;--logo-w:128px;--logo-h:70px;position:sticky;top:0;z-index:35;height:var(--header-h);min-height:0;background:#fbf9f500;border-bottom-color:var(--line)}
+.store-header-wrap.is-scrolled header.store-header{height:var(--header-compact);margin-bottom:calc(var(--header-h) - var(--header-compact));padding-block:6px;background:#fbf9f5d6;border-bottom-color:#ebe4de99;box-shadow:0 10px 30px -22px #432b3b40;-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2)}
+.store-header-wrap.is-scrolled .store-header .brand-logo img{width:var(--logo-w);height:var(--logo-h)}
+@media(min-width:1051px) and (max-width:1250px){.store-header-wrap header.store-header{--header-h:112px;--header-compact:80px;--logo-w:118px;--logo-h:64px}}
+@media(max-width:1050px){.store-header-wrap header.store-header{--header-h:93px;--header-compact:68px;--logo-w:106px;--logo-h:58px}}
+@media(max-width:380px){.store-header-wrap header.store-header{--header-h:92px;--logo-w:100px;--logo-h:55px}}
+html{scroll-padding-top:96px}
+
+/* Product cards: image reveal frame, hover lift and second-photo crossfade. */
+.product-reveal{position:absolute;inset:0}
+.product-reveal>.product-media{position:absolute;inset:0}
+.product .product-image{box-shadow:0 6px 18px -14px #432b3b2e}
+
+@media(prefers-reduced-motion:no-preference){
+  .store-header-wrap header.store-header{transition:height .45s var(--ease-premium),margin .45s var(--ease-premium),padding .45s var(--ease-premium),background-color .35s ease,box-shadow .35s ease,border-color .35s ease}
+  .store-header-wrap .store-header .brand-logo img{transition:width .45s var(--ease-premium),height .45s var(--ease-premium)}
+  .product{transition:translate .45s var(--ease-premium)}
+  .product .product-image{transition:box-shadow .45s var(--ease-premium)}
+  .product .product-image .product-media>img.product-media__main,.product .product-image .product-media>img.product-media__secondary{transition:opacity .5s var(--ease-premium),transform .75s var(--ease-premium),filter .5s ease}
+  /* Bag drawer: soft slide, staggered items, fading overlay. */
+  .store-dialog.bag-drawer[open]{animation:aurzen-drawer .52s var(--ease-premium)}
+  .bag-drawer[open] .drawer-item{animation:aurzen-rise .45s var(--ease-premium) both;animation-delay:calc(140ms + var(--i,0) * 60ms)}
+  .store-dialog[open]::backdrop{animation:aurzen-overlay .4s ease-out}
+  .purchase-add.is-added .purchase-add-label{animation:aurzen-label .35s var(--ease-premium)}
+}
+@media(hover:hover) and (pointer:fine){
+  .product:hover{translate:0 -4px}
+  .product:hover .product-image{box-shadow:var(--shadow-soft)}
+  .product .product-media--preview>.product-media__main{opacity:0}
+}
+.purchase-add-label{display:inline-block}
+.detail-copy .purchase-actions .purchase-add.is-added{background:var(--plum);color:var(--ivory);border-color:var(--plum)}
+
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{animation:none!important;transition:none!important}
+  ::backdrop{animation:none!important}
+  /* Scroll reveals are skipped: content is shown at once. */
+  [data-fade],[data-fade-media]{opacity:1!important;transform:none!important;clip-path:none!important}
 }

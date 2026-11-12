@@ -133,14 +133,14 @@ async function run(){
   for(const width of [360,390,768,1440]){
     await current.viewport(width);await current.navigate('/admin/');
     await current.evaluate(`Array.from(document.querySelectorAll('.admin aside button')).find(button=>button.textContent.includes('Products')).click()`);await pause(80);
-    await current.click('.admin-main tbody tr:first-child button.text-link');
+    await current.click('.admin-main tbody tr:first-child button[data-row-action="edit"]');
     await poll(()=>current.evaluate(`!!document.querySelector('.form-modal')`));
     await current.fits(width+' admin product form');await current.screenshot(width+'-admin-form');
     assert(await current.evaluate(`(()=>{const rect=document.querySelector('.form-modal').getBoundingClientRect();return rect.width<=window.innerWidth;})()`),'Admin form exceeds viewport at '+width);
     for(let i=0;i<20;i++)await current.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
     assert(await current.evaluate(`document.querySelector('.admin-edit-dialog').contains(document.activeElement)`));
     await current.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});await pause(80);
-    assert(await current.evaluate(`!document.querySelector('.admin-edit-dialog[open]')&&document.activeElement===document.querySelector('.admin-main tbody tr:first-child button.text-link')`));
+    assert(await current.evaluate(`!document.querySelector('.admin-edit-dialog[open]')&&document.activeElement===document.querySelector('.admin-main tbody tr:first-child button[data-row-action="edit"]')`));
   }
   console.log('PASS 360/390/768/1440px authenticated admin product forms: no horizontal document overflow, focus trap, Escape and focus restoration.');
   await current.close();

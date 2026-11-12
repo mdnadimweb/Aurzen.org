@@ -1,0 +1,116 @@
+/* AURZÉN premium layer: soft plum/ivory palette, rounded surfaces and branded placeholders.
+   Loaded last from the root layout. Selectors that compete with component stylesheets
+   (store header, offers, hero) carry an extra class so load order does not matter. */
+
+/* Announcement bar and navigation */
+.announcement,.store-header-wrap .store-header-announcement{background:linear-gradient(90deg,var(--plum),var(--plum-soft));color:#f8efe9;letter-spacing:.06em}
+.store-header-wrap .store-header-desktop-nav a{border-bottom-width:2px}
+.store-header-wrap .store-header-desktop-nav a:hover{border-bottom-color:#d9c7b6}
+.store-header-wrap .store-header-desktop-nav a[aria-current=page]{border-bottom-color:var(--gold);color:var(--plum)}
+.store-header-wrap .store-header-bag>span{background:var(--blush);color:var(--plum)}
+.mobile-nav nav a[aria-current=page]{box-shadow:inset 3px 0 0 var(--gold);padding-left:12px}
+nav button::after{background:var(--gold)}
+
+/* Buttons and links */
+.primary{border-radius:999px;padding-inline:26px}
+.primary:hover:not(:disabled){background:var(--plum-soft)}
+.detail-copy .purchase-actions .purchase-add{border-radius:999px}
+.text-link:hover{color:var(--plum)}
+
+/* Chips, size options, badges */
+.chips button{border:1px solid var(--line);border-radius:999px;background:#fffdfa;color:var(--ink)}
+.chips button.chosen,.chips button[aria-pressed=true]{background:var(--plum);border-color:var(--plum);color:var(--ivory)}
+@media(hover:hover) and (pointer:fine){.chips button:hover:not(.chosen):not([aria-pressed=true]){background:var(--blush);border-color:#dccbd3}}
+.product .tag{border-radius:999px;background:#fffdfaeb;color:var(--plum);box-shadow:0 2px 10px #432b3b14}
+.product.product--sold-out .tag{background:var(--plum);color:var(--ivory)}
+.product-image .offer-badge,.product-gallery-offer .offer-badge{border-radius:999px;background:linear-gradient(90deg,var(--plum),var(--plum-soft));box-shadow:0 4px 12px #432b3b2e}
+
+/* Form fields */
+input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea,select{border:1px solid var(--line);border-radius:10px;background:#fffdfa}
+.shop-toolbar input,.shop-toolbar select{border-radius:999px;padding-inline:18px}
+input:focus-visible,textarea:focus-visible,select:focus-visible{border-color:var(--plum-soft);outline:2px solid #6b4a5e55;outline-offset:1px;box-shadow:none}
+
+/* Soft surfaces: cards, panels, summaries */
+.product .product-image{border:0;border-radius:var(--radius);background:var(--blush)}
+.collection{border:0;border-radius:var(--radius);background:var(--blush);box-shadow:var(--shadow-soft);overflow:hidden}
+.mystery{border-radius:calc(var(--radius) * 1.5);background:var(--blush);overflow:hidden}
+.checkout .panel,.tracking-page .panel,.receipt .panel{border:0;border-radius:var(--radius);background:var(--blush);box-shadow:var(--shadow-soft)}
+.checkout .panel .summary,.drawer-summary .summary{border-bottom-color:#e4d6cf}
+.price-review{border-radius:10px}
+.form-error,.availability-note,.cart-item-copy .cart-item-issue{border-radius:10px}
+footer{background:var(--sand)}
+.product-media{background:var(--blush)}
+
+/* Branded photo placeholder (missing or failed photos) */
+.product-media__fallback{gap:8px;background:linear-gradient(155deg,var(--blush) 0%,var(--sand) 100%);color:var(--plum-soft)}
+.product-media__monogram{display:grid;place-items:center;width:2.2em;height:2.2em;border:1px solid #432b3b2e;border-radius:50%;font-family:var(--font-heading);font-size:clamp(1.75rem,1.2rem + 1.6vw,3rem);font-weight:500;line-height:1;letter-spacing:.04em;color:var(--plum);background:#fbf9f580}
+.product-media__wordmark{padding-left:.3em;font-size:.6875rem;font-weight:600;letter-spacing:.3em;color:var(--plum-soft)}
+.product-media__note{font-size:.75rem;color:var(--muted)}
+.bag-photo .product-media__monogram,.cart-thumb .product-media__monogram,.gallery-thumbnails .product-media__monogram{font-size:1rem;border:0;background:none}
+.bag-photo .product-media__wordmark,.cart-thumb .product-media__wordmark,.gallery-thumbnails .product-media__wordmark,
+.bag-photo .product-media__note,.cart-thumb .product-media__note,.gallery-thumbnails .product-media__note{display:none}
+
+/* Product page: fixed 4:5 photo frame, filled edge to edge */
+.product-page .detail{border:0;border-radius:calc(var(--radius) * 1.5);background:#fffdfa;box-shadow:var(--shadow-soft)}
+.product-page .product-gallery-offer{padding:clamp(12px,2vw,24px)}
+.product-page .gallery-main,.product-page .gallery-main[data-category]{aspect-ratio:4/5;height:auto;border-radius:var(--radius);background:var(--blush);overflow:hidden}
+.product-page .gallery-main>img,.product-page .gallery-main.product-media>img{object-fit:cover;padding:0}
+.product-page .gallery-expand{border:0;border-radius:999px;background:#fbf9f5f0;box-shadow:var(--shadow-soft)}
+.gallery-thumbnails button{border-radius:10px;overflow:hidden}
+.gallery-arrows button,.viewer-toolbar button{border-radius:999px;background:#fffdfa}
+
+/* Quantity steppers (bag drawer and cart page) */
+.quantity-controls>button:not(.text-link){display:inline-grid;place-items:center;border:1px solid var(--line);border-radius:50%;background:#fffdfa;color:var(--plum);font-size:1.125rem;line-height:1;text-decoration:none}
+@media(hover:hover) and (pointer:fine){.quantity-controls>button:not(.text-link):hover:not(:disabled){background:var(--blush);border-color:#dccbd3}}
+.quantity-controls>span{min-width:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.bag-photo,.cart-thumb{border-radius:10px;overflow:hidden}
+
+/* Bag drawer: separate secondary links */
+.drawer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 28px;margin-top:8px}
+.drawer-links>.text-link{margin:0}
+
+/* Cart page stepper layout */
+.checkout-items .cart-row{grid-template-columns:80px minmax(0,1fr) auto}
+.cart-quantity-label{display:block;font-size:.75rem;font-weight:500;color:var(--muted)}
+.cart-item-quantity .quantity-controls{margin-top:4px;flex-wrap:nowrap;gap:8px}
+.cart-row .cart-item-remove{text-decoration:none}
+@media(max-width:750px){
+  .checkout-items .cart-row{grid-template-columns:64px minmax(0,1fr)}
+  .cart-item-quantity .quantity-controls{margin-top:0}
+  .product-page .product-gallery-offer{padding:10px}
+}
+
+/* Final polish: consistency and readable contrast on the soft palette. */
+.eyebrow{color:#7a5c52;text-transform:uppercase}
+.lux-hero .lux-hero__controls{color:var(--muted)}
+footer p{color:#5f5658}
+.footer-bottom,.footer-bottom a,.footer-bottom button{color:#6b5f5b}
+.mystery small{color:var(--muted)}
+.mystery .gift small{color:inherit;font-size:clamp(6px,.8vw,10px);letter-spacing:.12em}
+
+/* Collection tiles: caption on blush below the photo (an older rule kept a grey overlay). */
+.collections .collection>div.collection-copy:last-child{position:static;width:auto;padding:18px 20px 20px;background:none;color:var(--plum)}
+.collections .collection>.collection-copy small{color:#7a5c52}
+.collections .collection>.collection-copy h3{color:var(--plum)}
+
+/* Text links inside running copy stay inline with the paragraph. */
+p>.text-link{display:inline;min-height:0;padding:0 0 1px}
+
+/* Shop toolbar on tablets: chips on their own row, search and sort side by side. */
+@media(min-width:751px) and (max-width:1050px){
+  .shop-toolbar .chips{flex:1 1 100%}
+  .shop-toolbar input{flex:1 1 240px}
+  .shop-toolbar select{flex:0 0 200px}
+}
+
+/* Single-column product page on tablets: keep the photo at a comfortable size. */
+@media(min-width:600px) and (max-width:900px){
+  .product-page .product-gallery-offer{width:100%;max-width:560px;margin-inline:auto}
+}
+.collections .collection>.collection-copy small{display:block;line-height:1.45}
+.collections .collection>.collection-copy h3{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.collections .collection>.collection-copy h3 span{float:none;margin-left:0;flex-shrink:0}
+/* Two-column phones: a third tile spans the row, photo beside its caption. */
+@media(max-width:750px){
+  .collections .collection:nth-child(3):last-child{grid-column:1/-1;grid-template-columns:42% minmax(0,1fr);grid-template-rows:auto;align-items:center}
+}

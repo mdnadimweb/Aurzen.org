@@ -1,7 +1,6 @@
 'use client';
 import {useState} from 'react';
 import {money,productPricing,type Product} from '@aurzen/shared/catalog';
-import './admin-offer.css';
 
 function localDate(value?:string|null){
   if(!value)return '';

@@ -213,7 +213,7 @@ Here “shared” explicitly means the listed services/phases receive the value;
 - Server-controlled prices, transactional stock updates, order retry protection, validation and private tracking are retained.
 - Per-request random CSP nonces authorize framework scripts; production does not allow `unsafe-eval` or arbitrary inline scripts. Pages are dynamically rendered and not publicly cached so nonces stay fresh.
 - `'self'` follows the current origin automatically. API connections remain same-origin; no hardcoded deployment hostname or wildcard script origin is needed.
-- HTTPS external images remain allowed because the owner can use arbitrary HTTPS product image URLs. Google Fonts domains are explicitly allowed for the existing typography. Inline styles are allowed for React/Motion/gallery styling. These are intentional compatibility allowances, not claims of a fully strict style/image policy.
+- HTTPS external images remain allowed because the owner can use arbitrary HTTPS product image URLs. Brand fonts (Cormorant Garamond, DM Sans) are self-hosted, so no third-party font origins are allowed. Inline styles are allowed for React/Motion/gallery styling. These are intentional compatibility allowances, not claims of a fully strict style/image policy.
 - Framing, plugins and base-URL injection are blocked. Responses set nosniff, frame denial, referrer and permissions policies. HTTPS page responses add HSTS without `includeSubDomains`.
 
 New analytics/third-party integrations require deliberate CSP updates and suitable privacy/consent handling. They are not enabled by broad script or connection wildcards. A new domain does not require changing CSP, but a new external service may.

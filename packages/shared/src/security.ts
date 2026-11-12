@@ -3,9 +3,10 @@ export function contentSecurityPolicy(nonce:string,development=false){
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development?" 'unsafe-eval'":''}`,
     // React, Motion and the gallery use style attributes. Scripts remain nonce-only.
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
-    "font-src 'self' https://fonts.gstatic.com",
+    // Brand fonts are self-hosted through next/font.
+    "font-src 'self'",
     `connect-src 'self'${development?' ws: wss:':''}`,
     "object-src 'none'", "base-uri 'none'", "form-action 'self'",
     "frame-ancestors 'none'", "frame-src 'none'",

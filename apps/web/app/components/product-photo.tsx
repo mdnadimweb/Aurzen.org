@@ -41,16 +41,16 @@ export default function ProductPhoto({initialImage='box',initialImages=[],disabl
     {images.length?<ol className="admin-photo-list">{images.map((image,index)=><li key={image} className="admin-photo-item">
       <ProductImage className="admin-photo-preview" src={image} alt={`Product photo ${index+1}${index===0?', cover image':''}`}/>
       <div><strong>{index===0?'Cover image':`Photo ${index+1}`}</strong><div className="admin-photo-actions">
-        <button type="button" className="text-link" disabled={disabled||busy||index===0} onClick={()=>move(index,0)} aria-label={`Make photo ${index+1} the cover`}>Make cover</button>
-        <button type="button" className="text-link" disabled={disabled||busy||index===0} onClick={()=>move(index,index-1)} aria-label={`Move photo ${index+1} earlier`}>Move earlier</button>
-        <button type="button" className="text-link" disabled={disabled||busy||index===images.length-1} onClick={()=>move(index,index+1)} aria-label={`Move photo ${index+1} later`}>Move later</button>
-        <button type="button" className="text-link" disabled={disabled||busy} onClick={()=>setImages(current=>current.filter((_,i)=>i!==index))} aria-label={`Remove photo ${index+1}`}>Remove</button>
+        <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||index===0} onClick={()=>move(index,0)} aria-label={`Make photo ${index+1} the cover`}>Make cover</button>
+        <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||index===0} onClick={()=>move(index,index-1)} aria-label={`Move photo ${index+1} earlier`}>Move earlier</button>
+        <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||index===images.length-1} onClick={()=>move(index,index+1)} aria-label={`Move photo ${index+1} later`}>Move later</button>
+        <button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" disabled={disabled||busy} onClick={()=>setImages(current=>current.filter((_,i)=>i!==index))} aria-label={`Remove photo ${index+1}`}>Remove</button>
       </div></div>
-    </li>)}</ol>:<div className="upload-placeholder">Add photos to your product gallery</div>}
+    </li>)}</ol>:<div className="upload-placeholder">No photos yet. Add photos to your product gallery.</div>}
     <input id={id} type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={disabled||busy||images.length>=maxPhotos} aria-describedby={id+'-help'} onChange={e=>{const files=Array.from(e.currentTarget.files||[]);e.currentTarget.value='';if(files.length)void upload(files);}}/>
     <p id={id+'-help'} className="upload-help">Up to 8 JPG, PNG or WebP photos, {maxImageMegabytes} MB each. Photos are optimized automatically. The first photo is the cover used throughout the store. Removing a photo here keeps its stored file safe for other products.</p>
     {busy&&<p role="status">Uploading photos… Please keep this form open.</p>}
     {message&&<p role="status">{message}</p>}
-    {!!failed.length&&<div className="form-error" role="alert"><p>Some photos need attention:</p><ul>{failed.map(({file,message},index)=><li key={index}>{file.name}: {message}</li>)}</ul><button type="button" className="text-link" disabled={disabled||busy||images.length>=maxPhotos} onClick={()=>void upload(failed.map(item=>item.file))}>Retry unsuccessful uploads</button><button type="button" className="text-link" disabled={disabled||busy} onClick={()=>setFailed([])}>Dismiss unsuccessful uploads</button></div>}
+    {!!failed.length&&<div className="form-error" role="alert"><p>Some photos need attention:</p><ul>{failed.map(({file,message},index)=><li key={index}>{file.name}: {message}</li>)}</ul><div className="photo-retry"><button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={disabled||busy||images.length>=maxPhotos} onClick={()=>void upload(failed.map(item=>item.file))}>Retry unsuccessful uploads</button><button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy} onClick={()=>setFailed([])}>Dismiss unsuccessful uploads</button></div></div>}
   </div>;
 }

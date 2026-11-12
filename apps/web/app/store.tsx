@@ -52,10 +52,10 @@ export default function Store({ initial = 'home', product, directCheckout }: {
         setBagOpen(false);
         router.push('/cart/?'+new URLSearchParams({buy:String(p.id),option,attempt:crypto.randomUUID()}));
     };
-    const add = (p: Product) => { const option=purchaseOption(p);if(!option)return; if(cart.some(c=>c.id===p.id&&c.size===option&&c.qty>=100)){setNotice('You can add up to 100 of each size or style.');return;} const inBag = cart.filter(c => c.id === p.id).reduce((sum, c) => sum + c.qty, 0); if (inBag >= p.stock) {
+    const add = (p: Product): boolean => { const option=purchaseOption(p);if(!option)return false; if(cart.some(c=>c.id===p.id&&c.size===option&&c.qty>=100)){setNotice('You can add up to 100 of each size or style.');return false;} const inBag = cart.filter(c => c.id === p.id).reduce((sum, c) => sum + c.qty, 0); if (inBag >= p.stock) {
         setNotice('All available stock is already in your bag');
-        return;
-    } setCart(c => { const found = c.find(x => x.id === p.id && x.size === option); return found ? c.map(x => x === found ? { ...x, qty: x.qty + 1 } : x) : [...c, { id: p.id, qty: 1, size: option }]; }); setBagOpen(true); setNotice('Added to your bag'); };
+        return false;
+    } setCart(c => { const found = c.find(x => x.id === p.id && x.size === option); return found ? c.map(x => x === found ? { ...x, qty: x.qty + 1 } : x) : [...c, { id: p.id, qty: 1, size: option }]; }); setBagOpen(true); setNotice('Added to your bag'); return true; };
     const count = cart.reduce((s, c) => s + c.qty, 0);
     const filtered = products.filter(p => (filter === 'All' || filter === p.category) && (p.name + ' ' + p.category).toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === 'price-asc' ? a.price - b.price : sort === 'price-desc' ? b.price - a.price : sort === 'name' ? a.name.localeCompare(b.name) : a.id - b.id);
     return <>{error && <div className="form-error" role="alert">{error} <button className="text-link" onClick={() => void refresh()}>Retry</button></div>}{view !== 'admin' && <StoreHeader view={view} count={count} onBag={()=>setBagOpen(true)} bagOpen={bagOpen} categories={categories} onNavigate={go}/>}

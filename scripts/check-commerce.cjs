@@ -130,7 +130,7 @@ async function run(){
   assert.equal(await current.evaluate(`fetch('/api/admin/session/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:${JSON.stringify(adminPassword)}})}).then(response=>response.status)`),200);
   await current.navigate('/admin/');
   await current.evaluate(`Array.from(document.querySelectorAll('.admin aside button')).find(button=>button.textContent.includes('Products')).click()`);await pause(100);
-  await current.click('.admin-main tbody tr:first-child button.text-link');
+  await current.click('.admin-main tbody tr:first-child button[data-row-action="edit"]');
   await poll(()=>current.evaluate(`!!document.querySelector('input[type="file"]')`));
   const setInput=async(name,value)=>current.evaluate(`(()=>{const input=document.querySelector('input[name="'+${JSON.stringify(name)}+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
   await setInput('price','1250');await current.click('input[name="offerEnabled"]');
@@ -221,7 +221,7 @@ async function run(){
     else await current.evaluate(`(()=>{const select=document.querySelector('#product-options select');select.value='Bold & playful';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
     await pause(80);await current.click('.purchase-actions button:last-child');
     await poll(()=>current.evaluate(`!!document.querySelector('.checkout-form')`));
-    assert(await current.evaluate(`document.querySelectorAll('.cart-row').length===1&&document.querySelector('.cart-row').textContent.includes(${JSON.stringify(option)})&&document.querySelector('.cart-item-quantity input').value==='1'`));
+    assert(await current.evaluate(`document.querySelectorAll('.cart-row').length===1&&document.querySelector('.cart-row').textContent.includes(${JSON.stringify(option)})&&document.querySelector('.cart-item-quantity .cart-quantity-value').textContent==='1'`));
     await bagUnchanged();
     const checkoutUrl=await current.evaluate(`location.pathname+location.search`);
     await poll(()=>current.evaluate(`!document.querySelector('.checkout-submit').disabled`));
