@@ -3,6 +3,7 @@ import { catalog, database, orders, transaction } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
 import { statuses, normalizeOffer, type Order } from '@aurzen/shared/catalog';
 import { imagePath } from '../../../lib/images';
+import { editOrder } from '../../../lib/order-edit';
 function productOffer(value:unknown){
     try{return normalizeOffer(value);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid offer.');}
@@ -84,6 +85,8 @@ export async function POST(request: Request) {
                 order.status = d.status;
                 await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order), order.id);
             }
+            else if(d.action==='editOrder')
+                await editOrder(db,d);
             else if(d.action==='delivery'){
                 const row=await db.prepare('SELECT payload FROM orders WHERE id=?').get(text(d.id,1,100,'Order ID'));
                 assert(row,'Order not found.',404);

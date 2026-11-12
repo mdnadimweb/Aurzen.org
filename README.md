@@ -283,6 +283,8 @@ Creates `artifacts/aurzen-coolify.zip` and its SHA-256 checksum. The archive has
 Product offers, Dhaka scheduling, whole-taka rounding, checkout price reviews and
 the automatic database upgrade are documented in [OFFERS.md](docs/OFFERS.md).
 
+The owner can correct an order (customer name, phone, delivery area and address, item sizes, quantities, removed or added products) from **Studio → Orders → Edit order** while it is New, Confirmed or Processing; shipped, delivered, cancelled and returned orders are locked. The API (`editOrder` in `apps/api/src/lib/order-edit.ts`) validates every field like checkout, moves stock only by the difference inside one transaction, keeps the quoted price for products already in the order, prices newly added products from the server (including active offers), recalculates delivery when the area changes, and stores `editedAt`. Customers are not notified of edits, and the edit time is not shown on public tracking.
+
 Payment is cash on delivery; online payments, courier booking, notifications and customer accounts are not integrated. Staff fulfil orders manually. Inventory is pooled per product rather than per size. The owner must supply accurate product content and business policies. These existing product limits are separate from the deployment architecture.
 
 ## Official deployment references

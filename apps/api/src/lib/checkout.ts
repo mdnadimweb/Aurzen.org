@@ -1,11 +1,11 @@
 import { randomUUID,createHash } from 'node:crypto';
 import { catalog, transaction,type Database } from './database';
 import { assert, text } from './http';
-import { validOption,productPricing,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
+import { validOption,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
 import { normalizePhone } from '@aurzen/shared/phone';
 export function deliverySettings() {
     const enabled = process.env.CHECKOUT_ENABLED === 'true';
-    return { enabled, dhaka: 80, outside: 150 };
+    return { enabled, ...deliveryFees };
 }
 async function calculateQuote(d:Record<string,unknown>,db?:Database):Promise<CheckoutQuote>{
     const settings=deliverySettings();

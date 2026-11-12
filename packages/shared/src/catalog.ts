@@ -37,7 +37,11 @@ export function normalizeOffer(value:unknown):Offer|null{
   return {enabled:o.enabled,percent:Number(o.percent),startsAt,endsAt};
 }
 export const statuses = ['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'] as const;
-export type Order = {paymentMethod?:'cod';id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string};
+/** Orders can be corrected by the owner until they ship. */
+export const editableStatuses:readonly string[] = ['New','Confirmed','Processing'];
+/** Cash-on-delivery charge per delivery area, in taka. */
+export const deliveryFees = {dhaka:80,outside:150} as const;
+export type Order = {paymentMethod?:'cod';id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string};
 export const photo=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=85`;
 export const money=(n:number)=>'৳'+n.toLocaleString('en-BD');
 export const seed:Product[]=[
@@ -47,6 +51,10 @@ export const seed:Product[]=[
   {id:4,name:'The Weekend Dress',category:'Clothing',price:1790,stock:12,image:photo('photo-1515372039744-b8f02a3ae446'),tag:'EDITOR’S PICK'},
 ];
 export const styleOptions=['Everyday elegance','Soft & feminine','Bold & playful','Minimal & classic'];
+/** The sizes or styles a customer can choose for a product. */
+export function productOptions(p:Pick<Product,'category'>):readonly string[]{
+  return p.category==='Clothing'?['S','M','L','XL']:p.category==='Mystery Boxes'?styleOptions:['One size'];
+}
 export function validOption(p:Product,size:string){
-  return p.category==='Clothing'?['S','M','L','XL'].includes(size):p.category==='Mystery Boxes'?styleOptions.includes(size):size==='One size';
+  return productOptions(p).includes(size);
 }

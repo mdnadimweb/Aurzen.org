@@ -244,7 +244,8 @@
 .admin-table td small{display:block;margin-top:3px;color:var(--a-muted);font-size:.8125rem;line-height:1.5}
 .admin-table--orders td{vertical-align:top}
 .admin-table--orders td:last-child{min-width:250px}
-.admin-table--orders td:nth-child(3){min-width:170px}
+.admin-table--orders td:nth-child(2){min-width:140px}
+.admin-table--orders td:nth-child(4){min-width:190px}
 .admin-num small{white-space:nowrap}
 .admin-mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8125rem;color:var(--a-plum);overflow-wrap:anywhere}
 .admin-num{font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -448,6 +449,47 @@
 @media(prefers-reduced-motion:reduce){
   .admin *,.admin *::before,.admin *::after{transition:none!important;animation:none!important}
   .admin-category:hover{transform:none}
+}
+
+/* Orders: separate address column, edit button and lock note */
+.admin-order-name{display:block;color:var(--a-ink);font-weight:600}
+.admin-table--orders td.admin-order-address{min-width:180px;max-width:280px;overflow-wrap:anywhere}
+.admin .admin-order-edit{margin-top:10px}
+.admin-order-locked{display:inline-flex!important;align-items:center;gap:6px;margin-top:10px!important}
+.admin-order-locked .a-icon{width:14px;height:14px}
+
+/* Order editor dialog */
+.order-editor__ref{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:8px 0 0}
+.order-editor__hint{display:block;margin:4px 0 12px;color:var(--a-muted);font-size:.75rem;line-height:1.5}
+.order-lines{display:grid;gap:10px;margin:12px 0;padding:0;list-style:none}
+.order-lines li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name total remove" "size qty qty" "warn warn warn";align-items:center;gap:8px 12px;padding:12px;border:1px solid var(--a-line);border-radius:12px;background:#fff}
+.order-lines li.is-over{border-color:#d9a3a3;background:#fdf6f6}
+.order-lines__name{grid-area:name;min-width:0}
+.order-lines__name strong{display:block;color:var(--a-ink);font-size:.875rem;overflow-wrap:anywhere}
+.order-lines__name small{display:block;color:var(--a-muted);font-size:.75rem}
+.order-lines__total{grid-area:total;color:var(--a-plum);font-size:.875rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.order-lines__remove{grid-area:remove}
+.admin .order-lines__field{grid-area:size;margin:0;font-size:.75rem}
+.admin .order-lines__field select{min-height:38px;margin-top:4px;padding:6px 10px;font-size:.875rem}
+.order-lines__qty{grid-area:qty;display:flex;flex-direction:column;align-items:flex-start}
+.order-lines__label{color:#3d3238;font-size:.75rem;font-weight:600;margin-bottom:4px}
+.admin .order-stepper{margin:0;gap:8px;flex-wrap:nowrap}
+.admin .order-stepper>button:not(.text-link){width:38px;height:38px}
+.order-lines__warn{grid-area:warn;margin:0;color:#9b3434;font-size:.75rem;font-weight:600}
+.order-add{margin:4px 0 12px;padding-top:14px;border-top:1px dashed var(--a-field)}
+.order-add h4{margin:0 0 4px;color:var(--a-muted);font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.order-add__row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 84px;align-items:end;gap:0 10px}
+.order-add__row label:first-child{grid-column:1/-1}
+.order-add__row label{margin:8px 0}
+.order-add__row .a-btn{grid-column:1/-1;justify-self:start;margin-top:4px}
+.order-summary p{display:flex;justify-content:space-between;gap:12px;margin:8px 0;font-size:.875rem}
+.order-summary strong{font-variant-numeric:tabular-nums}
+.order-summary__total{padding-top:10px;border-top:1px solid var(--a-line);color:var(--a-plum);font-size:1rem!important}
+.order-summary__total strong{font-size:1.125rem}
+@media(max-width:600px){
+  .order-lines li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name remove" "total total" "size size" "qty qty" "warn warn"}
+  .order-add__row{grid-template-columns:minmax(0,1fr) 84px}
+  .order-add__row label:nth-child(2){grid-column:1}
 }
 
 /* Admin sign-in page: same tokens, buttons and fields as the studio (.admin.admin--login) */

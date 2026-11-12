@@ -68,15 +68,15 @@ export default function FashionHero() {
     },
   ];
 
+  // Advance every 7s. Any slide change (auto or manual) restarts the timer.
+  // Stops only for the pause button, keyboard focus inside, a hidden tab or reduced motion.
   useEffect(() => {
     if (paused || interacting || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        setActiveIndex((index) => (index + 1) % slides.length);
-      }
+    const timer = window.setTimeout(function next() {
+      if (document.visibilityState === "visible") setActiveIndex((index) => (index + 1) % slides.length);
     }, 7000);
-    return () => window.clearInterval(timer);
-  }, [interacting, paused, slides.length]);
+    return () => window.clearTimeout(timer);
+  }, [activeIndex, interacting, paused, slides.length]);
 
   function handleBlur(event: FocusEvent<HTMLElement>) {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setInteracting(false);
@@ -101,11 +101,8 @@ export default function FashionHero() {
       className="lux-hero"
       aria-label="Featured collections"
       aria-roledescription="carousel"
-      onMouseEnter={() => setInteracting(true)}
-      onMouseLeave={(event) => {
-        if (!event.currentTarget.contains(document.activeElement)) setInteracting(false);
-      }}
-      onFocusCapture={() => setInteracting(true)}
+      // Keyboard focus pauses autoplay; a mouse click on an arrow does not.
+      onFocusCapture={(event) => { if ((event.target as Element).matches(":focus-visible")) setInteracting(true); }}
       onBlurCapture={handleBlur}
     >
       <div className="lux-hero__stage">

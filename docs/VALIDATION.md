@@ -1,5 +1,34 @@
 # Delivery validation
 
+## Storefront refresh, owner studio and order editing — 12 November 2026
+
+Storefront: self-hosted Cormorant Garamond/DM Sans (CSP limited to self-hosted
+fonts), soft plum/ivory palette, branded photo placeholder, cart stepper, calm
+animations disabled under reduced motion, and a hero carousel that now keeps
+auto-advancing after hover or an arrow click (it still pauses for keyboard focus,
+the pause button, hidden tabs and reduced motion). Owner studio: redesigned
+dashboard, animated Overview from existing /api/admin data, matching sign-in
+page, and owner order editing for New/Confirmed/Processing orders.
+
+Checks run on Windows with Node 26.13.1 and Chrome, using isolated temporary data:
+
+- `npm run typecheck`, `npm run build`: passed.
+- `npm test`: 60/60 passed, including `admin-overview.test.cjs` (Dhaka-day
+  grouping, 7-day trends, KPIs, empty store) and `order-edit.test.cjs` (stock
+  moves by difference, refused edits change nothing, quoted prices kept, server
+  pricing for added products, merged lines, validation, locked statuses).
+- `test:presentation`, `test:commerce`, `test:intro`, `test:integration`,
+  `test:deployment`: passed. Two browser checks now select the studio Edit
+  button by `data-row-action="edit"` and read the cart stepper value.
+- Browser QA at 360/390/768/1440px: no horizontal overflow; computed WCAG AA
+  contrast for status pills, buttons, studio text and the sign-in page (disabled
+  controls excluded, as WCAG allows); visible focus on every keyboard stop;
+  dialog focus restored after Escape; reduced motion leaves no animation; a real
+  order edit saved the previewed total and moved stock by exactly the change.
+
+Not covered: Safari, Firefox, real phones and screen readers; Docker/Coolify and
+real-PostgreSQL runs (CI covers these); a final GitHub Actions result.
+
 ## Security cleanup and PostgreSQL — 12 November 2026
 
 **Malware removed.** Four identical obfuscated `init` files (root, apps/api,

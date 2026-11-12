@@ -5,13 +5,14 @@ import Modal from './modal';
 import ProductImage from './product-image';
 import Icon,{type IconName} from './admin-icons';
 import Overview from './admin/overview';
-import {initials} from './admin/metrics';
+import {initials,relativeTime} from './admin/metrics';
+import OrderEditor from './admin/order-editor';
 
 import BrandLogo from './brand-logo';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { money, type Product, type Order } from '@aurzen/shared/catalog';
+import { money, editableStatuses, type Product, type Order } from '@aurzen/shared/catalog';
 import { api, useStore } from '../providers';
 
 const tabs:{name:string;icon:IconName}[]=[{name:'Overview',icon:'overview'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Orders',icon:'orders'},{name:'Customers',icon:'customers'}];
@@ -40,7 +41,7 @@ export default function AdminWorkspace() {
     const { products, setProducts, categories, setCategories } = useStore();
     const [offerPrice,setOfferPrice]=useState(0);
     const [orders, setOrders] = useState<Order[]>([]), [tab, setTab] = useState('Overview'), [notice, setNoticeState] = useState<Notice|null>(null), [modal, setModal] = useState(''), [editing, setEditing] = useState<Product | null>(null), [saving, setSaving] = useState(false), [uploading,setUploading]=useState(false), [adminLoaded, setAdminLoaded] = useState(false), [formError,setFormError]=useState('');
-    const [navOpen,setNavOpen]=useState(false),[bannerOpen,setBannerOpen]=useState(true);
+    const [navOpen,setNavOpen]=useState(false),[bannerOpen,setBannerOpen]=useState(true),[editingOrder,setEditingOrder]=useState<Order|null>(null);
     const menuButton=useRef<HTMLButtonElement>(null),sidebar=useRef<HTMLElement>(null);
     const setNotice=(text:string,kind:Notice['kind']='success')=>setNoticeState(text?{text,kind}:null);
     useEffect(()=>{setFormError('');setOfferPrice(editing?.price||0);},[modal,editing?.id]);
@@ -119,9 +120,10 @@ export default function AdminWorkspace() {
     </tr>)}</tbody></table></div>{!products.length&&<div className="admin-empty"><span className="admin-empty__icon"><Icon name="products"/></span><h3>No products yet.</h3><p>Add your first product to start selling.</p></div>}</section>}
     {tab === 'Categories' && <div className="admin-category-grid">{categories.map((c) => { const count=products.filter(p => p.category === c).length; return <article className="a-card admin-category" key={c}><span className="admin-category__icon"><Icon name={/mystery/i.test(c)?'box':'categories'}/></span><h2>{c}</h2><p>{count} product{count===1?'':'s'}</p><button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" aria-label={'Remove category '+c} onClick={() => { if (confirm('Remove ' + c + '?'))
         void change({ action: 'deleteCategory', name: c }); }}><Icon name="trash"/>Remove category</button></article>; })}</div>}
-    {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col">Order</th><th scope="col">Customer & delivery</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orders.map(o => <tr key={o.id}>
-        <td data-label="Order"><span className="admin-mono">{o.id}</span><small>{new Date(o.date).toLocaleDateString('en-BD')}</small></td>
-        <td data-label="Customer">{o.name}<small>{o.phone}<br />{o.address}<br />{o.area === 'dhaka' ? 'Dhaka city' : 'Outside Dhaka'} · Delivery {money(o.delivery)}</small></td>
+    {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orders.map(o => <tr key={o.id}>
+        <td data-label="Order"><span className="admin-mono">{o.id}</span><small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>setEditingOrder(o)}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
+        <td data-label="Customer"><strong className="admin-order-name">{o.name}</strong><small>{o.phone}</small></td>
+        <td data-label="Address" className="admin-order-address">{o.address}<small>{o.area === 'dhaka' ? 'Dhaka city' : 'Outside Dhaka'} · Delivery {money(o.delivery)}</small></td>
         <td data-label="Items">{o.items.map((x) => <small key={x.id + '-' + x.size}>{x.name} × {x.qty}<br />{x.size}</small>)}</td>
         <td data-label="Total" className="admin-num">{money(o.total)}<small>Cash on delivery</small></td>
         <td data-label="Status"><div className="a-status-select" data-status={statusKey(o.status)}><span className="a-pill__dot" aria-hidden="true"/><select aria-label={'Status for '+o.id} value={o.status} onChange={e => void change({ action: 'status', id: o.id, status: e.target.value })}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div><DeliveryEditor key={o.id+'-'+(o.courier||'')+'-'+(o.trackingReference||'')} order={o} onSave={change}/></td>
@@ -166,6 +168,7 @@ export default function AdminWorkspace() {
             </div>
             <div className="form-modal__foot">{formError&&<p className="form-error" role="alert">{formError}</p>}<div className="form-modal__buttons"><button type="button" className="a-btn a-btn--secondary" disabled={saving || uploading} onClick={() => setModal('')}>Cancel</button><button className="a-btn a-btn--primary" disabled={saving || uploading}>{uploading ? 'Uploading photo…' : saving ? 'Saving…' : 'Save ' + modal}</button></div></div>
         </form>}</Modal>
+    <Modal open={!!editingOrder} onClose={()=>setEditingOrder(null)} label={editingOrder?'Edit order '+editingOrder.id:'Edit order'} className="admin-edit-dialog admin-edit-dialog--order">{editingOrder&&<OrderEditor key={editingOrder.id} order={editingOrder} products={products} onCancel={()=>setEditingOrder(null)} onSave={async data=>{await mutate({action:'editOrder',...data});setEditingOrder(null);setNotice('Order updated');}}/>}</Modal>
     {notice && <div role={notice.kind==='error'?'alert':'status'} className={'admin-toast admin-toast--'+notice.kind}><Icon name={notice.kind==='error'?'alert':'check'}/><span>{notice.text}</span><button type="button" className="a-btn a-btn--icon a-btn--sm" aria-label="Dismiss notification" onClick={()=>setNoticeState(null)}><Icon name="close"/></button></div>}
     </div>;
 }
