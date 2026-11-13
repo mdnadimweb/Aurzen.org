@@ -146,6 +146,28 @@ async function run(){
     assert(await current.evaluate(`!document.querySelector('.admin-edit-dialog[open]')&&document.activeElement===document.querySelector('.admin-main tbody tr:first-child button[data-row-action="edit"]')`));
   }
   console.log('PASS 360/390/768/1440px authenticated admin product forms: no horizontal document overflow, focus trap, Escape and focus restoration.');
+
+  const openHomepage=async()=>{await current.navigate('/admin/');await current.evaluate(`Array.from(document.querySelectorAll('.admin aside button')).find(button=>button.textContent.includes('Homepage')).click()`);await poll(()=>current.evaluate(`!!document.querySelector('.hero-editor .hero-slide')`));};
+  for(const width of [360,1440]){
+    await current.viewport(width);await openHomepage();
+    assert.equal(await current.evaluate(`document.querySelectorAll('.hero-editor .hero-slide').length`),3,'Studio starts from the three automatic slides');
+    await current.fits(width+' admin homepage slides');await current.screenshot(width+'-admin-homepage');
+  }
+  await current.evaluate(`(()=>{const input=document.querySelector('.hero-slide input[maxlength="60"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Studio edited heading');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+  await current.click('.hero-editor__foot button.a-btn--primary');
+  await poll(()=>current.evaluate(`document.querySelector('.admin-toast')?.textContent.includes('Homepage slides saved')`));
+  for(const width of [390,1440]){
+    await current.viewport(width);await current.navigate('/');
+    await poll(()=>current.evaluate(`document.querySelector('.lux-hero__slide[data-active="true"] h1')?.textContent.includes('Studio edited heading')`));
+    await current.fits(width+' storefront with custom slides');await current.screenshot(width+'-home-custom-slides');
+  }
+  await openHomepage();
+  await current.send('Page.addScriptToEvaluateOnNewDocument',{source:'window.confirm=()=>true;'});await current.evaluate('window.confirm=()=>true');
+  await current.evaluate(`Array.from(document.querySelectorAll('.hero-editor__foot button')).find(button=>button.textContent.includes('Reset')).click()`);
+  await poll(()=>current.evaluate(`document.querySelector('.admin-toast')?.textContent.includes('Automatic slides restored')`));
+  await current.navigate('/');
+  assert(await current.evaluate(`!document.querySelector('.lux-hero h1').textContent.includes('Studio edited heading')`),'Reset restores the automatic slides');
+  console.log('PASS 360/1440px homepage slide editor fits, saves an edited heading to the storefront at 390/1440px, and resets to automatic slides.');
   await current.close();
 }
 run().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{

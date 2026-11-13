@@ -24,7 +24,7 @@ const postgres=production.services.postgres;
 assert.equal(production.services.api.environment.DATABASE_URL,`postgres://aurzen:${dbPassword}@postgres:5432/aurzen`);
 assert.equal(production.services.api.depends_on.postgres.condition,'service_healthy');
 assert.equal(postgres.environment.POSTGRES_PASSWORD,dbPassword);
-assert.match(postgres.image,/^postgres:[d.]+-alpine@sha256:[a-f0-9]{64}$/);
+assert.match(postgres.image,/^postgres:[\d.]+-alpine@sha256:[a-f0-9]{64}$/);
 assert.equal(postgres.volumes[0].target,'/var/lib/postgresql');
 assert(!postgres.ports?.length&&!local.services.postgres.ports?.length,'PostgreSQL is never published to the host');
 assert(postgres.healthcheck.test.join(' ').includes('pg_isready'));

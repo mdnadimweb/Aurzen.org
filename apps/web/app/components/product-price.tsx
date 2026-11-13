@@ -11,11 +11,12 @@ export default function ProductPrice({product,quantity=1,compact=false,chargedUn
   return <span className={'product-price'+(price.active?' product-price--sale':'')+(compact?' product-price--compact':'')}>
     {price.active&&<del><span className="sr-only">Regular price </span>{money(price.regular*quantity)}</del>}
     <b><span className="sr-only">{price.active?'Sale price ':''}</span>{money(price.unitPrice*quantity)}</b>
-    {price.active&&!compact&&<span className="product-price-saving">{money(price.savings*quantity)} saved</span>}
+    {price.active&&!compact&&<span className="block basis-full text-caption leading-normal text-muted">{money(price.savings*quantity)} saved</span>}
   </span>;
 }
 
 export function OfferBadge({product}:{product:Product}){
   const {now}=useStore(),price=productPricing(product,now);
-  return price.active?<span className="offer-badge" aria-label={`${price.percent}% off`}>{price.percent}% OFF</span>:null;
+  // offer-badge stays as a hook for the browser checks; Tailwind supplies the styling.
+  return price.active?<span className="offer-badge pointer-events-none absolute top-[var(--sale-inset,10px)] left-[var(--sale-inset,10px)] z-2 inline-block rounded-full bg-[linear-gradient(90deg,var(--plum),var(--plum-soft))] px-2.5 py-[7px] text-caption leading-tight font-bold tracking-[.04em] whitespace-nowrap text-ivory shadow-[0_4px_12px_#432b3b2e]" aria-label={`${price.percent}% off`}>{price.percent}% OFF</span>:null;
 }

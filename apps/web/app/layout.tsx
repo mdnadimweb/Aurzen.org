@@ -1,3 +1,4 @@
+import './tailwind.css';
 import './globals.css';
 import './launch.css';
 import './motion.css';

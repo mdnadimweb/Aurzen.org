@@ -1,6 +1,7 @@
 node_modules/
 .next/
 out/npm
+.env*
 !.env.example
 data/
 *.tsbuildinfo
