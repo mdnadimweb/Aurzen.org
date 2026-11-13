@@ -105,6 +105,20 @@ test('login rate limits count attempts and reject the excess',async()=>{
   assert.equal(Number((await (await lib.database()).prepare('SELECT count FROM rate_limits WHERE key=?').get(key)).count),3);
 });
 
+test('homepage slides save, replace and reset on PostgreSQL',async()=>{
+  const auth=require('../apps/api/dist/lib/auth.js'),{POST}=require('../apps/api/dist/app/api/admin/route.js'),original=auth.requireAdmin;
+  const request=data=>new Request('https://aurzen.netlify.app/api/admin/',{method:'POST',headers:{Origin:'https://aurzen.netlify.app','Content-Type':'application/json'},body:JSON.stringify(data)});
+  const slide=title=>({eyebrow:'',title,emphasis:'',description:'',image:'box',alt:'Gift box',caption:'',note:'',category:'Mystery Boxes',cta:'Shop now',tone:'plum'});
+  try{
+    auth.requireAdmin=async()=>{};
+    assert.equal((await POST(request({action:'saveHero',slides:[slide('First')]}))).status,200);
+    assert.equal((await POST(request({action:'saveHero',slides:[slide('Second')]}))).status,200);
+    assert.deepEqual((await lib.catalog()).hero,[slide('Second')]);
+    assert.equal((await POST(request({action:'resetHero'}))).status,200);
+    assert.equal((await lib.catalog()).hero,null);
+  }finally{auth.requireAdmin=original;}
+});
+
 test('photo bytes and millisecond timestamps round-trip exactly',async()=>{
   const db=await lib.database(),bytes=Buffer.from([0,1,128,255,42]);
   await db.prepare('INSERT INTO images(id,data) VALUES(?,?)').run('pg-round-trip.webp',bytes);

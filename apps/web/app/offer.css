@@ -2,14 +2,12 @@
 .product-price del{color:var(--muted);font-size:.8125rem;font-weight:400;white-space:nowrap}
 .product-price b{color:var(--ink);font-size:1.125rem;line-height:1.5;white-space:nowrap}
 .product-price--sale b{color:var(--plum)}
-.product-price-saving{display:block;flex-basis:100%;color:var(--muted);font-size:.75rem;line-height:1.5}
 .product-info>.product-price{margin-top:auto}
 .product-info .product-price b{margin-top:0}
 .sale-badge{display:inline-block;width:var(--sale-size,96px);flex-shrink:0;pointer-events:none;user-select:none;line-height:0}
 .sale-badge>svg{display:block;width:100%;height:auto;overflow:visible}
 .sale-badge-face{filter:drop-shadow(0 3px 3px rgb(0 0 0 / 12%))}
 .product-image{--sale-inset:10px}
-.offer-badge{position:absolute;z-index:2;top:var(--sale-inset,10px);left:var(--sale-inset,10px);display:inline-block;padding:7px 10px;border-radius:3px;background:var(--plum);color:var(--ivory);font-size:.75rem;font-weight:700;line-height:1.25;letter-spacing:.04em;white-space:nowrap;pointer-events:none}
 .product--on-offer .product-image .tag{top:calc(var(--sale-inset) + 38px)}
 .product-gallery-offer{position:relative;min-width:0}
 .product-gallery-offer{--sale-inset:12px}
@@ -21,6 +19,4 @@
 .detail-copy>.product-price{margin:12px 0 20px}
 .detail-copy>.product-price b{font-size:1.5rem}
 @media(max-width:600px){.product-price{gap:3px 7px}.product-price b{font-size:1.0625rem}}
-
-.price-review{margin:16px 0;padding:14px;border:1px solid var(--plum);background:var(--rose)}
-.price-review p{margin:0}.price-review .text-link{text-decoration:underline;font-weight:600}
+/* The offer badge, saving line and checkout price-review box are styled with Tailwind utilities in their components. */

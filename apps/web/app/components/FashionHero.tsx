@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties, type FocusEvent } from "react";
 import Link from "next/link";
+import type { HeroSlide, Product } from "@aurzen/shared/catalog";
 import { useStore } from "../providers";
 import BoxArt from "./box-art";
 import ProductImage from "./product-image";
@@ -9,12 +10,8 @@ import "./FashionHero.css";
 
 const gentlemenPhoto = "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=1200&q=85";
 
-export default function FashionHero() {
-  const { products, categories } = useStore();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [interacting, setInteracting] = useState(false);
-
+// The automatic slides shown until the owner saves their own from the studio.
+export function defaultHeroSlides(products: Product[], categories: string[]): HeroSlide[] {
   const clothingCategory = categories.find((category) => /clothing|fashion|wear/i.test(category)) || "Clothing";
   const ladiesCategory = categories.find((category) => /women|ladies|female/i.test(category)) || clothingCategory;
   const gentlemenCategory = categories.find((category) => /\bmen(?:'s)?\b|\bgent(?:lemen)?\b|\bmale\b|\bboys?\b/i.test(category)) || clothingCategory;
@@ -26,7 +23,7 @@ export default function FashionHero() {
     /\bmen(?:'s)?\b|\bgent(?:lemen)?\b|\bmale\b|\bboys?\b/i.test(`${product.category} ${product.name}`) && product.image && product.image !== "box"
   );
 
-  const slides = [
+  return [
     {
       eyebrow: "THE LADIES' EDIT",
       title: "A little elegance,",
@@ -58,15 +55,27 @@ export default function FashionHero() {
       title: "A little something,",
       emphasis: "just for you.",
       description: "Choose the mood. We'll curate a fashion surprise, beautifully packed and made to brighten your day.",
+      image: "box",
       alt: "AURZÉN mystery gift box",
       caption: "A SURPRISE WITH YOUR NAME ON IT",
       note: "A little unexpected",
       category: mysteryCategory,
       cta: "Find your mystery box",
       tone: "plum",
-      box: true,
     },
   ];
+}
+
+export default function FashionHero() {
+  const { products, categories, hero } = useStore();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [interacting, setInteracting] = useState(false);
+
+  const slides = hero?.length ? hero : defaultHeroSlides(products, categories);
+  // Slides can be removed in the studio while this page is open.
+  useEffect(() => { if (activeIndex >= slides.length) setActiveIndex(0); }, [activeIndex, slides.length]);
+  const current = slides[activeIndex] || slides[0];
 
   // Advance every 7s. Any slide change (auto or manual) restarts the timer.
   // Stops only for the pause button, keyboard focus inside, a hidden tab or reduced motion.
@@ -112,23 +121,23 @@ export default function FashionHero() {
               const active = activeIndex === index;
               return (
                 <article
-                  key={slide.eyebrow}
+                  key={index}
                   className="lux-hero__slide"
                   data-tone={slide.tone}
                   data-active={active}
                   role="group"
                   aria-roledescription="slide"
-                  aria-label={`${index + 1} of ${slides.length}: ${slide.eyebrow}`}
+                  aria-label={`${index + 1} of ${slides.length}: ${slide.eyebrow || slide.title}`}
                   aria-hidden={!active}
                   inert={!active}
                 >
                   <div className="lux-hero__copy">
-                    <span className="lux-hero__eyebrow">{slide.eyebrow} · AURZÉN</span>
+                    <span className="lux-hero__eyebrow">{slide.eyebrow ? `${slide.eyebrow} · AURZÉN` : "AURZÉN"}</span>
                     <h1>
-                      {words(slide.title, 0)}{" "}
-                      <em>{words(slide.emphasis, slide.title.split(" ").length)}</em>
+                      {words(slide.title, 0)}
+                      {slide.emphasis && <>{" "}<em>{words(slide.emphasis, slide.title.split(" ").length)}</em></>}
                     </h1>
-                    <p>{slide.description}</p>
+                    {slide.description && <p>{slide.description}</p>}
                     <Link className="lux-hero__button" href={`/shop/?category=${encodeURIComponent(slide.category)}`}>
                       {slide.cta} <span aria-hidden="true">↗</span>
                     </Link>
@@ -136,7 +145,7 @@ export default function FashionHero() {
                   <div className="lux-hero__art">
                     <div className="lux-hero__backdrop" />
                     <div className="lux-hero__image-card">
-                      {slide.box ? (
+                      {slide.image === "box" ? (
                         <div className="lux-hero__box-art" aria-hidden="true"><BoxArt /></div>
                       ) : (
                         <ProductImage
@@ -148,10 +157,10 @@ export default function FashionHero() {
                         />
                       )}
                       <div className="lux-hero__image-glow" />
-                      <div className="lux-hero__image-caption">
-                        <span>{slide.caption}</span>
-                        <strong>{slide.note}</strong>
-                      </div>
+                      {(slide.caption || slide.note) && <div className="lux-hero__image-caption">
+                        {slide.caption && <span>{slide.caption}</span>}
+                        {slide.note && <strong>{slide.note}</strong>}
+                      </div>}
                     </div>
                   </div>
                 </article>
@@ -166,7 +175,7 @@ export default function FashionHero() {
           <i aria-hidden="true"><b style={{ width: `${((activeIndex + 1) / slides.length) * 100}%` }} /></i>
           <span>{String(slides.length).padStart(2, "0")}</span>
           <span className="lux-hero__visually-hidden" aria-live="polite" aria-atomic="true">
-            Slide {activeIndex + 1} of {slides.length}: {slides[activeIndex].eyebrow}
+            Slide {activeIndex + 1} of {slides.length}: {current.eyebrow || current.title}
           </span>
         </div>
         <div className="lux-hero__control-group" role="group" aria-label="Carousel controls">

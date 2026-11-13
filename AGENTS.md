@@ -51,7 +51,10 @@ Run from the repository root; on Windows use npm.cmd if PowerShell blocks npm.
   mass formatting, and unnecessary dependencies. Match each file's existing style.
 - Keep UI in web, business/data logic in API, and reusable contracts in shared.
   Reuse existing components, StoreProvider/useStore, and gateway/backend helpers.
-- Follow current naming and plain CSS/token patterns; do not add a styling framework.
+- Styling is plain CSS plus Tailwind CSS v4 (apps/web/app/tailwind.css, postcss.config.mjs).
+  Tailwind loads theme and utilities only (no preflight), in cascade layers, so the unlayered
+  CSS files win on conflicts. Use brand tokens (bg-plum, text-muted, font-serif, text-caption);
+  when moving an element to utilities, delete its old CSS rules and keep test-hook class names.
   Preserve established public paths, trailing-slash behavior, and HTTP contracts.
 - Production uses PostgreSQL (DATABASE_URL, postgres-database.ts); local development and
   most unit tests fall back to node:sqlite (WAL); hosted Turso/libSQL remains supported.

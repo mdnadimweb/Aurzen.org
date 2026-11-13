@@ -1,7 +1,7 @@
 import { requireAdmin } from '../../../lib/auth';
 import { catalog, database, orders, transaction } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
-import { statuses, normalizeOffer, type Order } from '@aurzen/shared/catalog';
+import { statuses, normalizeOffer, normalizeHeroSlides, type Order } from '@aurzen/shared/catalog';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
 function productOffer(value:unknown){
@@ -85,6 +85,18 @@ export async function POST(request: Request) {
                 order.status = d.status;
                 await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order), order.id);
             }
+            else if(d.action==='saveHero'){
+                let slides;
+                try{slides=normalizeHeroSlides(d.slides);}
+                catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid homepage slides.');}
+                for(const [index,slide] of slides.entries()){
+                    assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(slide.category),`Choose an existing category for slide ${index+1}.`);
+                    if(imagePath.test(slide.image))assert(await db.prepare('SELECT id FROM images WHERE id=?').get(slide.image.slice('/media/'.length)),`The photo on slide ${index+1} is unavailable. Upload it again.`);
+                }
+                await db.prepare("INSERT INTO settings(key,value) VALUES('heroSlides',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(slides));
+            }
+            else if(d.action==='resetHero')
+                await db.prepare("DELETE FROM settings WHERE key='heroSlides'").run();
             else if(d.action==='editOrder')
                 await editOrder(db,d);
             else if(d.action==='delivery'){

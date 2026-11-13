@@ -36,6 +36,36 @@ export function normalizeOffer(value:unknown):Offer|null{
   if(startsAt&&endsAt&&startsAt>=endsAt)throw new Error('Offer end must be after its start.');
   return {enabled:o.enabled,percent:Number(o.percent),startsAt,endsAt};
 }
+
+// Homepage carousel slides, edited from the owner studio. `image` is 'box' for the
+// gift box illustration, an uploaded /media/ photo, or an HTTPS image URL.
+export const heroTones=['rose','sand','plum'] as const;
+export const maxHeroSlides=6;
+export type HeroSlide={eyebrow:string;title:string;emphasis:string;description:string;image:string;alt:string;caption:string;note:string;category:string;cta:string;tone:typeof heroTones[number]};
+export const heroFieldLimits={eyebrow:40,title:60,emphasis:60,description:240,alt:160,caption:40,note:40,category:100,cta:40} as const;
+const heroLabels:Record<keyof typeof heroFieldLimits,string>={eyebrow:'Eyebrow',title:'Heading',emphasis:'Heading highlight',description:'Description',alt:'Photo description',caption:'Photo caption',note:'Photo note',category:'Button category',cta:'Button text'};
+const heroRequired=new Set(['title','category','cta','alt']);
+export function normalizeHeroSlides(value:unknown):HeroSlide[]{
+  if(!Array.isArray(value)||value.length<1||value.length>maxHeroSlides)throw new Error(`Use 1 to ${maxHeroSlides} homepage slides.`);
+  return value.map((input,index)=>{
+    if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Invalid homepage slide.');
+    const s=input as Record<string,unknown>,slide:Record<string,string>={},at=` on slide ${index+1}`;
+    for(const [key,limit] of Object.entries(heroFieldLimits)){
+      const text=typeof s[key]==='string'?(s[key] as string).replace(/\s+/g,' ').trim():'';
+      const label=heroLabels[key as keyof typeof heroFieldLimits];
+      if(heroRequired.has(key)&&!text)throw new Error(`${label} is required${at}.`);
+      if(text.length>limit)throw new Error(`${label} must be at most ${limit} characters${at}.`);
+      slide[key]=text;
+    }
+    const image=typeof s.image==='string'?s.image.trim():'';
+    // Built-in storefront photos live under /images/ in the web app's public folder.
+    let valid=image==='box'||/^\/media\/[a-f0-9-]{36}\.webp$/.test(image)||/^\/images\/[a-z0-9-]+\.(?:jpe?g|png|webp)$/.test(image);
+    if(!valid&&image.length<=2000)try{valid=new URL(image).protocol==='https:';}catch{}
+    if(!valid)throw new Error(`Upload a photo, use an HTTPS image URL or choose the gift box${at}.`);
+    if(!heroTones.includes(s.tone as HeroSlide['tone']))throw new Error(`Choose a colour mood${at}.`);
+    return {...slide,image,tone:s.tone} as HeroSlide;
+  });
+}
 export const statuses = ['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'] as const;
 /** Orders can be corrected by the owner until they ship. */
 export const editableStatuses:readonly string[] = ['New','Confirmed','Processing'];

@@ -24,6 +24,7 @@ const paths={
   chevron:<><path d="m9 6 6 6-6 6"/></>,
   sparkle:<><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="m6 6 2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></>,
   box:<><path d="M3 8 12 3l9 5v8l-9 5-9-5Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></>,
+  slides:<><rect x="3" y="4" width="18" height="13" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 14-5-5-8 8"/><path d="M9 21h.01M12 21h.01M15 21h.01"/></>,
 };
 export type IconName=keyof typeof paths;
 export default function Icon({name,...props}:{name:IconName}&SVGProps<SVGSVGElement>){

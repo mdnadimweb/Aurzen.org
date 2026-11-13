@@ -1,0 +1,45 @@
+/*
+  Tailwind CSS v4 for AURZÉN.
+
+  Only the theme and utilities are loaded. Tailwind's base reset (preflight) is left out on
+  purpose: globals.css already sets the site's base styles, and preflight would change
+  margins, headings, buttons and images across every existing page.
+
+  Tailwind's output sits in cascade layers. The existing stylesheets are unlayered, so they
+  win wherever both set the same property; utilities fill in everything else.
+*/
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Brand tokens. `inline` makes utilities read the live :root variables from globals.css,
+   so classes like bg-plum, text-muted and font-serif always match the hand-written CSS. */
+@theme inline {
+  --color-plum: var(--plum);
+  --color-plum-soft: var(--plum-soft);
+  --color-ivory: var(--ivory);
+  --color-blush: var(--blush);
+  --color-sand: var(--sand);
+  --color-mist: var(--mist);
+  --color-gold: var(--gold);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-heading);
+
+  --radius-brand: var(--radius);
+  --shadow-brand: var(--shadow-soft);
+}
+
+/* The site's type scale (same values as globals.css). */
+@theme {
+  --text-caption: 0.75rem;
+  --text-small: 0.8125rem;
+  --text-label: 0.875rem;
+  --text-nav: 0.9375rem;
+  --text-body: 1rem;
+  --text-product: 1.0625rem;
+  --text-price: 1.125rem;
+}
