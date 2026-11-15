@@ -8,6 +8,7 @@ import Overview from './admin/overview';
 import {initials,relativeTime} from './admin/metrics';
 import OrderEditor from './admin/order-editor';
 import HeroEditor from './admin/hero-editor';
+import StorefrontEditor from './admin/storefront-editor';
 import {defaultHeroSlides} from './FashionHero';
 
 import BrandLogo from './brand-logo';
@@ -40,14 +41,14 @@ function DeliveryEditor({order,onSave}:{order:Order;onSave:(data:Record<string,u
 }
 export default function AdminWorkspace() {
     const router = useRouter();
-    const { products, setProducts, categories, setCategories, hero, setHero } = useStore();
+    const { products, setProducts, categories, setCategories, hero, setHero, storefront, setStorefront } = useStore();
     const [offerPrice,setOfferPrice]=useState(0);
     const [orders, setOrders] = useState<Order[]>([]), [tab, setTab] = useState('Overview'), [notice, setNoticeState] = useState<Notice|null>(null), [modal, setModal] = useState(''), [editing, setEditing] = useState<Product | null>(null), [saving, setSaving] = useState(false), [uploading,setUploading]=useState(false), [adminLoaded, setAdminLoaded] = useState(false), [formError,setFormError]=useState('');
     const [navOpen,setNavOpen]=useState(false),[bannerOpen,setBannerOpen]=useState(true),[editingOrder,setEditingOrder]=useState<Order|null>(null);
     const menuButton=useRef<HTMLButtonElement>(null),sidebar=useRef<HTMLElement>(null);
     const setNotice=(text:string,kind:Notice['kind']='success')=>setNoticeState(text?{text,kind}:null);
     useEffect(()=>{setFormError('');setOfferPrice(editing?.price||0);},[modal,editing?.id]);
-    useEffect(() => { api('/api/admin').then(d => { setProducts(d.products); setCategories(d.categories); setHero(d.hero||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
+    useEffect(() => { api('/api/admin').then(d => { setProducts(d.products); setCategories(d.categories); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
     useEffect(() => { if (notice) {
         const t = setTimeout(() => setNoticeState(null), 6000);
         return () => clearTimeout(t);
@@ -63,7 +64,7 @@ export default function AdminWorkspace() {
         document.addEventListener('keydown',onKey);desktop.addEventListener('change',onChange);
         return()=>{document.removeEventListener('keydown',onKey);desktop.removeEventListener('change',onChange);};
     },[navOpen]);
-    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin', { method: 'POST', body: JSON.stringify(data) }); setProducts(d.products); setCategories(d.categories); setHero(d.hero||null); setOrders(d.orders); }
+    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin', { method: 'POST', body: JSON.stringify(data) }); setProducts(d.products); setCategories(d.categories); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); }
     async function change(data: Record<string, unknown>) { try {
         await mutate(data);
         setNotice('Changes saved');
@@ -123,6 +124,7 @@ export default function AdminWorkspace() {
     {tab === 'Categories' && <div className="admin-category-grid">{categories.map((c) => { const count=products.filter(p => p.category === c).length; return <article className="a-card admin-category" key={c}><span className="admin-category__icon"><Icon name={/mystery/i.test(c)?'box':'categories'}/></span><h2>{c}</h2><p>{count} product{count===1?'':'s'}</p><button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" aria-label={'Remove category '+c} onClick={() => { if (confirm('Remove ' + c + '?'))
         void change({ action: 'deleteCategory', name: c }); }}><Icon name="trash"/>Remove category</button></article>; })}</div>}
     {tab === 'Homepage' && (adminLoaded?<HeroEditor key={JSON.stringify(hero)} initialSlides={hero?.length?hero:defaultHeroSlides(products,categories)} custom={!!hero?.length} categories={categories} onSave={async slides=>{await mutate({action:'saveHero',slides});setNotice('Homepage slides saved');}} onReset={async()=>{await mutate({action:'resetHero'});setNotice('Automatic slides restored');}}/>:<p className="admin-loading" role="status">Loading your slides…</p>)}
+    {tab === 'Homepage' && adminLoaded && <StorefrontEditor key={JSON.stringify(storefront)} initial={storefront} categories={categories} products={products} onSave={async value=>{await mutate({action:'saveStorefront',storefront:value});setNotice('Storefront saved');}}/>}
     {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orders.map(o => <tr key={o.id}>
         <td data-label="Order"><span className="admin-mono">{o.id}</span><small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>setEditingOrder(o)}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
         <td data-label="Customer"><strong className="admin-order-name">{o.name}</strong><small>{o.phone}</small></td>

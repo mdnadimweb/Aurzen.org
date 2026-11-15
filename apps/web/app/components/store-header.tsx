@@ -4,11 +4,14 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import BrandLogo from './brand-logo';
 import Modal from './modal';
+import {defaultStorefront} from '@aurzen/shared/catalog';
+import {useStore} from '../providers';
 import './store-header.css';
 
 type Props={view:string;count:number;onBag:()=>void;bagOpen:boolean;categories:string[];onNavigate:(view:string,category?:string)=>void};
 export default function StoreHeader({view,count,onBag,bagOpen,categories,onNavigate}:Props){
   const [menuOpen,setMenuOpen]=useState(false),[scrolled,setScrolled]=useState(false);
+  const {announcement}=useStore().storefront||defaultStorefront;
   const navigationId=useId(),pathname=usePathname();
   useEffect(()=>{setMenuOpen(false);},[pathname]);
   useEffect(()=>{if(bagOpen)setMenuOpen(false);},[bagOpen]);
@@ -39,7 +42,7 @@ export default function StoreHeader({view,count,onBag,bagOpen,categories,onNavig
     {mobile&&<Link href="/tracking/" onClick={e=>navigate(e,'tracking')}>Track your order <span aria-hidden="true">↗</span></Link>}
   </>;
   return <div className={'store-header-wrap'+(scrolled?' is-scrolled':'')}>
-    <div className="announcement store-header-announcement">A little joy, delivered. <span>Thoughtfully selected in Bangladesh</span></div>
+    <div className="announcement store-header-announcement">{announcement.message}{announcement.detail&&<> <span>{announcement.detail}</span></>}</div>
     <header className="store-header">
       <BrandLogo/>
       <nav className="store-header-desktop-nav" aria-label="Main navigation">{links()}</nav>

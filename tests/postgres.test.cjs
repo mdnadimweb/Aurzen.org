@@ -119,6 +119,20 @@ test('homepage slides save, replace and reset on PostgreSQL',async()=>{
   }finally{auth.requireAdmin=original;}
 });
 
+test('storefront announcement and category covers save and replace on PostgreSQL',async()=>{
+  const auth=require('../apps/api/dist/lib/auth.js'),{POST}=require('../apps/api/dist/app/api/admin/route.js'),original=auth.requireAdmin;
+  const request=data=>new Request('https://aurzen.netlify.app/api/admin/',{method:'POST',headers:{Origin:'https://aurzen.netlify.app','Content-Type':'application/json'},body:JSON.stringify(data)});
+  try{
+    auth.requireAdmin=async()=>{};
+    const box=(await lib.catalog()).products.find(p=>p.category==='Mystery Boxes');
+    const first={announcement:{message:'First',detail:''},covers:{'Mystery Boxes':box.id}},second={announcement:{message:'Second',detail:'Detail'},covers:{}};
+    assert.equal((await POST(request({action:'saveStorefront',storefront:first}))).status,200);
+    assert.deepEqual((await lib.catalog()).storefront,first);
+    assert.equal((await POST(request({action:'saveStorefront',storefront:second}))).status,200);
+    assert.deepEqual((await lib.catalog()).storefront,second);
+  }finally{auth.requireAdmin=original;}
+});
+
 test('photo bytes and millisecond timestamps round-trip exactly',async()=>{
   const db=await lib.database(),bytes=Buffer.from([0,1,128,255,42]);
   await db.prepare('INSERT INTO images(id,data) VALUES(?,?)').run('pg-round-trip.webp',bytes);

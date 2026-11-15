@@ -168,6 +168,23 @@ async function run(){
   await current.navigate('/');
   assert(await current.evaluate(`!document.querySelector('.lux-hero h1').textContent.includes('Studio edited heading')`),'Reset restores the automatic slides');
   console.log('PASS 360/1440px homepage slide editor fits, saves an edited heading to the storefront at 390/1440px, and resets to automatic slides.');
+
+  const storefrontForm=`document.querySelector('form[aria-label="Storefront text and category covers"]')`;
+  await openHomepage();await poll(()=>current.evaluate(`!!${storefrontForm}`));
+  await current.evaluate(`(()=>{const form=${storefrontForm},setInput=(el,v)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));};
+    const [message,detail]=form.querySelectorAll('input');setInput(message,'Studio announcement');setInput(detail,'Studio detail');
+    const select=Array.from(form.querySelectorAll('label')).find(l=>l.firstChild.textContent==='Clothing').querySelector('select');
+    const option=Array.from(select.options).find(o=>o.textContent==='The Weekend Dress');
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,option.value);select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  await current.evaluate(`${storefrontForm}.querySelector('button.a-btn--primary').click()`);
+  await poll(()=>current.evaluate(`document.querySelector('.admin-toast')?.textContent.includes('Storefront saved')`));
+  for(const width of [390,1440]){
+    await current.viewport(width);await current.navigate('/');
+    await poll(()=>current.evaluate(`(()=>{const bar=document.querySelector('.store-header-announcement');return bar.textContent==='Studio announcement Studio detail'&&bar.querySelector('span').textContent==='Studio detail';})()`));
+    assert(await current.evaluate(`Array.from(document.querySelectorAll('.collections .collection')).some(tile=>tile.querySelector('h3').textContent.startsWith('Clothing')&&!!tile.querySelector('img[alt^="The Weekend Dress"],[role=img][aria-label^="The Weekend Dress"]'))`),'Clothing tile uses the chosen cover');
+    await current.fits(width+' storefront with custom announcement and cover');await current.screenshot(width+'-home-storefront-settings');
+  }
+  console.log('PASS homepage storefront editor saves the announcement bar and a chosen category cover, shown at 390/1440px.');
   await current.close();
 }
 run().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{

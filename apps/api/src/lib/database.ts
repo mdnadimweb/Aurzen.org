@@ -3,7 +3,7 @@ import {mkdirSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 import {localClient} from './local-database';
 import {postgresClient} from './postgres-database';
-import {seed,type Product,type Order,type HeroSlide} from '@aurzen/shared/catalog';
+import {seed,type Product,type Order,type HeroSlide,type Storefront} from '@aurzen/shared/catalog';
 
 export type Dialect='postgres'|'sqlite';
 // Each write transaction gets its own handle; concurrent requests never share it.
@@ -100,7 +100,10 @@ export async function catalog(connection?:Database){
   // null until the owner saves slides; the storefront then shows its automatic defaults.
   const heroRow=await db.prepare("SELECT value FROM settings WHERE key='heroSlides'").get();
   const hero=heroRow?JSON.parse(String(heroRow.value)) as HeroSlide[]:null;
-  return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null'))})) as unknown as Product[],categories:categories.map(c=>String(c.name)),hero,serverNow:Date.now()};
+  // null until the owner saves an announcement or category covers.
+  const storefrontRow=await db.prepare("SELECT value FROM settings WHERE key='storefront'").get();
+  const storefront=storefrontRow?JSON.parse(String(storefrontRow.value)) as Storefront:null;
+  return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null'))})) as unknown as Product[],categories:categories.map(c=>String(c.name)),hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){
   return (await (await database()).prepare('SELECT payload FROM orders ORDER BY created DESC').all()).map(o=>JSON.parse(String(o.payload)) as Order);
