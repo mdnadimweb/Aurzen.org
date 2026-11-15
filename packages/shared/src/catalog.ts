@@ -66,6 +66,36 @@ export function normalizeHeroSlides(value:unknown):HeroSlide[]{
     return {...slide,image,tone:s.tone} as HeroSlide;
   });
 }
+// Owner-edited storefront text and category cover photos. Stored as one settings row;
+// null until the owner saves, so the storefront keeps its built-in defaults.
+export type Storefront={announcement:{message:string;detail:string};covers:Record<string,number>};
+export const defaultStorefront:Storefront={announcement:{message:'A little joy, delivered.',detail:'Thoughtfully selected in Bangladesh'},covers:{}};
+export const storefrontLimits={message:80,detail:80} as const;
+export function normalizeStorefront(value:unknown):Storefront{
+  if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid storefront settings.');
+  const v=value as Record<string,unknown>,a=v.announcement as Record<string,unknown>|undefined;
+  if(!a||typeof a!=='object'||Array.isArray(a))throw new Error('Invalid announcement.');
+  const clean=(x:unknown)=>typeof x==='string'?x.replace(/\s+/g,' ').trim():'';
+  const message=clean(a.message),detail=clean(a.detail);
+  if(!message)throw new Error('Announcement message is required.');
+  if(message.length>storefrontLimits.message)throw new Error(`Announcement message must be at most ${storefrontLimits.message} characters.`);
+  if(detail.length>storefrontLimits.detail)throw new Error(`Announcement detail must be at most ${storefrontLimits.detail} characters.`);
+  const input=v.covers??{};
+  if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Invalid category covers.');
+  const entries=Object.entries(input as Record<string,unknown>);
+  if(entries.length>50)throw new Error('Too many category covers.');
+  const covers:Record<string,number>={};
+  for(const [category,id] of entries){
+    if(!category||category.length>100||!Number.isSafeInteger(id)||(id as number)<1)throw new Error('Choose a valid cover product.');
+    covers[category]=id as number;
+  }
+  return {announcement:{message,detail},covers};
+}
+/** The product whose photo represents a category: the owner's choice if it still belongs there, else the first with a photo. */
+export function categoryCover(category:string,products:Product[],covers:Record<string,number>={}){
+  const chosen=products.find(p=>p.id===covers[category]&&p.category===category);
+  return chosen||products.find(p=>p.category===category&&p.image&&p.image!=='box')||products.find(p=>p.category===category);
+}
 export const statuses = ['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'] as const;
 /** Orders can be corrected by the owner until they ship. */
 export const editableStatuses:readonly string[] = ['New','Confirmed','Processing'];

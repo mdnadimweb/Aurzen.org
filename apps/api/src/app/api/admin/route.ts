@@ -1,7 +1,7 @@
 import { requireAdmin } from '../../../lib/auth';
 import { catalog, database, orders, transaction } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
-import { statuses, normalizeOffer, normalizeHeroSlides, type Order } from '@aurzen/shared/catalog';
+import { statuses, normalizeOffer, normalizeHeroSlides, normalizeStorefront, type Order } from '@aurzen/shared/catalog';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
 function productOffer(value:unknown){
@@ -97,6 +97,16 @@ export async function POST(request: Request) {
             }
             else if(d.action==='resetHero')
                 await db.prepare("DELETE FROM settings WHERE key='heroSlides'").run();
+            else if(d.action==='saveStorefront'){
+                let storefront;
+                try{storefront=normalizeStorefront(d.storefront);}
+                catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid storefront settings.');}
+                for(const [category,id] of Object.entries(storefront.covers)){
+                    assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(category),`Category "${category}" no longer exists.`);
+                    assert(await db.prepare('SELECT id FROM products WHERE id=? AND category=?').get(id,category),`Choose a cover product from ${category}.`);
+                }
+                await db.prepare("INSERT INTO settings(key,value) VALUES('storefront',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(storefront));
+            }
             else if(d.action==='editOrder')
                 await editOrder(db,d);
             else if(d.action==='delivery'){
