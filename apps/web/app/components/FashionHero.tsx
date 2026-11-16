@@ -12,10 +12,13 @@ const gentlemenPhoto = "https://images.unsplash.com/photo-1617137968427-85924c80
 
 // The automatic slides shown until the owner saves their own from the studio.
 export function defaultHeroSlides(products: Product[], categories: string[]): HeroSlide[] {
-  const clothingCategory = categories.find((category) => /clothing|fashion|wear/i.test(category)) || "Clothing";
+  // Every slide must point at a category the shop really has, or the studio cannot save
+  // these slides ("Choose an existing category"). The mystery box slide is only shown
+  // while a mystery box category exists.
+  const clothingCategory = categories.find((category) => /clothing|fashion|wear/i.test(category)) || categories[0] || "Clothing";
   const ladiesCategory = categories.find((category) => /women|ladies|female/i.test(category)) || clothingCategory;
   const gentlemenCategory = categories.find((category) => /\bmen(?:'s)?\b|\bgent(?:lemen)?\b|\bmale\b|\bboys?\b/i.test(category)) || clothingCategory;
-  const mysteryCategory = categories.find((category) => /mystery/i.test(category)) || "Mystery Boxes";
+  const mysteryCategory = categories.find((category) => /mystery/i.test(category));
   const ladiesProduct = products.find((product) =>
     /women|woman|ladies|lady|female/i.test(`${product.category} ${product.name}`) && product.image && product.image !== "box"
   );
@@ -23,7 +26,7 @@ export function defaultHeroSlides(products: Product[], categories: string[]): He
     /\bmen(?:'s)?\b|\bgent(?:lemen)?\b|\bmale\b|\bboys?\b/i.test(`${product.category} ${product.name}`) && product.image && product.image !== "box"
   );
 
-  return [
+  const slides: HeroSlide[] = [
     {
       eyebrow: "THE LADIES' EDIT",
       title: "A little elegance,",
@@ -50,6 +53,8 @@ export function defaultHeroSlides(products: Product[], categories: string[]): He
       cta: "Explore the gentlemen's edit",
       tone: "sand",
     },
+  ];
+  if (mysteryCategory) slides.push(
     {
       eyebrow: "THE MYSTERY BOX EDIT",
       title: "A little something,",
@@ -63,7 +68,8 @@ export function defaultHeroSlides(products: Product[], categories: string[]): He
       cta: "Find your mystery box",
       tone: "plum",
     },
-  ];
+  );
+  return slides;
 }
 
 export default function FashionHero() {
