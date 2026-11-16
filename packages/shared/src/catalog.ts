@@ -71,8 +71,10 @@ export function normalizeHeroSlides(value:unknown):HeroSlide[]{
 }
 // Owner-edited storefront text and category cover photos. Stored as one settings row;
 // null until the owner saves, so the storefront keeps its built-in defaults.
-export type Storefront={announcement:{message:string;detail:string};covers:Record<string,number>};
-export const defaultStorefront:Storefront={announcement:{message:'A little joy, delivered.',detail:'Thoughtfully selected in Bangladesh'},covers:{}};
+// featured: up to four main category names shown under the hero, in order. Empty = automatic.
+export type Storefront={announcement:{message:string;detail:string};covers:Record<string,number>;featured?:string[]};
+export const maxFeaturedCategories=4;
+export const defaultStorefront:Storefront={announcement:{message:'A little joy, delivered.',detail:'Thoughtfully selected in Bangladesh'},covers:{},featured:[]};
 export const storefrontLimits={message:80,detail:80} as const;
 export function normalizeStorefront(value:unknown):Storefront{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid storefront settings.');
@@ -92,7 +94,14 @@ export function normalizeStorefront(value:unknown):Storefront{
     if(!category||category.length>100||!Number.isSafeInteger(id)||(id as number)<1)throw new Error('Choose a valid cover product.');
     covers[category]=id as number;
   }
-  return {announcement:{message,detail},covers};
+  const featuredInput=v.featured??[];
+  if(!Array.isArray(featuredInput)||featuredInput.length>maxFeaturedCategories)throw new Error(`Feature at most ${maxFeaturedCategories} categories.`);
+  const featured:string[]=[];
+  for(const name of featuredInput){
+    if(typeof name!=='string'||!name.trim()||name.length>100)throw new Error('Choose a valid featured category.');
+    if(!featured.includes(name.trim()))featured.push(name.trim());
+  }
+  return {announcement:{message,detail},covers,featured};
 }
 /** The product whose photo represents a category: the owner's choice if it still belongs there, else the first with a photo. */
 export function categoryCover(category:string,products:Product[],covers:Record<string,number>={}){
@@ -104,7 +113,7 @@ export const statuses = ['New','Confirmed','Processing','Shipped','Delivered','C
 export const editableStatuses:readonly string[] = ['New','Confirmed','Processing'];
 /** Cash-on-delivery charge per delivery area, in taka. */
 export const deliveryFees = {dhaka:80,outside:150} as const;
-export type Order = {paymentMethod?:'cod';id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string};
+export type Order = {paymentMethod?:'cod';id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};
 export const photo=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=85`;
 export const money=(n:number)=>'৳'+n.toLocaleString('en-BD');
 export const seed:Product[]=[
@@ -159,3 +168,105 @@ export function normalizeVariants(value:unknown,label:'size'|'colour'):string[]{
   if(list.length>variantLimits.count)throw new Error(`Use at most ${variantLimits.count} ${label}s.`);
   return list;
 }
+
+// ---- Categories: one level of nesting (main categories and their subcategories) ----
+// parent is null for a main category. slug is stored when the category is created and
+// stays the same after a rename, so shared links keep working.
+export type Category={name:string;slug:string;parent:string|null;cover:string|null};
+export const categoryLimits={name:80} as const;
+export function slugify(name:string){
+  return name.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/&/g,' and ').replace(/['’]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'collection';
+}
+/** Older catalogs only send names; treat every name as a main category. */
+export function categoryList(details:Category[]|undefined,names:string[]):Category[]{
+  if(details?.length)return details;
+  return names.map(name=>({name,slug:slugify(name),parent:null,cover:null}));
+}
+export const mainCategories=(categories:Category[])=>categories.filter(c=>!c.parent);
+export const subcategoriesOf=(categories:Category[],main:string)=>categories.filter(c=>c.parent===main);
+/** A main category's own name plus its subcategories; a subcategory on its own. */
+export function categoryFamily(categories:Category[],name:string):string[]{
+  const category=categories.find(c=>c.name===name);
+  if(!category||category.parent)return [name];
+  return [name,...subcategoriesOf(categories,name).map(c=>c.name)];
+}
+/** Main category a product's category belongs to (itself when it is a main category). */
+export function mainCategoryOf(categories:Category[],name:string){
+  const category=categories.find(c=>c.name===name);
+  return category?.parent||name;
+}
+export function categoryPath(categories:Category[],name:string){
+  const category=categories.find(c=>c.name===name);
+  if(!category)return '/shop/';
+  const parent=category.parent?categories.find(c=>c.name===category.parent):null;
+  return '/collections/'+(parent?parent.slug+'/':'')+category.slug+'/';
+}
+/** Resolves /collections/<main>[/<sub>] slugs to categories. */
+export function categoryFromSlugs(categories:Category[],slugs:string[]){
+  const main=categories.find(c=>!c.parent&&c.slug===slugs[0]);
+  if(!main||slugs.length>2)return null;
+  if(slugs.length===1)return {main,sub:null as Category|null};
+  const sub=categories.find(c=>c.parent===main.name&&c.slug===slugs[1]);
+  return sub?{main,sub}:null;
+}
+const photoOf=(p?:Product)=>p&&p.image&&p.image!=='box'?p.image:undefined;
+/** Cover for a main category tile: uploaded cover, owner-chosen product, any product photo, else none (placeholder). */
+export function categoryCoverImage(category:Category,categories:Category[],products:Product[],covers:Record<string,number>={}){
+  if(category.cover)return category.cover;
+  const family=categoryFamily(categories,category.name);
+  const chosen=products.find(p=>p.id===covers[category.name]&&family.includes(p.category));
+  return photoOf(chosen)||photoOf(products.find(p=>family.includes(p.category)&&photoOf(p)));
+}
+/** Up to four featured main categories: the owner's order, else the first main categories. */
+export function featuredCategories(categories:Category[],featured:string[]|undefined){
+  const mains=mainCategories(categories);
+  const chosen=(featured||[]).map(name=>mains.find(c=>c.name===name)).filter((c):c is Category=>!!c);
+  return (chosen.length?chosen:mains).slice(0,maxFeaturedCategories);
+}
+/** Products on sale right now, using the same offer rules as the product page and checkout. */
+export const saleProducts=(products:Product[],now=Date.now())=>products.filter(p=>productPricing(p,now).active);
+
+// ---- Homepage promotions banner ----
+export type PromotionLink={type:'product'|'category'|'sale';value:string};
+export type Promotion={id:string;image:string;mobileImage:string;headline:string;cta:string;link:PromotionLink;startsAt:string|null;endsAt:string|null;hidden:boolean};
+export const maxPromotions=8;
+export const promotionLimits={headline:90,cta:30} as const;
+const promotionImage=(image:string,label:string)=>{
+  if(/^\/media\/[a-f0-9-]{36}\.webp$/.test(image))return image;
+  if(image.length<=2000){try{if(new URL(image).protocol==='https:')return image;}catch{}}
+  throw new Error(label);
+};
+export function normalizePromotions(value:unknown):Promotion[]{
+  if(!Array.isArray(value)||value.length>maxPromotions)throw new Error(`Use at most ${maxPromotions} promotion slides.`);
+  const ids=new Set<string>();
+  return value.map((input,index)=>{
+    if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Invalid promotion slide.');
+    const s=input as Record<string,unknown>,at=` on promotion ${index+1}`;
+    const text=(x:unknown)=>typeof x==='string'?x.replace(/\s+/g,' ').trim():'';
+    const id=typeof s.id==='string'&&/^[a-z0-9-]{1,40}$/.test(s.id)?s.id:'';
+    if(!id||ids.has(id))throw new Error('Invalid promotion id'+at+'.');
+    ids.add(id);
+    const headline=text(s.headline),cta=text(s.cta);
+    if(!headline)throw new Error('Headline is required'+at+'.');
+    if(headline.length>promotionLimits.headline)throw new Error(`Headline must be at most ${promotionLimits.headline} characters${at}.`);
+    if(!cta)throw new Error('Button label is required'+at+'.');
+    if(cta.length>promotionLimits.cta)throw new Error(`Button label must be at most ${promotionLimits.cta} characters${at}.`);
+    const image=promotionImage(text(s.image),'Upload a main image'+at+'.');
+    const mobileRaw=text(s.mobileImage);
+    const mobileImage=mobileRaw?promotionImage(mobileRaw,'Upload a valid mobile image'+at+'.'):'';
+    const l=s.link as Record<string,unknown>|undefined;
+    if(!l||!['product','category','sale'].includes(l.type as string))throw new Error('Choose where the button goes'+at+'.');
+    const linkValue=l.type==='sale'?'':text(l.value);
+    if(l.type!=='sale'&&(!linkValue||linkValue.length>100))throw new Error('Choose a product or category for the button'+at+'.');
+    const date=(x:unknown,label:string)=>{
+      if(x===null||x===undefined||x==='')return null;
+      if(typeof x!=='string'||!Number.isFinite(Date.parse(x))||!/(Z|[+-]\d{2}:\d{2})$/.test(x))throw new Error(label+at+' must be a valid date and time.');
+      return new Date(x).toISOString();
+    };
+    const startsAt=date(s.startsAt,'Start'),endsAt=date(s.endsAt,'End');
+    if(startsAt&&endsAt&&startsAt>=endsAt)throw new Error('End must be after start'+at+'.');
+    return {id,image,mobileImage,headline,cta,link:{type:l.type as PromotionLink['type'],value:linkValue},startsAt,endsAt,hidden:s.hidden===true};
+  });
+}
+/** Slides customers see now: not hidden and within their optional schedule. */
+export const activePromotions=(promotions:Promotion[]|null|undefined,now=Date.now())=>(promotions||[]).filter(p=>!p.hidden&&(!p.startsAt||Date.parse(p.startsAt)<=now)&&(!p.endsAt||now<Date.parse(p.endsAt)));

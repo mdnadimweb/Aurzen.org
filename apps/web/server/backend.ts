@@ -1,6 +1,6 @@
 import 'server-only';
 import {cookies} from 'next/headers';
-import type {Product,HeroSlide,Storefront} from '@aurzen/shared/catalog';
+import type {Product,HeroSlide,Storefront,Category,Promotion} from '@aurzen/shared/catalog';
 
 export function backendConfig(){
   const url=process.env.INTERNAL_API_URL||'http://127.0.0.1:4000';
@@ -16,5 +16,5 @@ async function read<T>(path:string,authenticated=false):Promise<T>{
   if(!response.ok)throw new Error('Store service is unavailable.');
   return response.json();
 }
-export const catalog=()=>read<{products:Product[];categories:string[];hero?:HeroSlide[]|null;storefront?:Storefront|null;serverNow:number}>('/api/catalog/');
+export const catalog=()=>read<{products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;serverNow:number}>('/api/catalog/');
 export const isAdmin=async()=>(await read<{authenticated:boolean}>('/api/admin/session/',true)).authenticated;

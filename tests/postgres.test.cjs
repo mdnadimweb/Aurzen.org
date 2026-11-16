@@ -125,7 +125,7 @@ test('storefront announcement and category covers save and replace on PostgreSQL
   try{
     auth.requireAdmin=async()=>{};
     const box=(await lib.catalog()).products.find(p=>p.category==='Mystery Boxes');
-    const first={announcement:{message:'First',detail:''},covers:{'Mystery Boxes':box.id}},second={announcement:{message:'Second',detail:'Detail'},covers:{}};
+    const first={announcement:{message:'First',detail:''},covers:{'Mystery Boxes':box.id},featured:['Mystery Boxes']},second={announcement:{message:'Second',detail:'Detail'},covers:{},featured:[]};
     assert.equal((await POST(request({action:'saveStorefront',storefront:first}))).status,200);
     assert.deepEqual((await lib.catalog()).storefront,first);
     assert.equal((await POST(request({action:'saveStorefront',storefront:second}))).status,200);

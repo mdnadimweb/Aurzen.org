@@ -37,7 +37,8 @@ async function transfer({source,client,apply=false,initialize}){
       const current=await tx.execute('SELECT (SELECT count(*) FROM products)+(SELECT count(*) FROM orders)+(SELECT count(*) FROM categories) AS count');
       if(Number(current.rows[0].count)!==0)throw new Error('Target changed during import. Catalog import cancelled.');
       const statements=[];
-      for(const row of data.categories)statements.push({sql:'INSERT INTO categories(name) VALUES(?)',args:[row.name]});
+      // Parent, slug and cover are copied when the source has them; older sources only have names.
+      for(const row of data.categories)statements.push(row.parent||row.slug||row.cover?{sql:'INSERT INTO categories(name,parent,slug,cover) VALUES(?,?,?,?)',args:[row.name,row.parent||null,row.slug||null,row.cover||null]}:{sql:'INSERT INTO categories(name) VALUES(?)',args:[row.name]});
       for(const p of data.products){
         // Sizes/colours are copied only when the source has any, so older target schemas keep working.
         const variants=(p.sizes&&p.sizes!=='[]')||(p.colors&&p.colors!=='[]');

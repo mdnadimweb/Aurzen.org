@@ -1,7 +1,8 @@
 import { requireAdmin } from '../../../lib/auth';
 import { catalog, database, orders, transaction } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
-import { statuses, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, type Order } from '@aurzen/shared/catalog';
+import { statuses, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
+import { addCategory, editCategory, deleteCategory } from '../../../lib/categories';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
 function productOffer(value:unknown){
@@ -68,15 +69,26 @@ export async function POST(request: Request) {
                 assert(Number.isSafeInteger(d.id), 'Invalid product.');
                 await db.prepare('DELETE FROM products WHERE id=?').run(d.id);
             }
-            else if (d.action === 'addCategory') {
-                const name = text(d.name, 2, 80, 'Category');
-                assert(!await db.prepare('SELECT name FROM categories WHERE lower(name)=lower(?)').get(name), 'This category already exists.');
-                await db.prepare('INSERT INTO categories VALUES(?)').run(name);
+            else if (d.action === 'addCategory') await addCategory(db, d);
+            else if (d.action === 'editCategory') await editCategory(db, d);
+            else if (d.action === 'deleteCategory') await deleteCategory(db, d);
+            else if (d.action === 'markRead') {
+                // Read status is separate from the fulfilment status and never changes it.
+                const row = await db.prepare('SELECT payload FROM orders WHERE id=?').get(text(d.id, 1, 100, 'Order ID'));
+                assert(row, 'Order not found.', 404);
+                const order = JSON.parse(String(row.payload)) as Order;
+                if (!order.readAt) { order.readAt = new Date().toISOString(); await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order), order.id); }
             }
-            else if (d.action === 'deleteCategory') {
-                const name = text(d.name, 1, 80, 'Category');
-                assert(!await db.prepare('SELECT id FROM products WHERE category=?').get(name), 'Move or remove products before deleting this category.');
-                await db.prepare('DELETE FROM categories WHERE name=?').run(name);
+            else if (d.action === 'savePromotions') {
+                let promotions;
+                try { promotions = normalizePromotions(d.promotions); }
+                catch (error) { throw new HttpError(400, error instanceof Error ? error.message : 'Invalid promotions.'); }
+                for (const [index, p] of promotions.entries()) {
+                    for (const image of [p.image, p.mobileImage]) if (imagePath.test(image)) assert(await db.prepare('SELECT id FROM images WHERE id=?').get(image.slice('/media/'.length)), `An uploaded image on promotion ${index + 1} is unavailable. Upload it again.`);
+                    if (p.link.type === 'category') assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(p.link.value), `Choose an existing category for promotion ${index + 1}.`);
+                    if (p.link.type === 'product') assert(/^\d+$/.test(p.link.value) && await db.prepare('SELECT id FROM products WHERE id=?').get(Number(p.link.value)), `Choose an existing product for promotion ${index + 1}.`);
+                }
+                await db.prepare("INSERT INTO settings(key,value) VALUES('promotions',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(promotions));
             }
             else if (d.action === 'status') {
                 assert(statuses.includes(d.status), 'Invalid order status.');
@@ -108,6 +120,10 @@ export async function POST(request: Request) {
                 let storefront;
                 try{storefront=normalizeStorefront(d.storefront);}
                 catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid storefront settings.');}
+                for(const name of storefront.featured||[]){
+                    const row=await db.prepare('SELECT parent FROM categories WHERE name=?').get(name);
+                    assert(row&&!row.parent,`Featured category "${name}" must be an existing main category.`);
+                }
                 for(const [category,id] of Object.entries(storefront.covers)){
                     assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(category),`Category "${category}" no longer exists.`);
                     assert(await db.prepare('SELECT id FROM products WHERE id=? AND category=?').get(id,category),`Choose a cover product from ${category}.`);

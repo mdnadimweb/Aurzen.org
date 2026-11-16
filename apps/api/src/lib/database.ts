@@ -3,7 +3,7 @@ import {mkdirSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 import {localClient} from './local-database';
 import {postgresClient} from './postgres-database';
-import {seed,type Product,type Order,type HeroSlide,type Storefront} from '@aurzen/shared/catalog';
+import {seed,slugify,type Product,type Order,type HeroSlide,type Storefront,type Category,type Promotion} from '@aurzen/shared/catalog';
 
 export type Dialect='postgres'|'sqlite';
 // Each write transaction gets its own handle; concurrent requests never share it.
@@ -25,6 +25,9 @@ const state=globalThis as typeof globalThis & {aurzenDatabase?:Promise<Database>
 const postgresSchema=`
   CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS categories(name TEXT PRIMARY KEY,position BIGSERIAL NOT NULL);
+  ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent TEXT;
+  ALTER TABLE categories ADD COLUMN IF NOT EXISTS slug TEXT;
+  ALTER TABLE categories ADD COLUMN IF NOT EXISTS cover TEXT;
   CREATE TABLE IF NOT EXISTS images(id TEXT PRIMARY KEY,data BYTEA NOT NULL);
   CREATE TABLE IF NOT EXISTS products(id SERIAL PRIMARY KEY,name TEXT NOT NULL,category TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),stock INTEGER NOT NULL CHECK(stock>=0),image TEXT NOT NULL,tag TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',images TEXT NOT NULL DEFAULT '[]',offer TEXT NOT NULL DEFAULT 'null',sizes TEXT NOT NULL DEFAULT '[]',colors TEXT NOT NULL DEFAULT '[]');
   ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes TEXT NOT NULL DEFAULT '[]';
@@ -42,6 +45,18 @@ const sqliteSchema=`
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL);`;
 
+/** Gives every category a unique URL slug once; later renames keep it, so shared links stay valid. */
+export async function uniqueCategorySlug(db:Database,name:string,parent:string|null,except?:string){
+  const base=slugify(name);
+  const taken=new Set((await db.prepare('SELECT name,slug,parent FROM categories').all()).filter(c=>c.name!==except&&(c.parent?String(c.parent):null)===parent).map(c=>String(c.slug||'')));
+  let slug=base,n=2;
+  while(taken.has(slug))slug=base+'-'+n++;
+  return slug;
+}
+async function backfillCategorySlugs(db:Database){
+  const missing=await db.prepare("SELECT name,parent FROM categories WHERE slug IS NULL OR slug=''").all();
+  for(const c of missing)await db.prepare('UPDATE categories SET slug=? WHERE name=?').run(await uniqueCategorySlug(db,String(c.name),c.parent?String(c.parent):null,String(c.name)),String(c.name));
+}
 // Products inserted with explicit IDs (demo seed, data import) must not collide with new ones.
 export async function syncProductIds(db:Database){
   if(db.dialect==='postgres')await db.exec("SELECT setval(pg_get_serial_sequence('products','id'),COALESCE((SELECT max(id) FROM products),1),(SELECT count(*)>0 FROM products))");
@@ -78,6 +93,8 @@ async function initialize(){
         if(!columns.some(column=>column.name==='offer'))await db.exec("ALTER TABLE products ADD COLUMN offer TEXT NOT NULL DEFAULT 'null'");
         if(!columns.some(column=>column.name==='sizes'))await db.exec("ALTER TABLE products ADD COLUMN sizes TEXT NOT NULL DEFAULT '[]'");
         if(!columns.some(column=>column.name==='colors'))await db.exec("ALTER TABLE products ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
+        const categoryColumns=await db.prepare('PRAGMA table_info(categories)').all();
+        for(const column of ['parent','slug','cover'])if(!categoryColumns.some(c=>c.name===column))await db.exec(`ALTER TABLE categories ADD COLUMN ${column} TEXT`);
       }
       if(!await db.prepare("SELECT value FROM settings WHERE key='initialized'").get()){
         // A hosted database starts empty: transfer the real catalog with the import script.
@@ -87,6 +104,7 @@ async function initialize(){
         }
         await db.prepare("INSERT INTO settings VALUES('initialized','1')").run();
       }
+      await backfillCategorySlugs(db);
       await syncProductIds(db);
       await tx.commit();
     }catch(error){if(!tx.closed)await tx.rollback();throw error;}finally{tx.close();}
@@ -100,14 +118,18 @@ export function database(){
 export async function catalog(connection?:Database){
   const db=connection||await database();
   const products=await db.prepare('SELECT * FROM products ORDER BY id').all();
-  const categories=await db.prepare(`SELECT name FROM categories ORDER BY ${db.dialect==='postgres'?'position':'rowid'}`).all();
+  const categories=await db.prepare(`SELECT name,parent,slug,cover FROM categories ORDER BY ${db.dialect==='postgres'?'position':'rowid'}`).all();
+  const categoryDetails:Category[]=categories.map(c=>({name:String(c.name),slug:String(c.slug||slugify(String(c.name))),parent:c.parent?String(c.parent):null,cover:c.cover?String(c.cover):null}));
+  // Empty list until the owner adds homepage promotion slides.
+  const promotionsRow=await db.prepare("SELECT value FROM settings WHERE key='promotions'").get();
+  const promotions=promotionsRow?JSON.parse(String(promotionsRow.value)) as Promotion[]:[];
   // null until the owner saves slides; the storefront then shows its automatic defaults.
   const heroRow=await db.prepare("SELECT value FROM settings WHERE key='heroSlides'").get();
   const hero=heroRow?JSON.parse(String(heroRow.value)) as HeroSlide[]:null;
   // null until the owner saves an announcement or category covers.
   const storefrontRow=await db.prepare("SELECT value FROM settings WHERE key='storefront'").get();
   const storefront=storefrontRow?JSON.parse(String(storefrontRow.value)) as Storefront:null;
-  return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null')),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categories.map(c=>String(c.name)),hero,storefront,serverNow:Date.now()};
+  return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null')),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){
   return (await (await database()).prepare('SELECT payload FROM orders ORDER BY created DESC').all()).map(o=>JSON.parse(String(o.payload)) as Order);
