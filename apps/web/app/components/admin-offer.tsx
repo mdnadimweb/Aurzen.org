@@ -2,12 +2,12 @@
 import {useState} from 'react';
 import {money,productPricing,type Product} from '@aurzen/shared/catalog';
 
-function localDate(value?:string|null){
+export function localDate(value?:string|null){
   if(!value)return '';
   const time=new Date(value).getTime();
   return Number.isFinite(time)?new Date(time+6*60*60*1000).toISOString().slice(0,23):'';
 }
-function utcDate(value:string){
+export function utcDate(value:string){
   if(!value)return null;
   const date=new Date(value+'+06:00');
   return Number.isFinite(date.getTime())?date.toISOString():value;

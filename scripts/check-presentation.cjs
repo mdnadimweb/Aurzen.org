@@ -112,9 +112,10 @@ async function run(){
   async function search(value){await current.evaluate(`(()=>{const input=document.querySelector('[aria-label="Search products"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);await pause(80);}
   await search('exceptionally');assert.equal(await current.evaluate(`document.querySelectorAll('.product').length`),1);
   await search('no such product here');assert(await current.evaluate(`document.querySelectorAll('.product').length===0&&document.querySelector('.shop .empty').textContent.includes('No pieces found')`));
-  await search('');await current.evaluate(`Array.from(document.querySelectorAll('.shop-toolbar .chips button')).find(button=>button.textContent==='Clothing').click()`);await pause(80);
-  assert.equal(await current.evaluate(`document.querySelectorAll('.product').length`),2);
-  await current.evaluate(`Array.from(document.querySelectorAll('.shop-toolbar .chips button')).find(button=>button.textContent==='All').click()`);await pause(80);
+  await search('');await current.evaluate(`Array.from(document.querySelectorAll('.shop-toolbar .chips a')).find(link=>link.textContent==='Clothing').click()`);
+  // Category chips open the shareable collection page.
+  await poll(()=>current.evaluate(`location.pathname==='/collections/clothing/'&&document.querySelectorAll('.product').length===2`));
+  await current.navigate('/shop/');
   await current.evaluate(`(()=>{const select=document.querySelector('[aria-label="Sort products"]');select.value='price-asc';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);await pause(80);
   assert(await current.evaluate(`document.querySelector('.product-image').getAttribute('href')==='/products/3/'`));
   await current.click('.product-image');await poll(()=>current.evaluate(`location.pathname==='/products/3/'&&!!document.querySelector('.detail-copy button.primary')`));

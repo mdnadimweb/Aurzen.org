@@ -52,7 +52,8 @@ async function transfer({data,apply=false}){
     }
     await transaction(async tx=>{
       if(Number((await tx.prepare(count).get()).count)!==0)throw new Error('Target changed during import. Catalog import cancelled.');
-      for(const row of data.categories)await tx.prepare('INSERT INTO categories(name) VALUES(?)').run(row.name);
+      // Parent, slug and cover are copied when the source has them; older sources only have names.
+      for(const row of data.categories)if(row.parent||row.slug||row.cover)await tx.prepare('INSERT INTO categories(name,parent,slug,cover) VALUES(?,?,?,?)').run(row.name,row.parent||null,row.slug||null,row.cover||null);else await tx.prepare('INSERT INTO categories(name) VALUES(?)').run(row.name);
       for(const p of data.products){
         // Sizes/colours are copied only when the source has any, so older target schemas keep working.
         const variants=(p.sizes&&p.sizes!=='[]')||(p.colors&&p.colors!=='[]');

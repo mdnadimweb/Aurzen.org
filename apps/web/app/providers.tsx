@@ -1,8 +1,8 @@
 'use client';
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import type { Product, CartItem, HeroSlide, Storefront } from '@aurzen/shared/catalog';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { categoryList, type Product, type CartItem, type HeroSlide, type Storefront, type Category, type Promotion } from '@aurzen/shared/catalog';
 import {usePathname} from 'next/navigation';
-type Catalog={products:Product[];categories:string[];hero?:HeroSlide[]|null;storefront?:Storefront|null;serverNow?:number};
+export type Catalog={products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;serverNow?:number};
 export async function api<T = any>(url: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers }, cache: 'no-store' });
     const result = await response.json();
@@ -16,12 +16,12 @@ function useStoreState(initialCatalog:Catalog) {
     const clockOffset=useRef(initialCatalog.serverNow?initialCatalog.serverNow-Date.now():0);
     const [bagOpen,setBagOpen]=useState(false);
     useEffect(()=>{setBagOpen(false);},[pathname]);
-    const [products, setProducts] = useState<Product[]>(initialCatalog.products), [categories, setCategories] = useState<string[]>(initialCatalog.categories), [hero, setHero] = useState<HeroSlide[]|null>(initialCatalog.hero||null), [storefront, setStorefront] = useState<Storefront|null>(initialCatalog.storefront||null), [cart, setCart] = useState<CartItem[]>([]), [ready, setReady] = useState(false), [loaded, setLoaded] = useState(true), [error, setError] = useState('');
+    const [products, setProducts] = useState<Product[]>(initialCatalog.products), [categories, setCategories] = useState<string[]>(initialCatalog.categories), [hero, setHero] = useState<HeroSlide[]|null>(initialCatalog.hero||null), [storefront, setStorefront] = useState<Storefront|null>(initialCatalog.storefront||null), [categoryDetails, setCategoryDetails] = useState<Category[]>(initialCatalog.categoryDetails||[]), [promotions, setPromotions] = useState<Promotion[]>(initialCatalog.promotions||[]), [cart, setCart] = useState<CartItem[]>([]), [ready, setReady] = useState(false), [loaded, setLoaded] = useState(true), [error, setError] = useState('');
     const refresh = useCallback(async () => { try {
         const d = await api('/api/catalog');
         setProducts(d.products);
         setCategories(d.categories);
-        setHero(d.hero||null); setStorefront(d.storefront||null);
+        setHero(d.hero||null); setStorefront(d.storefront||null); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]);
         if(Number.isFinite(d.serverNow)){clockOffset.current=d.serverNow-Date.now();setNow(d.serverNow);}
         setLoaded(true);
         setError('');
@@ -59,7 +59,9 @@ function useStoreState(initialCatalog:Catalog) {
             localStorage.setItem('aurzen-cart', JSON.stringify(cart));
         }
         catch { } }, [ready, cart]);
-    return { products, setProducts, categories, setCategories, hero, setHero, storefront, setStorefront, cart, setCart, ready, loaded, error, refresh, bagOpen, setBagOpen, now };
+    // categoryTree: every category with its parent and URL slug (older API responses fall back to names only).
+    const categoryTree=useMemo(()=>categoryList(categoryDetails,categories),[categoryDetails,categories]);
+    return { products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront, cart, setCart, ready, loaded, error, refresh, bagOpen, setBagOpen, now };
 }
 const StoreContext = createContext<ReturnType<typeof useStoreState> | null>(null);
 export function StoreProvider({ children,initialCatalog }: {

@@ -20,7 +20,7 @@ test.after(async()=>{
 
 test('storefront validation trims text and rejects missing, long or malformed values',()=>{
   const result=normalizeStorefront({...settings({announcement:{message:'  Eid   edit ',detail:' '},covers:{Clothing:1}}),extra:'ignored'});
-  assert.deepEqual(result,{announcement:{message:'Eid edit',detail:''},covers:{Clothing:1}});
+  assert.deepEqual(result,{announcement:{message:'Eid edit',detail:''},covers:{Clothing:1},featured:[]});
   assert.throws(()=>normalizeStorefront(settings({announcement:{message:' ',detail:''}})),/message is required/);
   assert.throws(()=>normalizeStorefront(settings({announcement:{message:'x'.repeat(81),detail:''}})),/at most 80/);
   assert.throws(()=>normalizeStorefront(settings({announcement:{message:'Hi',detail:'x'.repeat(81)}})),/detail must be at most 80/);
@@ -53,12 +53,12 @@ test('saving storefront requires admin, checks categories and covers, and replac
     assert.equal(response.status,400);
     assert.equal((await catalog()).storefront,null,'Rejected saves leave the storefront unchanged');
 
-    const saved=settings({covers:{Clothing:clothing.id}});
+    const saved={...settings({covers:{Clothing:clothing.id}}),featured:[]};
     response=await POST(request({action:'saveStorefront',storefront:saved}));
     assert.equal(response.status,200);
     assert.deepEqual((await response.json()).storefront,saved,'The admin response carries the saved settings');
     assert.deepEqual((await catalog()).storefront,saved);
-    const replacement={announcement:defaultStorefront.announcement,covers:{}};
+    const replacement={announcement:defaultStorefront.announcement,covers:{},featured:[]};
     assert.equal((await POST(request({action:'saveStorefront',storefront:replacement}))).status,200);
     assert.deepEqual((await catalog()).storefront,replacement,'Saving again replaces the single settings row');
   }finally{auth.requireAdmin=original;}

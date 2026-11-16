@@ -10,13 +10,16 @@ import {initials,relativeTime} from './admin/metrics';
 import OrderEditor from './admin/order-editor';
 import HeroEditor from './admin/hero-editor';
 import StorefrontEditor from './admin/storefront-editor';
+import CategoryManager from './admin/category-manager';
+import ProductsTable from './admin/products-table';
+import PromotionsEditor from './admin/promotions-editor';
 import {defaultHeroSlides} from './FashionHero';
 
 import BrandLogo from './brand-logo';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { money, editableStatuses, lineKey, optionLabel, type Product, type Order } from '@aurzen/shared/catalog';
+import { money, editableStatuses, lineKey, optionLabel, mainCategories, type Product, type Order } from '@aurzen/shared/catalog';
 import { api, useStore } from '../providers';
 
 const tabs:{name:string;icon:IconName}[]=[{name:'Overview',icon:'overview'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Homepage',icon:'slides'},{name:'Orders',icon:'orders'},{name:'Customers',icon:'customers'}];
@@ -27,10 +30,10 @@ const stockText=(stock:number)=>stock===0?'Out of stock':stock<=5?'Low stock':'I
 const bannerKey='aurzen-studio-banner-dismissed';
 type Notice={text:string;kind:'success'|'error'};
 
-function DeliveryEditor({order,onSave}:{order:Order;onSave:(data:Record<string,unknown>)=>Promise<void>}){
+function DeliveryEditor({order,onSave,onOpen}:{order:Order;onSave:(data:Record<string,unknown>)=>Promise<void>;onOpen:()=>void}){
     const [saving,setSaving]=useState(false);
     const filled=Boolean(order.courier&&order.trackingReference);
-    return <details className="admin-delivery">
+    return <details className="admin-delivery" onToggle={e=>{if(e.currentTarget.open)onOpen();}}>
         <summary><Icon name="truck"/><span>Delivery details</span><span className="admin-delivery__state">{filled?order.courier:'Not added'}</span><Icon name="chevron" className="a-icon admin-delivery__chevron"/></summary>
         <form className="admin-delivery-form" onSubmit={async e=>{e.preventDefault();if(saving)return;const data=new FormData(e.currentTarget);setSaving(true);try{await onSave({action:'delivery',id:order.id,courier:data.get('courier'),trackingReference:data.get('trackingReference')});}finally{setSaving(false);}}}>
             <label>Courier<input name="courier" defaultValue={order.courier||''} maxLength={80} disabled={saving} placeholder="Courier name"/></label>
@@ -42,14 +45,17 @@ function DeliveryEditor({order,onSave}:{order:Order;onSave:(data:Record<string,u
 }
 export default function AdminWorkspace() {
     const router = useRouter();
-    const { products, setProducts, categories, setCategories, hero, setHero, storefront, setStorefront } = useStore();
+    const { products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront } = useStore();
+    const [categoryRequest,setCategoryRequest]=useState(false);
     const [offerPrice,setOfferPrice]=useState(0);
     const [orders, setOrders] = useState<Order[]>([]), [tab, setTab] = useState('Overview'), [notice, setNoticeState] = useState<Notice|null>(null), [modal, setModal] = useState(''), [editing, setEditing] = useState<Product | null>(null), [saving, setSaving] = useState(false), [uploading,setUploading]=useState(false), [adminLoaded, setAdminLoaded] = useState(false), [formError,setFormError]=useState('');
     const [navOpen,setNavOpen]=useState(false),[bannerOpen,setBannerOpen]=useState(true),[editingOrder,setEditingOrder]=useState<Order|null>(null);
     const menuButton=useRef<HTMLButtonElement>(null),sidebar=useRef<HTMLElement>(null);
     const setNotice=(text:string,kind:Notice['kind']='success')=>setNoticeState(text?{text,kind}:null);
     useEffect(()=>{setFormError('');setOfferPrice(editing?.price||0);},[modal,editing?.id]);
-    useEffect(() => { api('/api/admin').then(d => { setProducts(d.products); setCategories(d.categories); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
+    useEffect(() => { api('/api/admin').then(d => { setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
+    // Keep the unread-order badge current while the studio is open (orders only, so edits in progress are untouched).
+    useEffect(() => { const poll = () => { if (document.visibilityState === 'visible') api('/api/admin').then(d => setOrders(d.orders)).catch(() => {}); }; const timer = setInterval(poll, 30000); document.addEventListener('visibilitychange', poll); return () => { clearInterval(timer); document.removeEventListener('visibilitychange', poll); }; }, []);
     useEffect(() => { if (notice) {
         const t = setTimeout(() => setNoticeState(null), 6000);
         return () => clearTimeout(t);
@@ -65,7 +71,10 @@ export default function AdminWorkspace() {
         document.addEventListener('keydown',onKey);desktop.addEventListener('change',onChange);
         return()=>{document.removeEventListener('keydown',onKey);desktop.removeEventListener('change',onChange);};
     },[navOpen]);
-    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin', { method: 'POST', body: JSON.stringify(data) }); setProducts(d.products); setCategories(d.categories); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); }
+    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin', { method: 'POST', body: JSON.stringify(data) }); setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); }
+    const unread = orders.filter(o => !o.readAt).length;
+    // Read status is saved on the server and never changes the fulfilment status.
+    const markRead = (order: Order) => { if (order.readAt) return; const readAt = new Date().toISOString(); setOrders(list => list.map(o => o.id === order.id ? { ...o, readAt } : o)); api('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'markRead', id: order.id }) }).then(d => setOrders(d.orders)).catch(e => setNotice((e as Error).message, 'error')); };
     async function change(data: Record<string, unknown>) { try {
         await mutate(data);
         setNotice('Changes saved');
@@ -84,7 +93,7 @@ export default function AdminWorkspace() {
     <aside ref={sidebar} id="admin-sidebar" className={'admin-sidebar'+(navOpen?' is-open':'')} aria-label="Studio navigation">
         <div className="admin-sidebar__brand"><BrandLogo/><button type="button" className="a-btn a-btn--icon admin-sidebar__close" aria-label="Close navigation" onClick={closeNav}><Icon name="close"/></button></div>
         <small className="admin-sidebar__label">Workspace</small>
-        <nav className="admin-nav">{tabs.map(t => <button type="button" className={tab === t.name ? 'selected' : ''} aria-current={tab===t.name?'page':undefined} key={t.name} onClick={() => choose(t.name)}><Icon name={t.icon}/>{t.name}</button>)}</nav>
+        <nav className="admin-nav">{tabs.map(t => <button type="button" className={tab === t.name ? 'selected' : ''} aria-current={tab===t.name?'page':undefined} key={t.name} onClick={() => choose(t.name)}><Icon name={t.icon}/>{t.name}{t.name==='Orders'&&unread>0&&<span className="admin-nav__badge" aria-label={unread+' unread order'+(unread===1?'':'s')}>{unread>99?'99+':unread}</span>}</button>)}</nav>
         <div className="admin-sidebar__foot">
             <a href="/" className="admin-sidebar__link"><Icon name="storefront"/>View storefront<Icon name="external" className="a-icon admin-sidebar__ext"/></a>
             <div className="admin-user"><span aria-hidden="true">N</span><div>Nadim<small>Store owner</small></div></div>
@@ -111,28 +120,20 @@ export default function AdminWorkspace() {
         <div className="admin-content">
         {!adminLoaded && <p className="admin-loading" role="status">Loading your workspace…</p>}
         {bannerOpen&&<div className="admin-info" role="note"><Icon name="info"/><p><strong>Before you open orders</strong>Products and orders are stored on the server. Replace sample products and confirm delivery settings before opening orders.</p><button type="button" className="a-btn a-btn--icon a-btn--sm" aria-label="Dismiss this note" onClick={dismissBanner}><Icon name="close"/></button></div>}
-        <div className="admin-title"><div><div className="admin-eyebrow">{tab==='Overview'?'Your business, at a glance':'Studio · '+tab}</div><h1>{tab === 'Overview' ? 'Welcome to your studio, Nadim.' : tab}</h1><p>{tab === 'Overview' ? 'A little clarity for your everyday business.' : 'Manage your AURZÉN ' + tab.toLowerCase() + '.'}</p></div>{['Products', 'Categories'].includes(tab) && <button type="button" className="a-btn a-btn--primary" onClick={() => { setEditing(null); setModal(tab === 'Products' ? 'product' : 'category'); }}><Icon name="plus"/>Add {tab === 'Products' ? 'product' : 'category'}</button>}</div>
-    {tab === 'Overview' && (adminLoaded?<Overview orders={orders} products={products} onEditProduct={openProduct} onViewOrders={()=>setTab('Orders')} onAddProduct={()=>{ setTab('Products'); openProduct(null); }} onAddCategory={()=>{ setTab('Categories'); setModal('category'); }} onStorefront={()=>go('home')}/>:<div className="ov-skeleton" aria-hidden="true">{[0,1,2,3].map(i=><div key={i} className="a-card"/>)}</div>)}
-    {tab === 'Products' && <section className="a-card a-card--flush" aria-label="Products"><div className="admin-table-wrap"><table className="admin-table admin-table--products"><thead><tr><th scope="col">Product</th><th scope="col">Category</th><th scope="col" className="admin-num">Price</th><th scope="col">Stock</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead><tbody>{products.map(p => <tr key={p.id}>
-        <td data-label="Product"><div className="admin-product"><span className="admin-thumb" aria-hidden="true"><ProductImage src={p.image} alt={p.name} category={p.category}/></span><div><strong>{p.name}</strong>{p.tag&&<small>{p.tag}</small>}</div></div></td>
-        <td data-label="Category">{p.category}</td>
-        <td data-label="Price" className="admin-num">{money(p.price)}{p.offer?.enabled&&<small>Offer {p.offer.percent}%</small>}</td>
-        <td data-label="Stock"><div className="a-stock" data-level={stockLevel(p.stock)}><span className="a-stock__dot" aria-hidden="true"/><input aria-label={'Stock for ' + p.name} aria-describedby={'stock-state-'+p.id} className="stock-input" type="number" min="0" value={p.stock} onChange={e => { const stock = Number(e.target.value); if (Number.isSafeInteger(stock) && stock >= 0)
-        setProducts(products.map(x => x.id === p.id ? { ...x, stock } : x)); }} onBlur={e => void change({ action: 'stock', id: p.id, stock: Number(e.target.value) })}/><small id={'stock-state-'+p.id}>{stockText(p.stock)}</small></div></td>
-        <td data-label="Actions" className="admin-actions"><button type="button" className="a-btn a-btn--secondary a-btn--sm" data-row-action="edit" aria-label={'Edit '+p.name} onClick={() => openProduct(p)}><Icon name="edit"/>Edit</button><button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" data-row-action="remove" aria-label={'Remove '+p.name} onClick={() => { if (confirm('Remove ' + p.name + ' from the store?'))
-        void change({ action: 'deleteProduct', id: p.id }); }}><Icon name="trash"/>Remove</button></td>
-    </tr>)}</tbody></table></div>{!products.length&&<div className="admin-empty"><span className="admin-empty__icon"><Icon name="products"/></span><h3>No products yet.</h3><p>Add your first product to start selling.</p></div>}</section>}
-    {tab === 'Categories' && <div className="admin-category-grid">{categories.map((c) => { const count=products.filter(p => p.category === c).length; return <article className="a-card admin-category" key={c}><span className="admin-category__icon"><Icon name={/mystery/i.test(c)?'box':'categories'}/></span><h2>{c}</h2><p>{count} product{count===1?'':'s'}</p><button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" aria-label={'Remove category '+c} onClick={() => { if (confirm('Remove ' + c + '?'))
-        void change({ action: 'deleteCategory', name: c }); }}><Icon name="trash"/>Remove category</button></article>; })}</div>}
+        <div className="admin-title"><div><div className="admin-eyebrow">{tab==='Overview'?'Your business, at a glance':'Studio · '+tab}</div><h1>{tab === 'Overview' ? 'Welcome to your studio, Nadim.' : tab}</h1><p>{tab === 'Overview' ? 'A little clarity for your everyday business.' : 'Manage your AURZÉN ' + tab.toLowerCase() + '.'}</p></div>{tab === 'Products' && <button type="button" className="a-btn a-btn--primary" onClick={() => { setEditing(null); setModal('product'); }}><Icon name="plus"/>Add product</button>}</div>
+    {tab === 'Overview' && (adminLoaded?<Overview orders={orders} products={products} onEditProduct={openProduct} onViewOrders={()=>setTab('Orders')} onAddProduct={()=>{ setTab('Products'); openProduct(null); }} onAddCategory={()=>{ setTab('Categories'); setCategoryRequest(true); }} onStorefront={()=>go('home')}/>:<div className="ov-skeleton" aria-hidden="true">{[0,1,2,3].map(i=><div key={i} className="a-card"/>)}</div>)}
+    {tab === 'Products' && <ProductsTable products={products} categories={categoryTree} onEdit={openProduct} onStockInput={(id, stock) => setProducts(products.map(x => x.id === id ? { ...x, stock } : x))} onStockSave={(id, stock) => void change({ action: 'stock', id, stock })} onRemove={p => { if (confirm('Remove ' + p.name + ' from the store?')) void change({ action: 'deleteProduct', id: p.id }); }}/>}
+    {tab === 'Categories' && <CategoryManager categories={categoryTree} products={products} requestNew={categoryRequest} onRequestHandled={() => setCategoryRequest(false)} onSave={async data => { await mutate(data); setNotice('Category saved'); }} onDelete={name => change({ action: 'deleteCategory', name })}/>}
     {tab === 'Homepage' && (adminLoaded?<HeroEditor key={'hero:'+JSON.stringify(hero)} initialSlides={hero?.length?hero:defaultHeroSlides(products,categories)} custom={!!hero?.length} categories={categories} onSave={async slides=>{await mutate({action:'saveHero',slides});setNotice('Homepage slides saved');}} onReset={async()=>{await mutate({action:'resetHero'});setNotice('Automatic slides restored');}}/>:<p className="admin-loading" role="status">Loading your slides…</p>)}
-    {tab === 'Homepage' && adminLoaded && <StorefrontEditor key={'storefront:'+JSON.stringify(storefront)} initial={storefront} categories={categories} products={products} onSave={async value=>{await mutate({action:'saveStorefront',storefront:value});setNotice('Storefront saved');}}/>}
+    {tab === 'Homepage' && adminLoaded && <StorefrontEditor key={'storefront:'+JSON.stringify(storefront)+categoryTree.length} initial={storefront} categories={mainCategories(categoryTree).map(c=>c.name)} products={products} onSave={async value=>{await mutate({action:'saveStorefront',storefront:value});setNotice('Storefront saved');}}/>}
+    {tab === 'Homepage' && adminLoaded && <PromotionsEditor key={'promotions:'+JSON.stringify(promotions)} initial={promotions} products={products} categories={categoryTree} onSave={async value=>{await mutate({action:'savePromotions',promotions:value});setNotice('Promotions saved');}}/>}
     {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orders.map(o => <tr key={o.id}>
-        <td data-label="Order"><span className="admin-mono">{o.id}</span><small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>setEditingOrder(o)}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
+        <td data-label="Order"><span className="admin-mono">{o.id}</span>{!o.readAt&&<span className="admin-new-marker">New<span className="sr-only"> unread order</span></span>}<small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>{markRead(o);setEditingOrder(o);}}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
         <td data-label="Customer"><strong className="admin-order-name">{o.name}</strong><small>{o.phone}</small></td>
         <td data-label="Address" className="admin-order-address">{o.address}<small>{o.area === 'dhaka' ? 'Dhaka city' : 'Outside Dhaka'} · Delivery {money(o.delivery)}</small></td>
         <td data-label="Items">{o.items.map((x) => <small key={lineKey(x)}>{x.name} × {x.qty}<br />{optionLabel(x)}</small>)}</td>
         <td data-label="Total" className="admin-num">{money(o.total)}<small>Cash on delivery</small></td>
-        <td data-label="Status"><div className="a-status-select" data-status={statusKey(o.status)}><span className="a-pill__dot" aria-hidden="true"/><select aria-label={'Status for '+o.id} value={o.status} onChange={e => void change({ action: 'status', id: o.id, status: e.target.value })}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div><DeliveryEditor key={o.id+'-'+(o.courier||'')+'-'+(o.trackingReference||'')} order={o} onSave={change}/></td>
+        <td data-label="Status"><div className="a-status-select" data-status={statusKey(o.status)}><span className="a-pill__dot" aria-hidden="true"/><select aria-label={'Status for '+o.id} value={o.status} onChange={e => void change({ action: 'status', id: o.id, status: e.target.value })}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div><DeliveryEditor key={o.id+'-'+(o.courier||'')+'-'+(o.trackingReference||'')} order={o} onSave={change} onOpen={()=>markRead(o)}/></td>
     </tr>)}</tbody></table></div>}</section>}
     {tab === 'Customers' && <section className="a-card a-card--flush" aria-label="Customers">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="customers"/></span><h3>No customers yet.</h3><p>Customer profiles will appear after your first order.</p></div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th scope="col">Name</th><th scope="col">Phone</th><th scope="col" className="admin-num">Orders</th><th scope="col" className="admin-num">Order value</th></tr></thead><tbody>{Array.from(new Set(orders.map(o => o.phone))).map(phone => { const list = orders.filter(o => o.phone === phone); return <tr key={phone}><td data-label="Name"><div className="admin-person"><span aria-hidden="true">{initials(list[0].name)}</span>{list[0].name}</div></td><td data-label="Phone">{phone}</td><td data-label="Orders" className="admin-num">{list.length}</td><td data-label="Order value" className="admin-num">{money(list.reduce((s, o) => s + o.total, 0))}</td></tr>; })}</tbody></table></div>}</section>}
         </div>
