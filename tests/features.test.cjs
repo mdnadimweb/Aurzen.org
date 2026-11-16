@@ -83,6 +83,22 @@ test('tracking and checkout share Bangladesh phone normalization', async () => {
   assert.equal(result.history[0].date, result.date);
 });
 
+test('new orders get short unique AZ-123456 references that track however they are typed', async () => {
+  const ids = new Set();
+  await (await database()).prepare('UPDATE products SET stock=100 WHERE id=1').run();
+  for (let i = 0; i < 20; i++) {
+    const receipt = await placeOrder({ key: randomUUID(), name: 'Short Reference', phone: '01712345678', address: 'House 10, Road 2, Dhaka', area: 'dhaka', items: [{ id: 1, qty: 1, size: 'M' }] });
+    assert.match(receipt.id, /^AZ-\d{6}$/);
+    ids.add(receipt.id);
+  }
+  assert.equal(ids.size, 20);
+  const id = [...ids][0], digits = id.slice(3);
+  for (const typed of [id, id.toLowerCase(), ' ' + id + ' ', digits, 'AZ' + digits]) assert.equal((await trackOrder(typed, '01712345678')).id, id);
+  // Older long references keep working unchanged.
+  const legacy = await store(oldOrder());
+  assert.equal((await trackOrder(legacy.id, legacy.phone)).id, legacy.id);
+});
+
 test('lookup requires matching reference and phone and uses one generic failure', async () => {
   const order = await store(oldOrder());
   assert.equal((await trackOrder(order.id, '+8801712345678')).id, order.id);

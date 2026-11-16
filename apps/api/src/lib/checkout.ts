@@ -1,4 +1,4 @@
-import { randomUUID,createHash } from 'node:crypto';
+import { randomInt,randomUUID,createHash } from 'node:crypto';
 import { catalog, transaction,type Database } from './database';
 import { assert, text } from './http';
 import { validOption,validColor,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
@@ -31,6 +31,19 @@ async function calculateQuote(d:Record<string,unknown>,db?:Database):Promise<Che
     return {items,subtotal,delivery,total,quote,serverNow};
 }
 export const quoteOrder=(d:Record<string,unknown>)=>calculateQuote(d);
+// Short, easy-to-read order references such as AZ-482193 (6 random digits).
+// Random rather than sequential so order numbers don't reveal how many orders the shop gets.
+// Tracking still needs the customer's phone number as well, so a short reference is not
+// enough on its own to look an order up.
+export const orderIdPattern=/^AZ-\d{6}$/;
+async function newOrderId(db:Database){
+    for(let attempt=0;attempt<25;attempt++){
+        const id='AZ-'+randomInt(100000,1000000);
+        if(!await db.prepare('SELECT id FROM orders WHERE id=?').get(id))return id;
+    }
+    // Practically unreachable before hundreds of thousands of orders; keeps checkout working regardless.
+    return 'AZ-'+randomUUID().slice(0,8).toUpperCase();
+}
 export async function placeOrder(d: Record<string, unknown>) {
     const settings = deliverySettings();
     assert(settings.enabled, 'Ordering will open soon. Please check back later.', 503);
@@ -51,7 +64,7 @@ export async function placeOrder(d: Record<string, unknown>) {
         const current=await calculateQuote(d,db);
         assert(typeof d.quote==='string'&&d.quote===current.quote,'Prices or delivery charges changed. Review the updated total before placing your order.',409);
         const {items,delivery,total}=current;
-        const order: Order = { paymentMethod: 'cod', id: 'AZ-' + randomUUID(), name, phone, address, area: d.area as 'dhaka' | 'outside', items, total, delivery, status: 'New', date: new Date().toISOString() };
+        const order: Order = { paymentMethod: 'cod', id: await newOrderId(db), name, phone, address, area: d.area as 'dhaka' | 'outside', items, total, delivery, status: 'New', date: new Date().toISOString() };
         order.history = [{status:'New',date:order.date}];
         for (const item of items)
             await db.prepare('UPDATE products SET stock=stock-? WHERE id=?').run(item.qty,item.id);
