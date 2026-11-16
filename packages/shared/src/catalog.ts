@@ -1,6 +1,9 @@
 export type Offer = {enabled:boolean;percent:number;startsAt:string|null;endsAt:string|null};
-export type Product = {id:number;name:string;category:string;price:number;stock:number;image:string;images?:string[];tag:string;description?:string;offer?:Offer|null};
-export type CartItem = {id:number;qty:number;size:string};
+// sizes/colors: what the owner offers for this product. Empty or missing means the
+// product has no such choice and the product page does not show a picker for it.
+export type Product = {id:number;name:string;category:string;price:number;stock:number;image:string;images?:string[];tag:string;description?:string;offer?:Offer|null;sizes?:string[];colors?:string[]};
+// color is omitted (or '') for products without colour choices.
+export type CartItem = {id:number;qty:number;size:string;color?:string};
 export type OrderItem = CartItem & {name:string;price:number};
 export type CheckoutQuote={items:OrderItem[];subtotal:number;delivery:number;total:number;quote:string;serverNow:number};
 
@@ -111,10 +114,48 @@ export const seed:Product[]=[
   {id:4,name:'The Weekend Dress',category:'Clothing',price:1790,stock:12,image:photo('photo-1515372039744-b8f02a3ae446'),tag:'EDITOR’S PICK'},
 ];
 export const styleOptions=['Everyday elegance','Soft & feminine','Bold & playful','Minimal & classic'];
-/** The sizes or styles a customer can choose for a product. */
-export function productOptions(p:Pick<Product,'category'>):readonly string[]{
+/** Sizes the owner can add with one click in the studio. */
+export const sizePresets=['XS','S','M','L','XL','XXL','3XL','Free size'];
+export const variantLimits={count:20,length:30} as const;
+/** The sizes or styles a customer can choose for a product. Owner-set sizes win;
+ *  otherwise the older category rules apply ('One size' means no size choice). */
+export function productOptions(p:Pick<Product,'category'|'sizes'>):readonly string[]{
+  if(p.sizes?.length)return p.sizes;
   return p.category==='Clothing'?['S','M','L','XL']:p.category==='Mystery Boxes'?styleOptions:['One size'];
 }
-export function validOption(p:Product,size:string){
+export function validOption(p:Pick<Product,'category'|'sizes'>,size:string){
   return productOptions(p).includes(size);
+}
+/** True when the customer must pick a size (or style) on the product page. */
+export const hasSizeChoice=(p:Pick<Product,'category'|'sizes'>)=>{const options=productOptions(p);return !(options.length===1&&options[0]==='One size');};
+export const productColors=(p:Pick<Product,'colors'>):readonly string[]=>p.colors||[];
+/** A product without colours only accepts "no colour"; otherwise one of its colours. */
+export function validColor(p:Pick<Product,'colors'>,color:string|undefined){
+  const colors=productColors(p);
+  return colors.length?!!color&&colors.includes(color):!color;
+}
+/** Same product, size and colour = the same bag line. */
+export const sameLine=(a:Pick<CartItem,'id'|'size'|'color'>,b:Pick<CartItem,'id'|'size'|'color'>)=>a.id===b.id&&a.size===b.size&&(a.color||'')===(b.color||'');
+export const lineKey=(c:Pick<CartItem,'id'|'size'|'color'>)=>c.id+'-'+c.size+'-'+(c.color||'');
+/** "M · Red", "Red", or "One size" for display. */
+export function optionLabel(c:Pick<CartItem,'size'|'color'>){
+  const parts=[c.size==='One size'&&c.color?'':c.size,c.color||''].filter(Boolean);
+  return parts.join(' · ')||'One size';
+}
+/** Cleans the owner's size or colour list: trimmed, no duplicates, sensible limits. */
+export function normalizeVariants(value:unknown,label:'size'|'colour'):string[]{
+  if(value===undefined||value===null)return [];
+  if(!Array.isArray(value))throw new Error(`Invalid ${label} list.`);
+  const seen=new Set<string>(),list:string[]=[];
+  for(const item of value){
+    if(typeof item!=='string')throw new Error(`Invalid ${label}.`);
+    const text=item.replace(/\s+/g,' ').trim();
+    if(!text)continue;
+    if(text.length>variantLimits.length)throw new Error(`Each ${label} must be at most ${variantLimits.length} characters.`);
+    const key=text.toLowerCase();
+    if(seen.has(key))continue;
+    seen.add(key);list.push(text);
+  }
+  if(list.length>variantLimits.count)throw new Error(`Use at most ${variantLimits.count} ${label}s.`);
+  return list;
 }

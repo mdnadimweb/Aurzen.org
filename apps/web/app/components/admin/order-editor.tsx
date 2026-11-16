@@ -1,18 +1,18 @@
 'use client';
 import {useMemo,useState} from 'react';
-import {deliveryFees,money,productOptions,productPricing,type Order,type Product} from '@aurzen/shared/catalog';
+import {deliveryFees,money,productOptions,productColors,optionLabel,sameLine,productPricing,type Order,type Product} from '@aurzen/shared/catalog';
 import Icon from '../admin-icons';
 import StatusPill from './status-pill';
 
-type Line={key:string;id:number;size:string;qty:number};
+type Line={key:string;id:number;size:string;color:string;qty:number};
 let nextKey=0;
 const keyFor=()=>'line-'+(++nextKey);
 
 /** Owner correction form for an unshipped order. The server re-validates everything and sets the final total. */
 export default function OrderEditor({order,products,onSave,onCancel}:{order:Order;products:Product[];onSave:(data:Record<string,unknown>)=>Promise<void>;onCancel:()=>void}){
   const [name,setName]=useState(order.name),[phone,setPhone]=useState(order.phone),[address,setAddress]=useState(order.address),[area,setArea]=useState(order.area);
-  const [lines,setLines]=useState<Line[]>(()=>order.items.map(item=>({key:keyFor(),id:item.id,size:item.size,qty:item.qty})));
-  const [addId,setAddId]=useState(''),[addSize,setAddSize]=useState(''),[addQty,setAddQty]=useState(1);
+  const [lines,setLines]=useState<Line[]>(()=>order.items.map(item=>({key:keyFor(),id:item.id,size:item.size,color:item.color||'',qty:item.qty})));
+  const [addId,setAddId]=useState(''),[addSize,setAddSize]=useState(''),[addColor,setAddColor]=useState(''),[addQty,setAddQty]=useState(1);
   const [saving,setSaving]=useState(false),[error,setError]=useState('');
   const [now]=useState(()=>Date.now());
 
@@ -20,8 +20,8 @@ export default function OrderEditor({order,products,onSave,onCancel}:{order:Orde
   const originalQty=(id:number)=>order.items.filter(i=>i.id===id).reduce((n,i)=>n+i.qty,0);
   // Units available to this order: shelf stock plus what the order already holds.
   const available=(id:number)=>(product(id)?.stock??0)+originalQty(id);
-  const unitPrice=(line:Pick<Line,'id'|'size'>)=>{
-    const original=order.items.find(i=>i.id===line.id&&i.size===line.size)||order.items.find(i=>i.id===line.id);
+  const unitPrice=(line:Pick<Line,'id'|'size'|'color'>)=>{
+    const original=order.items.find(i=>sameLine(i,line))||order.items.find(i=>i.id===line.id);
     if(original)return original.price;const p=product(line.id);return p?productPricing(p,now).unitPrice:0;
   };
   const lineName=(id:number)=>order.items.find(i=>i.id===id)?.name||product(id)?.name||'Unavailable product';
@@ -36,11 +36,11 @@ export default function OrderEditor({order,products,onSave,onCancel}:{order:Orde
   const update=(key:string,change:Partial<Line>)=>setLines(list=>list.map(l=>l.key===key?{...l,...change}:l));
   const addable=products.filter(p=>p.stock>0||originalQty(p.id)>0);
   const chosen=addId?product(Number(addId)):undefined;
-  const addLine=()=>{if(!chosen||!addSize)return;setLines(list=>{const same=list.find(l=>l.id===chosen.id&&l.size===addSize);return same?list.map(l=>l===same?{...l,qty:Math.min(100,l.qty+addQty)}:l):[...list,{key:keyFor(),id:chosen.id,size:addSize,qty:addQty}];});setAddId('');setAddSize('');setAddQty(1);};
+  const addLine=()=>{if(!chosen||!addSize||(productColors(chosen).length>0&&!addColor))return;const line={id:chosen.id,size:addSize,color:addColor};setLines(list=>{const same=list.find(l=>sameLine(l,line));return same?list.map(l=>l===same?{...l,qty:Math.min(100,l.qty+addQty)}:l):[...list,{key:keyFor(),...line,qty:addQty}];});setAddId('');setAddSize('');setAddColor('');setAddQty(1);};
 
   return <form className="form-modal order-editor" aria-label={'Edit order '+order.id} onChange={()=>{if(error)setError('');}} onClick={event=>{if(error&&(event.target as HTMLElement).closest('button[type=button]'))setError('');}} onSubmit={async event=>{
     event.preventDefault();if(saving||problems.length)return;setSaving(true);setError('');
-    try{await onSave({id:order.id,name,phone,address,area,items:lines.map(({id,size,qty})=>({id,size,qty}))});}
+    try{await onSave({id:order.id,name,phone,address,area,items:lines.map(({id,size,color,qty})=>({id,size,...(color?{color}:{}),qty}))});}
     catch(e){setError((e as Error).message);}finally{setSaving(false);}
   }}>
     <div className="form-modal__head"><div><div className="admin-eyebrow">Correct an order</div><h2>Edit order</h2><p className="order-editor__ref"><span className="admin-mono">{order.id}</span><StatusPill status={order.status}/></p></div><button type="button" aria-label="Close order editor" className="a-btn a-btn--icon close" disabled={saving} onClick={onCancel}><Icon name="close"/></button></div>
@@ -62,20 +62,22 @@ export default function OrderEditor({order,products,onSave,onCancel}:{order:Orde
             return <li key={line.key} className={over?'is-over':''}>
               <div className="order-lines__name"><strong>{lineName(line.id)}</strong><small>{money(unitPrice(line))} each{!p?' · product removed':''}</small></div>
               <label className="order-lines__field">Size or style<select value={line.size} disabled={!p} onChange={e=>update(line.key,{size:e.target.value})} aria-label={'Size or style for '+lineName(line.id)}>{options.includes(line.size)?null:<option value={line.size}>{line.size}</option>}{options.map(o=><option key={o}>{o}</option>)}</select></label>
+              {(()=>{const colors=p?productColors(p):[];if(!colors.length&&!line.color)return null;return <label className="order-lines__field order-lines__field--color">Colour<select value={line.color} disabled={!p} onChange={e=>update(line.key,{color:e.target.value})} aria-label={'Colour for '+lineName(line.id)}>{line.color&&!colors.includes(line.color)?<option value={line.color}>{line.color}</option>:null}{!colors.length&&<option value="">No colour</option>}{colors.map(c=><option key={c}>{c}</option>)}</select></label>;})()}
               <div className="order-lines__qty"><span className="order-lines__label">Qty</span><div className="quantity-controls order-stepper" role="group" aria-label={'Quantity for '+lineName(line.id)}>
                 <button type="button" aria-label={'Decrease quantity for '+lineName(line.id)} disabled={line.qty<=1} onClick={()=>update(line.key,{qty:line.qty-1})}>−</button>
                 <span aria-live="polite">{line.qty}</span>
                 <button type="button" aria-label={'Increase quantity for '+lineName(line.id)} disabled={line.qty>=100||!p||(perProduct.get(line.id)||0)>=available(line.id)} onClick={()=>update(line.key,{qty:line.qty+1})}>+</button>
               </div></div>
               <strong className="order-lines__total">{money(unitPrice(line)*line.qty)}</strong>
-              <button type="button" className="a-btn a-btn--danger-ghost a-btn--sm order-lines__remove" disabled={lines.length<=1} aria-label={'Remove '+lineName(line.id)+', '+line.size} onClick={()=>setLines(list=>list.filter(l=>l.key!==line.key))}><Icon name="trash"/></button>
+              <button type="button" className="a-btn a-btn--danger-ghost a-btn--sm order-lines__remove" disabled={lines.length<=1} aria-label={'Remove '+lineName(line.id)+', '+optionLabel(line)} onClick={()=>setLines(list=>list.filter(l=>l.key!==line.key))}><Icon name="trash"/></button>
               {over&&<p className="order-lines__warn" role="alert">{p?`Only ${available(line.id)} available for ${p.name}.`:'This product was removed; its quantity can only be reduced.'}</p>}
             </li>;})}</ul>
           {lines.length<=1&&<small className="order-editor__hint">An order needs at least one item. To remove everything, set the status to Cancelled instead.</small>}
           <div className="order-add"><h4>Add a product</h4>
             <div className="order-add__row">
-              <label>Product<select value={addId} onChange={e=>{setAddId(e.target.value);const p=product(Number(e.target.value));setAddSize(p?productOptions(p)[0]:'');}}><option value="">Choose a product</option>{addable.map(p=><option key={p.id} value={p.id}>{p.name} — {money(productPricing(p,now).unitPrice)} ({available(p.id)-(perProduct.get(p.id)||0)} available)</option>)}</select></label>
+              <label>Product<select value={addId} onChange={e=>{setAddId(e.target.value);const p=product(Number(e.target.value));setAddSize(p?productOptions(p)[0]:'');setAddColor(p?productColors(p)[0]||'':'');}}><option value="">Choose a product</option>{addable.map(p=><option key={p.id} value={p.id}>{p.name} — {money(productPricing(p,now).unitPrice)} ({available(p.id)-(perProduct.get(p.id)||0)} available)</option>)}</select></label>
               <label>Size or style<select value={addSize} disabled={!chosen} onChange={e=>setAddSize(e.target.value)}>{chosen?productOptions(chosen).map(o=><option key={o}>{o}</option>):<option value="">—</option>}</select></label>
+              {chosen&&productColors(chosen).length>0&&<label>Colour<select value={addColor} onChange={e=>setAddColor(e.target.value)}>{productColors(chosen).map(c=><option key={c}>{c}</option>)}</select></label>}
               <label>Qty<input type="number" min={1} max={100} value={addQty} disabled={!chosen} onChange={e=>setAddQty(Math.max(1,Math.min(100,Math.floor(Number(e.target.value))||1)))}/></label>
               <button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={!chosen||!addSize} onClick={addLine}><Icon name="plus"/>Add</button>
             </div>

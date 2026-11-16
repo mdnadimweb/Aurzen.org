@@ -1,6 +1,7 @@
 'use client';
 import ProductPhoto from './product-photo';
 import AdminOffer from './admin-offer';
+import AdminVariants from './admin-variants';
 import Modal from './modal';
 import ProductImage from './product-image';
 import Icon,{type IconName} from './admin-icons';
@@ -15,7 +16,7 @@ import BrandLogo from './brand-logo';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { money, editableStatuses, type Product, type Order } from '@aurzen/shared/catalog';
+import { money, editableStatuses, lineKey, optionLabel, type Product, type Order } from '@aurzen/shared/catalog';
 import { api, useStore } from '../providers';
 
 const tabs:{name:string;icon:IconName}[]=[{name:'Overview',icon:'overview'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Homepage',icon:'slides'},{name:'Orders',icon:'orders'},{name:'Customers',icon:'customers'}];
@@ -129,7 +130,7 @@ export default function AdminWorkspace() {
         <td data-label="Order"><span className="admin-mono">{o.id}</span><small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>setEditingOrder(o)}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
         <td data-label="Customer"><strong className="admin-order-name">{o.name}</strong><small>{o.phone}</small></td>
         <td data-label="Address" className="admin-order-address">{o.address}<small>{o.area === 'dhaka' ? 'Dhaka city' : 'Outside Dhaka'} · Delivery {money(o.delivery)}</small></td>
-        <td data-label="Items">{o.items.map((x) => <small key={x.id + '-' + x.size}>{x.name} × {x.qty}<br />{x.size}</small>)}</td>
+        <td data-label="Items">{o.items.map((x) => <small key={lineKey(x)}>{x.name} × {x.qty}<br />{optionLabel(x)}</small>)}</td>
         <td data-label="Total" className="admin-num">{money(o.total)}<small>Cash on delivery</small></td>
         <td data-label="Status"><div className="a-status-select" data-status={statusKey(o.status)}><span className="a-pill__dot" aria-hidden="true"/><select aria-label={'Status for '+o.id} value={o.status} onChange={e => void change({ action: 'status', id: o.id, status: e.target.value })}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div><DeliveryEditor key={o.id+'-'+(o.courier||'')+'-'+(o.trackingReference||'')} order={o} onSave={change}/></td>
     </tr>)}</tbody></table></div>}</section>}
@@ -144,7 +145,7 @@ export default function AdminWorkspace() {
                 setFormError('');
                 const f = new FormData(e.currentTarget);
                 try {
-                    await mutate(modal === 'category' ? { action: 'addCategory', name: f.get('name') } : { action: 'saveProduct', id: editing?.id, name: f.get('name'), category: f.get('category'), price: Number(f.get('price')), stock: Number(f.get('stock')), image: f.get('image') || 'box', images:JSON.parse(String(f.get('images')||'[]')), description:f.get('description'),tag:f.get('tag'),offer:JSON.parse(String(f.get('offer')||'null')) });
+                    await mutate(modal === 'category' ? { action: 'addCategory', name: f.get('name') } : { action: 'saveProduct', id: editing?.id, name: f.get('name'), category: f.get('category'), price: Number(f.get('price')), stock: Number(f.get('stock')), image: f.get('image') || 'box', images:JSON.parse(String(f.get('images')||'[]')), description:f.get('description'),tag:f.get('tag'),offer:JSON.parse(String(f.get('offer')||'null')),sizes:JSON.parse(String(f.get('sizes')||'[]')),colors:JSON.parse(String(f.get('colors')||'[]')) });
                     setModal('');
                     setEditing(null);
                     setNotice('Saved to your store');
@@ -164,7 +165,8 @@ export default function AdminWorkspace() {
                         {modal === 'product' && <><label>Category<select name="category" defaultValue={editing?.category}>{categories.map(c => <option key={c}>{c}</option>)}</select></label><label>Product label<input name="tag" defaultValue={editing?.tag||'NEW ARRIVAL'} maxLength={40}/></label></>}
                     </section>
                     {modal === 'product' && <><section className="form-section"><h3>Pricing & stock</h3><div className="form-pair"><label>Price (৳)<input name="price" type="number" min="1" step="1" max="1000000" defaultValue={editing?.price} onChange={event=>setOfferPrice(Number(event.target.value))} required/></label><label>Stock<input name="stock" type="number" min="0" step="1" max="1000000" defaultValue={editing?.stock} required/></label></div></section>
-                    <section className="form-section"><h3>Description</h3><label>Description<textarea name="description" defaultValue={editing?.description||''} maxLength={3000} rows={6} placeholder="Materials, fit, care instructions and what is included"/></label></section></>}
+                    <section className="form-section"><h3>Description</h3><label>Description<textarea name="description" defaultValue={editing?.description||''} maxLength={3000} rows={6} placeholder="Materials, fit, care instructions and what is included"/></label></section>
+                    <AdminVariants key={editing?.id||'new'} product={editing} disabled={saving}/></>}
                 </div>
                 {modal === 'product' && <div className="form-modal__side">
                     <section className="form-section"><h3>Photos</h3><ProductPhoto key={editing?.id||'new'} initialImage={editing?.image||'box'} initialImages={editing?.images||[]} disabled={saving} onBusy={setUploading}/></section>

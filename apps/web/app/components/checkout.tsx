@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useRef,useState,type FocusEvent,type InvalidEvent,type FormEvent} from 'react';
 import Link from 'next/link';
 import {api,useStore} from '../providers';
-import {money,validOption,productPricing,type CartItem,type CheckoutQuote} from '@aurzen/shared/catalog';
+import {money,validOption,validColor,optionLabel,lineKey,productPricing,type CartItem,type CheckoutQuote} from '@aurzen/shared/catalog';
 import {normalizePhone} from '@aurzen/shared/phone';
 import ProductImage from './product-image';
 import ProductPrice from './product-price';
@@ -37,7 +37,7 @@ export default function Checkout({directCheckout}:{directCheckout?:DirectCheckou
       const saved=JSON.parse(sessionStorage.getItem('aurzen-buy-receipt:'+directCheckout.attempt)||'null');
       if(saved&&typeof saved.id==='string'&&Number.isSafeInteger(saved.total))setReceipt(saved);
       const draft=JSON.parse(sessionStorage.getItem('aurzen-buy-draft:'+directCheckout.attempt)||'null');
-      if(directCheckout.item&&draft&&draft.id===directCheckout.item.id&&draft.size===directCheckout.item.size&&Number.isSafeInteger(draft.qty)&&draft.qty>0&&draft.qty<=100){
+      if(directCheckout.item&&draft&&draft.id===directCheckout.item.id&&draft.size===directCheckout.item.size&&(draft.color||'')===(directCheckout.item.color||'')&&Number.isSafeInteger(draft.qty)&&draft.qty>0&&draft.qty<=100){
         setDirectItems([{...directCheckout.item,qty:draft.qty}]);
         if(draft.area==='dhaka'||draft.area==='outside')setArea(draft.area);
       }
@@ -72,13 +72,13 @@ export default function Checkout({directCheckout}:{directCheckout?:DirectCheckou
   },[ready,directReady,settings?.enabled,cart.length,receipt,loadQuote,quoteRefresh]);
   const quoteReady=!!quote&&quote.requestKey===requestKey&&!checking;
   const total=quote?.subtotal||0,delivery=quote?.delivery||0;
-  const invalid=cart.some(c=>{const p=products.find(p=>p.id===c.id);return !p||!validOption(p,c.size)||cart.filter(x=>x.id===c.id).reduce((sum,x)=>sum+x.qty,0)>p.stock;});
+  const invalid=cart.some(c=>{const p=products.find(p=>p.id===c.id);return !p||!validOption(p,c.size)||!validColor(p,c.color)||cart.filter(x=>x.id===c.id).reduce((sum,x)=>sum+x.qty,0)>p.stock;});
   function updateQuantity(index:number,requested:number){
     if(!Number.isFinite(requested))return;
     setCart(items=>items.map((item,i)=>{
       if(i!==index)return item;
       const product=products.find(p=>p.id===item.id);
-      if(!product||!validOption(product,item.size))return item;
+      if(!product||!validOption(product,item.size)||!validColor(product,item.color))return item;
       const other=items.reduce((sum,other,j)=>j!==index&&other.id===item.id?sum+other.qty:sum,0);
       const limit=Math.min(100,product.stock-other);
       return limit<1?item:{...item,qty:Math.max(1,Math.min(limit,Math.floor(requested)))};
@@ -99,12 +99,12 @@ export default function Checkout({directCheckout}:{directCheckout?:DirectCheckou
 
   return <main className="section checkout"><div className="eyebrow">YOUR LITTLE FINDS</div><h1>{directCheckout?'Your checkout.':'Your shopping bag.'}</h1>{directCheckout&&<p>Review this item and place your cash-on-delivery order. Your shopping bag stays saved. <Link className="text-link" href="/cart/">View your bag</Link></p>}{!cart.length?<div className="empty"><h2>{directCheckout?'Choose a product to buy now.':'A little room for something lovely.'}</h2><Link className="primary" href="/shop">Explore the collection ↗</Link></div>:<div className="checkout-grid"><div className="checkout-items">{cart.map((c,i)=>{
     const product=products.find(p=>p.id===c.id),other=cart.reduce((sum,item,j)=>j!==i&&item.id===c.id?sum+item.qty:sum,0),limit=Math.min(100,Math.max(0,(product?.stock||0)-other));
-    const optionAvailable=product&&validOption(product,c.size);
+    const optionAvailable=product&&validOption(product,c.size)&&validColor(product,c.color);
     const issue=!product?'This product is no longer available. Remove it to continue.':!optionAvailable?'This option is no longer available. Remove it and choose another option on the product page.':product.stock===0?'This product is currently out of stock. Remove it to continue.':c.qty+other>product.stock?`Only ${product.stock} available in total. Reduce quantities across the options in your bag.`:'';
-    const label=(product?.name||'Unavailable item')+', '+c.size;
-    return <article className="cart-row" key={c.id+'-'+c.size} aria-labelledby={'cart-item-'+i}>
+    const label=(product?.name||'Unavailable item')+', '+optionLabel(c);
+    return <article className="cart-row" key={lineKey(c)} aria-labelledby={'cart-item-'+i}>
       <div className="cart-thumb"><ProductImage src={product?.image} alt={product?.name||'Unavailable product'} category={product?.category}/></div>
-      <div className="cart-item-copy"><h3 id={'cart-item-'+i}>{product?<Link href={'/products/'+product.id+'/'}>{product.name}</Link>:'Unavailable product'}</h3><p>{c.size}</p>{product&&<div className="cart-item-price">{quoteReady?<><ProductPrice product={product} chargedUnitPrice={quote!.items[i]?.price}/><span>{money((quote!.items[i]?.price||0)*c.qty)} for {c.qty}</span></>:<span>Checking price…</span>}</div>}{issue&&<p className="cart-item-issue" id={'cart-issue-'+i}>{issue}</p>}
+      <div className="cart-item-copy"><h3 id={'cart-item-'+i}>{product?<Link href={'/products/'+product.id+'/'}>{product.name}</Link>:'Unavailable product'}</h3><p>{optionLabel(c)}</p>{product&&<div className="cart-item-price">{quoteReady?<><ProductPrice product={product} chargedUnitPrice={quote!.items[i]?.price}/><span>{money((quote!.items[i]?.price||0)*c.qty)} for {c.qty}</span></>:<span>Checking price…</span>}</div>}{issue&&<p className="cart-item-issue" id={'cart-issue-'+i}>{issue}</p>}
       <button type="button" className="cart-item-remove text-link" disabled={busy} aria-label={'Remove '+label+' from your bag'} onClick={()=>setCart(items=>items.filter((_,j)=>j!==i))}>Remove</button></div>
       {product&&<div className="cart-item-quantity"><span className="cart-quantity-label" id={'cart-quantity-'+i}>Qty</span><div className="quantity-controls" role="group" aria-labelledby={'cart-quantity-'+i+' cart-item-'+i} aria-describedby={issue?'cart-issue-'+i:undefined}><button type="button" aria-label={'Decrease quantity for '+label} disabled={busy||!optionAvailable||c.qty<=1} onClick={()=>updateQuantity(i,c.qty-1)}>−</button><span className="cart-quantity-value" aria-live="polite">{c.qty}</span><button type="button" aria-label={'Increase quantity for '+label} disabled={busy||!optionAvailable||c.qty>=limit} onClick={()=>updateQuantity(i,c.qty+1)}>+</button></div></div>}
     </article>;

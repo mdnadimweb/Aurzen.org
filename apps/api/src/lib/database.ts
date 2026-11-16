@@ -26,7 +26,9 @@ const postgresSchema=`
   CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS categories(name TEXT PRIMARY KEY,position BIGSERIAL NOT NULL);
   CREATE TABLE IF NOT EXISTS images(id TEXT PRIMARY KEY,data BYTEA NOT NULL);
-  CREATE TABLE IF NOT EXISTS products(id SERIAL PRIMARY KEY,name TEXT NOT NULL,category TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),stock INTEGER NOT NULL CHECK(stock>=0),image TEXT NOT NULL,tag TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',images TEXT NOT NULL DEFAULT '[]',offer TEXT NOT NULL DEFAULT 'null');
+  CREATE TABLE IF NOT EXISTS products(id SERIAL PRIMARY KEY,name TEXT NOT NULL,category TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),stock INTEGER NOT NULL CHECK(stock>=0),image TEXT NOT NULL,tag TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',images TEXT NOT NULL DEFAULT '[]',offer TEXT NOT NULL DEFAULT 'null',sizes TEXT NOT NULL DEFAULT '[]',colors TEXT NOT NULL DEFAULT '[]');
+  ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes TEXT NOT NULL DEFAULT '[]';
+  ALTER TABLE products ADD COLUMN IF NOT EXISTS colors TEXT NOT NULL DEFAULT '[]';
   CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,idempotency TEXT NOT NULL UNIQUE,payload TEXT NOT NULL,created TEXT NOT NULL);
   CREATE INDEX IF NOT EXISTS orders_created ON orders(created);
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires BIGINT NOT NULL);
@@ -74,6 +76,8 @@ async function initialize(){
         if(!columns.some(column=>column.name==='description'))await db.exec("ALTER TABLE products ADD COLUMN description TEXT NOT NULL DEFAULT ''");
         if(!columns.some(column=>column.name==='images'))await db.exec("ALTER TABLE products ADD COLUMN images TEXT NOT NULL DEFAULT '[]'");
         if(!columns.some(column=>column.name==='offer'))await db.exec("ALTER TABLE products ADD COLUMN offer TEXT NOT NULL DEFAULT 'null'");
+        if(!columns.some(column=>column.name==='sizes'))await db.exec("ALTER TABLE products ADD COLUMN sizes TEXT NOT NULL DEFAULT '[]'");
+        if(!columns.some(column=>column.name==='colors'))await db.exec("ALTER TABLE products ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
       }
       if(!await db.prepare("SELECT value FROM settings WHERE key='initialized'").get()){
         // A hosted database starts empty: transfer the real catalog with the import script.
@@ -103,7 +107,7 @@ export async function catalog(connection?:Database){
   // null until the owner saves an announcement or category covers.
   const storefrontRow=await db.prepare("SELECT value FROM settings WHERE key='storefront'").get();
   const storefront=storefrontRow?JSON.parse(String(storefrontRow.value)) as Storefront:null;
-  return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null'))})) as unknown as Product[],categories:categories.map(c=>String(c.name)),hero,storefront,serverNow:Date.now()};
+  return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null')),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categories.map(c=>String(c.name)),hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){
   return (await (await database()).prepare('SELECT payload FROM orders ORDER BY created DESC').all()).map(o=>JSON.parse(String(o.payload)) as Order);

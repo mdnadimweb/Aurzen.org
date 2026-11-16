@@ -1,7 +1,7 @@
 import { randomUUID,createHash } from 'node:crypto';
 import { catalog, transaction,type Database } from './database';
 import { assert, text } from './http';
-import { validOption,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
+import { validOption,validColor,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
 import { normalizePhone } from '@aurzen/shared/phone';
 export function deliverySettings() {
     const enabled = process.env.CHECKOUT_ENABLED === 'true';
@@ -18,8 +18,10 @@ async function calculateQuote(d:Record<string,unknown>,db?:Database):Promise<Che
         const product=products.find(p=>p.id===item.id);
         assert(product,'An item is no longer available. Please refresh your bag.',409);
         assert(typeof item.size==='string'&&validOption(product,item.size),'Choose a valid product size or style.');
+        const color=typeof item.color==='string'?item.color:'';
+        assert(validColor(product,color),product.colors?.length?'Choose a colour for '+product.name+'.':'Invalid product colour.');
         quantities.set(product.id,(quantities.get(product.id)||0)+Number(item.qty));
-        items.push({id:product.id,name:product.name,price:productPricing(product,serverNow).unitPrice,qty:Number(item.qty),size:item.size});
+        items.push({id:product.id,name:product.name,price:productPricing(product,serverNow).unitPrice,qty:Number(item.qty),size:item.size,...(color?{color}:{})});
     }
     for(const [id,qty]of quantities){const p=products.find(p=>p.id===id)!;assert(qty<=p.stock,`${p.name}: only ${p.stock} available.`,409);}
     const subtotal=items.reduce((sum,item)=>sum+item.price*item.qty,0),delivery=settings[d.area as 'dhaka'|'outside'],total=subtotal+delivery;

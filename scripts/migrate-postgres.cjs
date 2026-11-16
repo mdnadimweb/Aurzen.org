@@ -53,7 +53,12 @@ async function transfer({data,apply=false}){
     await transaction(async tx=>{
       if(Number((await tx.prepare(count).get()).count)!==0)throw new Error('Target changed during import. Catalog import cancelled.');
       for(const row of data.categories)await tx.prepare('INSERT INTO categories(name) VALUES(?)').run(row.name);
-      for(const p of data.products)await tx.prepare('INSERT INTO products(id,name,category,price,stock,image,tag,description,images,offer) VALUES(?,?,?,?,?,?,?,?,?,?)').run(p.id,p.name,p.category,p.price,p.stock,p.image,p.tag,p.description||'',p.images||'[]',p.offer||'null');
+      for(const p of data.products){
+        // Sizes/colours are copied only when the source has any, so older target schemas keep working.
+        const variants=(p.sizes&&p.sizes!=='[]')||(p.colors&&p.colors!=='[]');
+        if(variants)await tx.prepare('INSERT INTO products(id,name,category,price,stock,image,tag,description,images,offer,sizes,colors) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(p.id,p.name,p.category,p.price,p.stock,p.image,p.tag,p.description||'',p.images||'[]',p.offer||'null',p.sizes||'[]',p.colors||'[]');
+        else await tx.prepare('INSERT INTO products(id,name,category,price,stock,image,tag,description,images,offer) VALUES(?,?,?,?,?,?,?,?,?,?)').run(p.id,p.name,p.category,p.price,p.stock,p.image,p.tag,p.description||'',p.images||'[]',p.offer||'null');
+      }
       for(const o of data.orders)await tx.prepare('INSERT INTO orders(id,idempotency,payload,created) VALUES(?,?,?,?)').run(o.id,o.idempotency,o.payload,o.created);
       await syncProductIds(tx);
       for(const table of ['categories','products','orders','images'])

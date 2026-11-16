@@ -18,7 +18,7 @@ import ProductPrice,{OfferBadge} from './components/product-price';
 import ProductImage from './components/product-image';
 import StoreHeader from './components/store-header';
 import OrderTracking from './components/order-tracking';
-import {validOption,styleOptions} from '@aurzen/shared/catalog';
+import {validOption,validColor,styleOptions,productOptions,productColors,hasSizeChoice,sameLine,type CartItem} from '@aurzen/shared/catalog';
 import AdminWorkspace from './components/admin-workspace';
 export default function Store({ initial = 'home', product, directCheckout }: {
     initial?: string;
@@ -27,8 +27,8 @@ export default function Store({ initial = 'home', product, directCheckout }: {
 }) {
     const router = useRouter(), view = initial;
     const { products, categories, storefront, cart, setCart, loaded, error, refresh, bagOpen, setBagOpen } = useStore();
-    const [filter, setFilter] = useState('All'), [query, setQuery] = useState(''), [sort, setSort] = useState('featured'), [notice, setNotice] = useState(''), [selected, setSelected] = useState<Product | null>(product || null), [size, setSize] = useState(''), [boxStyle, setBoxStyle] = useState(''), [optionError,setOptionError]=useState('');
-    useEffect(()=>{setSize('');setBoxStyle('');setOptionError('');},[product?.id]);
+    const [filter, setFilter] = useState('All'), [query, setQuery] = useState(''), [sort, setSort] = useState('featured'), [notice, setNotice] = useState(''), [selected, setSelected] = useState<Product | null>(product || null), [size, setSize] = useState(''), [boxStyle, setBoxStyle] = useState(''), [color, setColor] = useState(''), [optionError,setOptionError]=useState(''), [colorError,setColorError]=useState('');
+    useEffect(()=>{setSize('');setBoxStyle('');setColor('');setOptionError('');setColorError('');},[product?.id]);
     useEffect(() => { setSelected(product ? (loaded ? products.find(p => p.id === product.id) || null : product) : null); }, [product, products, loaded]);
     useEffect(() => { const sync = () => setFilter(new URLSearchParams(window.location.search).get('category') || 'All'); sync(); window.addEventListener('popstate', sync); return () => window.removeEventListener('popstate', sync); }, []);
     useEffect(() => { if (notice) {
@@ -37,25 +37,29 @@ export default function Store({ initial = 'home', product, directCheckout }: {
     } }, [notice]);
     const go = (v: string, category?: string) => { router.push((v === 'home' ? '/' : '/' + v) + (category ? '?category=' + encodeURIComponent(category) : '')); if (v === 'shop')
         setFilter(category || 'All'); };
-    const purchaseOption = (p:Product) => {
+    const styleChoice=(p:Product)=>p.category==='Mystery Boxes'&&!p.sizes?.length;
+    const focusChoice=(id:string)=>{const el=document.getElementById(id);el?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});el?.focus({preventScroll:true});};
+    const purchaseOption = (p:Product):Pick<CartItem,'size'|'color'>|null => {
         if(p.stock<=0){setNotice('This product is currently out of stock.');return null;}
-        const option=p.category==='Mystery Boxes'?boxStyle:p.category==='Clothing'?size:'One size';
-        if(validOption(p,option))return option;
-        setOptionError('Please choose a '+(p.category==='Clothing'?'size':'style')+'.');
-        setNotice('Please choose a '+(p.category==='Clothing'?'size':'style')+' before continuing.');
-        document.getElementById('product-options')?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
-        document.getElementById('product-options')?.focus({preventScroll:true});
+        const option=styleChoice(p)?boxStyle:hasSizeChoice(p)?size:'One size';
+        const sizeOk=validOption(p,option),colorOk=validColor(p,color);
+        if(sizeOk&&colorOk)return {size:option,...(color?{color}:{})};
+        const word=styleChoice(p)?'style':'size';
+        if(!sizeOk)setOptionError('Please choose a '+word+'.');
+        if(!colorOk)setColorError('Please choose a colour.');
+        setNotice('Please choose '+(!sizeOk&&!colorOk?'a '+word+' and a colour':!sizeOk?'a '+word:'a colour')+' before continuing.');
+        focusChoice(!sizeOk?'product-options':'product-colors');
         return null;
     };
     const buy = (p:Product) => {
         const option=purchaseOption(p);if(!option)return;
         setBagOpen(false);
-        router.push('/cart/?'+new URLSearchParams({buy:String(p.id),option,attempt:crypto.randomUUID()}));
+        router.push('/cart/?'+new URLSearchParams({buy:String(p.id),option:option.size,...(option.color?{color:option.color}:{}),attempt:crypto.randomUUID()}));
     };
-    const add = (p: Product): boolean => { const option=purchaseOption(p);if(!option)return false; if(cart.some(c=>c.id===p.id&&c.size===option&&c.qty>=100)){setNotice('You can add up to 100 of each size or style.');return false;} const inBag = cart.filter(c => c.id === p.id).reduce((sum, c) => sum + c.qty, 0); if (inBag >= p.stock) {
+    const add = (p: Product): boolean => { const option=purchaseOption(p);if(!option)return false; const line={id:p.id,...option};if(cart.some(c=>sameLine(c,line)&&c.qty>=100)){setNotice('You can add up to 100 of each size, colour or style.');return false;} const inBag = cart.filter(c => c.id === p.id).reduce((sum, c) => sum + c.qty, 0); if (inBag >= p.stock) {
         setNotice('All available stock is already in your bag');
         return false;
-    } setCart(c => { const found = c.find(x => x.id === p.id && x.size === option); return found ? c.map(x => x === found ? { ...x, qty: x.qty + 1 } : x) : [...c, { id: p.id, qty: 1, size: option }]; }); setBagOpen(true); setNotice('Added to your bag'); return true; };
+    } setCart(c => { const found = c.find(x => sameLine(x, line)); return found ? c.map(x => x === found ? { ...x, qty: x.qty + 1 } : x) : [...c, { ...line, qty: 1 }]; }); setBagOpen(true); setNotice('Added to your bag'); return true; };
     const count = cart.reduce((s, c) => s + c.qty, 0);
     const filtered = products.filter(p => (filter === 'All' || filter === p.category) && (p.name + ' ' + p.category).toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === 'price-asc' ? a.price - b.price : sort === 'price-desc' ? b.price - a.price : sort === 'name' ? a.name.localeCompare(b.name) : a.id - b.id);
     return <>{error && <div className="form-error" role="alert">{error} <button className="text-link" onClick={() => void refresh()}>Retry</button></div>}{view !== 'admin' && <StoreHeader view={view} count={count} onBag={()=>setBagOpen(true)} bagOpen={bagOpen} categories={categories} onNavigate={go}/>}
@@ -65,7 +69,7 @@ export default function Store({ initial = 'home', product, directCheckout }: {
     {view === 'cart' && <Checkout key={directCheckout?.attempt||'bag'} directCheckout={directCheckout}/>}
     {view === 'admin' && <AdminWorkspace />}
     {view === 'product' && !selected && <main className="section empty"><h1>This piece is currently unavailable.</h1><p>Explore the collection for your next favourite.</p><Link className="primary" href="/shop/">Back to the collection</Link></main>}
-    {view === 'product' && selected && <main className="section product-page has-mobile-purchase"><Link className="text-link" href="/shop">← Back to collection</Link><div className="detail"><div className="product-gallery-offer"><ProductGallery key={selected.id} product={selected}/><OfferBadge product={selected}/></div><div className="detail-copy"><div className="eyebrow">{selected.category}</div><h1>{selected.name}</h1><ProductPrice product={selected}/><p>{selected.description || (selected.category === 'Mystery Boxes' ? 'A curated surprise of fashion and accessories. Share your style preference to help us make it feel like you.' : 'An everyday favourite, thoughtfully selected for your wardrobe.')}</p>{selected.category === 'Mystery Boxes' ? <label id="product-options" tabIndex={-1}>Your style<select value={boxStyle} aria-invalid={!!optionError} aria-describedby={optionError?'product-option-error':undefined} onChange={e => {setBoxStyle(e.target.value);setOptionError('');}}><option value="">Choose your style</option>{styleOptions.map(s => <option key={s}>{s}</option>)}</select></label> : selected.category === 'Clothing' ? <fieldset id="product-options" className="product-options" tabIndex={-1}><legend>Choose a size</legend><div className="chips" role="group" aria-label="Choose a size" aria-invalid={!!optionError} aria-describedby={optionError?'product-option-error':undefined}>{['S', 'M', 'L', 'XL'].map(s => <button aria-pressed={size === s} className={size === s ? 'chosen' : ''} onClick={() => {setSize(s);setOptionError('');}} key={s}>{s}</button>)}</div></fieldset> : null}{optionError&&<p id="product-option-error" className="field-error" role="alert">{optionError}</p>}<p className="muted">{selected.stock > 0 ? selected.stock + ' available' : 'Currently out of stock'}</p><ProductPurchase product={selected} onAdd={()=>add(selected)} onBuy={()=>buy(selected)} disabled={!selected.stock||cart.filter(c=>c.id===selected.id).reduce((n,c)=>n+c.qty,0)>=selected.stock}/><small>Cash on delivery · Thoughtfully packed</small><Link className="text-link" href="/cart">View your bag ↗</Link></div></div></main>}
+    {view === 'product' && selected && <main className="section product-page has-mobile-purchase"><Link className="text-link" href="/shop">← Back to collection</Link><div className="detail"><div className="product-gallery-offer"><ProductGallery key={selected.id} product={selected}/><OfferBadge product={selected}/></div><div className="detail-copy"><div className="eyebrow">{selected.category}</div><h1>{selected.name}</h1><ProductPrice product={selected}/><p>{selected.description || (selected.category === 'Mystery Boxes' ? 'A curated surprise of fashion and accessories. Share your style preference to help us make it feel like you.' : 'An everyday favourite, thoughtfully selected for your wardrobe.')}</p>{styleChoice(selected) ? <label id="product-options" tabIndex={-1}>Your style<select value={boxStyle} aria-invalid={!!optionError} aria-describedby={optionError?'product-option-error':undefined} onChange={e => {setBoxStyle(e.target.value);setOptionError('');}}><option value="">Choose your style</option>{styleOptions.map(s => <option key={s}>{s}</option>)}</select></label> : hasSizeChoice(selected) ? <fieldset id="product-options" className="product-options" tabIndex={-1}><legend>Choose a size{size&&<span className="product-options__chosen">: {size}</span>}</legend><div className="chips" role="group" aria-label="Choose a size" aria-invalid={!!optionError} aria-describedby={optionError?'product-option-error':undefined}>{productOptions(selected).map(s => <button type="button" aria-pressed={size === s} className={size === s ? 'chosen' : ''} onClick={() => {setSize(s);setOptionError('');}} key={s}>{s}</button>)}</div></fieldset> : null}{optionError&&<p id="product-option-error" className="field-error" role="alert">{optionError}</p>}{productColors(selected).length>0&&<fieldset id="product-colors" className="product-options" tabIndex={-1}><legend>Choose a colour{color&&<span className="product-options__chosen">: {color}</span>}</legend><div className="chips" role="group" aria-label="Choose a colour" aria-invalid={!!colorError} aria-describedby={colorError?'product-color-error':undefined}>{productColors(selected).map(c => <button type="button" aria-pressed={color === c} className={color === c ? 'chosen' : ''} onClick={() => {setColor(c);setColorError('');}} key={c}>{c}</button>)}</div></fieldset>}{colorError&&<p id="product-color-error" className="field-error" role="alert">{colorError}</p>}<p className="muted">{selected.stock > 0 ? selected.stock + ' available' : 'Currently out of stock'}</p><ProductPurchase product={selected} onAdd={()=>add(selected)} onBuy={()=>buy(selected)} disabled={!selected.stock||cart.filter(c=>c.id===selected.id).reduce((n,c)=>n+c.qty,0)>=selected.stock}/><small>Cash on delivery · Thoughtfully packed</small><Link className="text-link" href="/cart">View your bag ↗</Link></div></div></main>}
     {view !== 'admin' && <footer><div><BrandLogo/><p>A little elegance for every day.<br />Thoughtfully selected in Bangladesh.</p></div><div><h4>Explore</h4>{categories.map(c => <button key={c} onClick={() => { go('shop', c); }}>{c}</button>)}</div><div><h4>The little details</h4><Link href="/tracking/">Track your order ↗</Link><p>Cash on delivery<br />Dhaka city ৳80 · Outside Dhaka ৳150<br />Returns accepted if the delivered item does not match your order.</p></div><div className="footer-bottom">© {new Date().getFullYear()} AURZÉN. Made with a little love.<a href="/admin">Enter the studio ↗</a></div></footer>}
     {view!=='admin'&&<BagDrawer/>}
     {notice && <div role="status" className="toast">✓ {notice}</div>}</>;
