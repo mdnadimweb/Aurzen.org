@@ -38,7 +38,13 @@ async function transfer({source,client,apply=false,initialize}){
       if(Number(current.rows[0].count)!==0)throw new Error('Target changed during import. Catalog import cancelled.');
       const statements=[];
       for(const row of data.categories)statements.push({sql:'INSERT INTO categories(name) VALUES(?)',args:[row.name]});
-      for(const p of data.products)statements.push({sql:'INSERT INTO products(id,name,category,price,stock,image,tag,description,images,offer) VALUES(?,?,?,?,?,?,?,?,?,?)',args:[p.id,p.name,p.category,p.price,p.stock,p.image,p.tag,p.description||'',p.images||'[]',p.offer||'null']});
+      for(const p of data.products){
+        // Sizes/colours are copied only when the source has any, so older target schemas keep working.
+        const variants=(p.sizes&&p.sizes!=='[]')||(p.colors&&p.colors!=='[]');
+        statements.push(variants
+          ?{sql:'INSERT INTO products(id,name,category,price,stock,image,tag,description,images,offer,sizes,colors) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',args:[p.id,p.name,p.category,p.price,p.stock,p.image,p.tag,p.description||'',p.images||'[]',p.offer||'null',p.sizes,p.colors||'[]']}
+          :{sql:'INSERT INTO products(id,name,category,price,stock,image,tag,description,images,offer) VALUES(?,?,?,?,?,?,?,?,?,?)',args:[p.id,p.name,p.category,p.price,p.stock,p.image,p.tag,p.description||'',p.images||'[]',p.offer||'null']});
+      }
       for(const o of data.orders)statements.push({sql:'INSERT INTO orders(id,idempotency,payload,created) VALUES(?,?,?,?)',args:[o.id,o.idempotency,o.payload,o.created]});
       if(statements.length)await tx.batch(statements);
       for(const table of ['categories','products','orders']){

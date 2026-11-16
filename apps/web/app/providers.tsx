@@ -33,7 +33,7 @@ function useStoreState(initialCatalog:Catalog) {
         try {
             const stored = JSON.parse(localStorage.getItem('aurzen-cart') || '[]');
             if (Array.isArray(stored))
-                setCart(stored.filter(c => Number.isSafeInteger(c.id) && Number.isSafeInteger(c.qty) && c.qty > 0 && c.qty <= 100 && typeof c.size === 'string'));
+                setCart(stored.filter(c => Number.isSafeInteger(c.id) && Number.isSafeInteger(c.qty) && c.qty > 0 && c.qty <= 100 && typeof c.size === 'string' && (c.color === undefined || typeof c.color === 'string')));
         }
         catch { }
         setReady(true);

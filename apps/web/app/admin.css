@@ -339,6 +339,23 @@
 .admin .admin-offer input[type=datetime-local]{width:100%;min-width:0;max-width:100%}
 .admin .admin-offer>small{display:block;margin:4px 0 12px;color:var(--a-muted);font-size:.75rem;line-height:1.5}
 .admin .admin-offer .field-hint{margin:14px 0 0;font-size:.75rem}
+/* Product sizes & colours */
+.admin .admin-variants>.field-hint{margin:0 0 6px;font-size:.75rem}
+.admin .admin-variants__group{border:1px solid var(--a-line);border-radius:12px;padding:6px 14px 14px;margin:12px 0 0;min-width:0}
+.admin .admin-variants__group legend{padding:0 6px;font-weight:600;color:var(--a-plum)}
+.admin .admin-variants__group .offer-toggle{display:flex;align-items:center;gap:10px;min-height:44px;margin:2px 0}
+.admin .admin-variants__group .offer-toggle input{width:20px;height:20px;margin:0;accent-color:var(--a-plum)}
+.admin .admin-variants__group .field-hint{margin:4px 0 0;font-size:.75rem;color:var(--a-muted)}
+.admin .admin-variants__presets{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+.admin .admin-variants__preset{min-height:36px;padding:0 14px;border:1px solid var(--a-field);border-radius:999px;background:var(--a-surface);color:var(--a-ink);font:inherit;font-size:.8125rem;cursor:pointer}
+.admin .admin-variants__preset:hover{background:var(--a-hover)}
+.admin .admin-variants__preset[aria-pressed=true]{background:var(--a-plum);border-color:var(--a-plum);color:#fff}
+.admin .admin-variants__add>div{display:flex;gap:8px;align-items:center}
+.admin .admin-variants__add input{flex:1;min-width:0}
+.admin .admin-variants__chosen{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:12px 0 0;padding:0}
+.admin .admin-variants__chosen li{display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:0 4px 0 12px;border-radius:999px;background:var(--a-tint);color:var(--a-plum);font-size:.8125rem;font-weight:600}
+.admin .admin-variants__chosen button{width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:inherit;font-size:1rem;line-height:1;cursor:pointer}
+.admin .admin-variants__chosen button:hover{background:#0000000f}
 .offer-preview{display:grid;gap:8px;margin:4px 0 12px;padding:14px;border-radius:10px;background:var(--a-tint);font-size:.875rem}
 .offer-preview>span{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .offer-preview strong{color:var(--a-plum)}
@@ -462,7 +479,7 @@
 .order-editor__ref{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:8px 0 0}
 .order-editor__hint{display:block;margin:4px 0 12px;color:var(--a-muted);font-size:.75rem;line-height:1.5}
 .order-lines{display:grid;gap:10px;margin:12px 0;padding:0;list-style:none}
-.order-lines li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name total remove" "size qty qty" "warn warn warn";align-items:center;gap:8px 12px;padding:12px;border:1px solid var(--a-line);border-radius:12px;background:#fff}
+.order-lines li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name total remove" "size qty qty" "color color color" "warn warn warn";align-items:center;gap:8px 12px;padding:12px;border:1px solid var(--a-line);border-radius:12px;background:#fff}
 .order-lines li.is-over{border-color:#d9a3a3;background:#fdf6f6}
 .order-lines__name{grid-area:name;min-width:0}
 .order-lines__name strong{display:block;color:var(--a-ink);font-size:.875rem;overflow-wrap:anywhere}
@@ -470,6 +487,7 @@
 .order-lines__total{grid-area:total;color:var(--a-plum);font-size:.875rem;font-variant-numeric:tabular-nums;white-space:nowrap}
 .order-lines__remove{grid-area:remove}
 .admin .order-lines__field{grid-area:size;margin:0;font-size:.75rem}
+.admin .order-lines__field--color{grid-area:color}
 .admin .order-lines__field select{min-height:38px;margin-top:4px;padding:6px 10px;font-size:.875rem}
 .order-lines__qty{grid-area:qty;display:flex;flex-direction:column;align-items:flex-start}
 .order-lines__label{color:#3d3238;font-size:.75rem;font-weight:600;margin-bottom:4px}
@@ -487,7 +505,7 @@
 .order-summary__total{padding-top:10px;border-top:1px solid var(--a-line);color:var(--a-plum);font-size:1rem!important}
 .order-summary__total strong{font-size:1.125rem}
 @media(max-width:600px){
-  .order-lines li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name remove" "total total" "size size" "qty qty" "warn warn"}
+  .order-lines li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name remove" "total total" "size size" "color color" "qty qty" "warn warn"}
   .order-add__row{grid-template-columns:minmax(0,1fr) 84px}
   .order-add__row label:nth-child(2){grid-column:1}
 }

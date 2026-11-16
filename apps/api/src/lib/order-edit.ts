@@ -1,6 +1,6 @@
 import { catalog, type Database } from './database';
 import { assert, text } from './http';
-import { deliveryFees, editableStatuses, productPricing, validOption, type Order, type OrderItem } from '@aurzen/shared/catalog';
+import { deliveryFees, editableStatuses, productPricing, validOption, validColor, sameLine, type Order, type OrderItem } from '@aurzen/shared/catalog';
 import { normalizePhone } from '@aurzen/shared/phone';
 
 /**
@@ -31,14 +31,17 @@ export async function editOrder(db: Database, d: Record<string, unknown>, now = 
     for (const raw of d.items as Record<string, unknown>[]) {
         assert(raw && typeof raw === 'object' && Number.isSafeInteger(raw.id) && Number.isSafeInteger(raw.qty) && Number(raw.qty) > 0 && Number(raw.qty) <= 100, 'Each item needs a quantity from 1 to 100.');
         assert(typeof raw.size === 'string' && raw.size.length <= 100, 'Choose a size or style for each item.');
-        const id = Number(raw.id), size = raw.size as string, qty = Number(raw.qty);
+        assert(raw.color === undefined || (typeof raw.color === 'string' && raw.color.length <= 100), 'Invalid colour.');
+        const id = Number(raw.id), size = raw.size as string, color = (raw.color as string | undefined) || '', qty = Number(raw.qty);
         const product = products.find(p => p.id === id);
-        const original = order.items.find(item => item.id === id && item.size === size) || order.items.find(item => item.id === id);
+        const original = order.items.find(item => sameLine(item, { id, size, color })) || order.items.find(item => item.id === id);
         assert(product || original, 'A product in this order is no longer available.', 409);
         if (product) assert(validOption(product, size) || (original?.size === size), `Choose a valid size or style for ${product.name}.`);
-        const key = id + '\u0000' + size, existing = lines.get(key);
+        // A colour the owner has since removed stays valid on a line that already had it.
+        if (product) assert(validColor(product, color) || ((original?.color || '') === color && original?.size === size), `Choose a valid colour for ${product.name}.`);
+        const key = id + '\u0000' + size + '\u0000' + color, existing = lines.get(key);
         if (existing) { existing.qty += qty; assert(existing.qty <= 100, 'Each item can have at most 100 pieces.'); continue; }
-        lines.set(key, { id, size, qty, name: original?.name || product!.name, price: original ? original.price : productPricing(product!, now).unitPrice });
+        lines.set(key, { id, size, ...(color ? { color } : {}), qty, name: original?.name || product!.name, price: original ? original.price : productPricing(product!, now).unitPrice });
     }
     const items = [...lines.values()];
 

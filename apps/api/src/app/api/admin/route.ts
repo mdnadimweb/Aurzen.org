@@ -1,12 +1,16 @@
 import { requireAdmin } from '../../../lib/auth';
 import { catalog, database, orders, transaction } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
-import { statuses, normalizeOffer, normalizeHeroSlides, normalizeStorefront, type Order } from '@aurzen/shared/catalog';
+import { statuses, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, type Order } from '@aurzen/shared/catalog';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
 function productOffer(value:unknown){
     try{return normalizeOffer(value);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid offer.');}
+}
+function productVariants(value:unknown,label:'size'|'colour'){
+    try{return normalizeVariants(value,label);}
+    catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid '+label+' list.');}
 }
 export const runtime = 'nodejs';
 export async function GET() { try {
@@ -28,8 +32,11 @@ export async function POST(request: Request) {
                 assert(Number.isSafeInteger(d.price) && d.price > 0 && d.price <= 1000000, 'Enter a whole taka price between 1 and 1,000,000.');
                 assert(Number.isSafeInteger(d.stock) && d.stock >= 0 && d.stock <= 1000000, 'Stock must be a whole number from 0 to 1,000,000.');
                 if(d.id!==undefined)assert(Number.isSafeInteger(d.id)&&d.id>0,'Invalid product.');
-                const previous=d.id?await db.prepare('SELECT image,images,offer FROM products WHERE id=?').get(d.id):null;
+                const previous=d.id?await db.prepare('SELECT image,images,offer,sizes,colors FROM products WHERE id=?').get(d.id):null;
                 const offer=d.offer===undefined?(previous?JSON.parse(String(previous.offer||'null')):null):productOffer(d.offer);
+                // Leaving sizes/colors out keeps what the product already has; [] turns the choice off.
+                const sizes=d.sizes===undefined?(previous?JSON.parse(String(previous.sizes||'[]')):[]):productVariants(d.sizes,'size');
+                const colors=d.colors===undefined?(previous?JSON.parse(String(previous.colors||'[]')):[]):productVariants(d.colors,'colour');
                 const images:unknown=d.images===undefined?(previous?JSON.parse(String(previous.images||'[]')):[]):d.images;
                 assert(Array.isArray(images)&&images.length<=8&&images.every(x=>typeof x==='string'&&x.length<=2000),'Use at most 8 product photos.');
                 assert(new Set(images).size===images.length,'Remove duplicate photos.');
@@ -48,10 +55,10 @@ export async function POST(request: Request) {
                 if (d.id) {
                     assert(Number.isSafeInteger(d.id), 'Invalid product.');
                     assert(await db.prepare('SELECT id FROM products WHERE id=?').get(d.id), 'Product not found.', 404);
-                    await db.prepare('UPDATE products SET name=?,category=?,price=?,stock=?,image=?,tag=?,description=?,images=?,offer=? WHERE id=?').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), d.id);
+                    await db.prepare('UPDATE products SET name=?,category=?,price=?,stock=?,image=?,tag=?,description=?,images=?,offer=?,sizes=?,colors=? WHERE id=?').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors), d.id);
                 }
                 else
-                    await db.prepare('INSERT INTO products(name,category,price,stock,image,tag,description,images,offer) VALUES(?,?,?,?,?,?,?,?,?)').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer));
+                    await db.prepare('INSERT INTO products(name,category,price,stock,image,tag,description,images,offer,sizes,colors) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors));
             }
             else if (d.action === 'stock') {
                 assert(Number.isSafeInteger(d.id) && Number.isSafeInteger(d.stock) && d.stock >= 0 && d.stock <= 1000000, 'Invalid stock.');

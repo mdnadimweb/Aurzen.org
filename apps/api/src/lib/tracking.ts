@@ -4,7 +4,7 @@ import { normalizePhone } from '@aurzen/shared/phone';
 import { assert } from './http';
 import type { Order } from '@aurzen/shared/catalog';
 export function publicOrder(order:Order){
-  return {id:order.id,date:order.date,status:order.status,items:order.items.map(({name,qty,size})=>({name,qty,size})),
+  return {id:order.id,date:order.date,status:order.status,items:order.items.map(({name,qty,size,color})=>({name,qty,size,...(color?{color}:{})})),
     history:order.history?.filter(event=>Number.isFinite(Date.parse(event.date))).map(({status,date})=>({status,date})),
     ...(order.courier&&order.trackingReference?{courier:order.courier,trackingReference:order.trackingReference}:{})};
 }
