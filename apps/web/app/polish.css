@@ -1,0 +1,41 @@
+/* Storefront button polish: one consistent, softly rounded style for every control.
+   Loaded after the other storefront sheets; the admin uses its own .a-btn classes. */
+
+/* Main call-to-action: soft plum gradient, gentle depth. */
+.primary{background:linear-gradient(135deg,var(--plum) 0%,var(--plum-soft) 100%);box-shadow:0 6px 18px #432b3b26,inset 0 1px 0 #ffffff1f;letter-spacing:.02em}
+.primary:hover:not(:disabled){background:linear-gradient(135deg,var(--plum-soft) 0%,var(--plum) 100%)}
+.primary:disabled{box-shadow:none}
+
+/* "View all" style links next to section headings become outlined pills. */
+.section-heading>.text-link,.collections-page .empty .text-link,.shop .empty .text-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:1px solid #d9c7cf;border-radius:999px;background:#fffdfa;color:var(--plum);font-weight:500;white-space:nowrap;transition:background-color .25s ease,color .25s ease,border-color .25s ease,box-shadow .25s ease}
+@media(hover:hover) and (pointer:fine){
+  .section-heading>.text-link:hover,.collections-page .empty .text-link:hover,.shop .empty .text-link:hover{background:var(--plum);border-color:var(--plum);color:#fff;box-shadow:0 6px 16px #432b3b22}
+}
+
+/* Link chips (collection subcategories) match the rounded filter chips. */
+.chips a{border-radius:999px;background:#fffdfa;transition:background-color .25s ease,color .25s ease,border-color .25s ease}
+.chips a.chosen{box-shadow:0 4px 12px #432b3b26}
+@media(hover:hover) and (pointer:fine){.chips a:hover:not(.chosen){background:var(--blush);border-color:#dccbd3}}
+
+/* Sort menus: pill shaped with a custom arrow. */
+.collection-toolbar select,.shop-toolbar select{appearance:none;-webkit-appearance:none;min-height:44px;padding:0 40px 0 18px;border:1px solid var(--line);border-radius:999px;background:#fffdfa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23432b3b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 16px center;color:var(--ink);cursor:pointer}
+
+/* Subcategory links on the All categories page become small pills. */
+.subcategory-links{gap:8px}
+.subcategory-links a{min-height:38px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:#fffdfa;text-decoration:none}
+@media(hover:hover) and (pointer:fine){.subcategory-links a:hover{background:var(--blush);border-color:#dccbd3}}
+
+/* Header actions: soft pill hover so they read as buttons. */
+.store-header-actions>button{border-radius:999px;transition:background-color .2s ease,color .2s ease}
+.store-header-actions .store-search-button,.store-header-actions .store-menu-button{min-height:40px;padding-inline:12px}
+@media(hover:hover) and (pointer:fine){.store-header-actions>button:hover{background:var(--blush)}}
+
+/* "View details" label on product photos: frosted pill. */
+.product .quick{left:12px;right:12px;bottom:12px;border-radius:999px;background:#fffdfaeb;color:var(--plum);box-shadow:0 4px 14px #30202b1a;backdrop-filter:blur(6px)}
+
+/* Quantity buttons and the size/colour choices get the same hover feedback. */
+.product-page .chips button[aria-pressed=true]{box-shadow:0 4px 12px #432b3b26}
+
+@media(prefers-reduced-motion:reduce){
+  .section-heading>.text-link,.chips a,.store-header-actions>button{transition:none}
+}

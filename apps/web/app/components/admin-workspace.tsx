@@ -13,6 +13,7 @@ import StorefrontEditor from './admin/storefront-editor';
 import CategoryManager from './admin/category-manager';
 import ProductsTable from './admin/products-table';
 import PromotionsEditor from './admin/promotions-editor';
+import CategoryPicker from './admin/category-picker';
 import {defaultHeroSlides} from './FashionHero';
 
 import BrandLogo from './brand-logo';
@@ -163,7 +164,7 @@ export default function AdminWorkspace() {
                 <div className="form-modal__main">
                     <section className="form-section"><h3>{modal==='product'?'Product details':'Category'}</h3>
                         <label>Name<input name="name" autoFocus defaultValue={editing?.name || ''} required minLength={2} maxLength={100}/></label>
-                        {modal === 'product' && <><label>Category<select name="category" defaultValue={editing?.category}>{categories.map(c => <option key={c}>{c}</option>)}</select></label><label>Product label<input name="tag" defaultValue={editing?.tag||'NEW ARRIVAL'} maxLength={40}/></label></>}
+                        {modal === 'product' && <><CategoryPicker key={editing?.id||'new'} categories={categoryTree} initial={editing?.category}/><label>Product label<input name="tag" defaultValue={editing?.tag||'NEW ARRIVAL'} maxLength={40}/></label></>}
                     </section>
                     {modal === 'product' && <><section className="form-section"><h3>Pricing & stock</h3><div className="form-pair"><label>Price (৳)<input name="price" type="number" min="1" step="1" max="1000000" defaultValue={editing?.price} onChange={event=>setOfferPrice(Number(event.target.value))} required/></label><label>Stock<input name="stock" type="number" min="0" step="1" max="1000000" defaultValue={editing?.stock} required/></label></div></section>
                     <section className="form-section"><h3>Description</h3><label>Description<textarea name="description" defaultValue={editing?.description||''} maxLength={3000} rows={6} placeholder="Materials, fit, care instructions and what is included"/></label></section>
