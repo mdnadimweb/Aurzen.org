@@ -8,7 +8,7 @@
 .brand-intro__logo>img{display:block;width:100%;height:auto;object-fit:contain}
 .brand-intro__mask{
   position:absolute;inset:0;overflow:hidden;pointer-events:none;
-  mask-image:url('/aurzen-logo.png');-webkit-mask-image:url('/aurzen-logo.png');
+  mask-image:url('/aurzen-logo.png?v=2');-webkit-mask-image:url('/aurzen-logo.png?v=2');
   mask-size:100% 100%;-webkit-mask-size:100% 100%;
   mask-repeat:no-repeat;-webkit-mask-repeat:no-repeat;
   mask-mode:alpha;

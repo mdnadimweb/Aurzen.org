@@ -25,7 +25,7 @@ async function page({url='/',reduced=false,imageFailure=false,stalled=false,stor
   if(reduced)await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
   await send('Page.addScriptToEvaluateOnNewDocument',{source:trace+(storageBlocked?`Object.defineProperty(window,'sessionStorage',{get(){throw new DOMException('Blocked','SecurityError')}});`:'')});
   if(imageFailure||stalled){
-    await send('Fetch.enable',{patterns:[{urlPattern:base+'/aurzen-logo.png'}]});
+    await send('Fetch.enable',{patterns:[{urlPattern:base+'/aurzen-logo.png*'}]});
     listeners.push(async event=>{if(event.sessionId===sessionId&&event.method==='Fetch.requestPaused'&&!stalled)await send('Fetch.failRequest',{requestId:event.params.requestId,errorReason:'Failed'});});
   }
   if(noJs)await send('Emulation.setScriptExecutionDisabled',{value:true});
