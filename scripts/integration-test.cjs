@@ -109,7 +109,7 @@ async function main(){
   assert.equal((await mutate({action:'deleteProduct',id:product.id})).status,200);
   assert.equal((await mutate({action:'deleteCategory',name:'Test Category'})).status,200);
   for(const url of ['/','/shop/','/cart/','/products/1/','/tracking/','/admin/login/']){
-    const r=await fetch(base+url);assert.equal(r.status,200,`${url} should load`);const html=await r.text();assert(html.includes('/brand/aurzen-logo.png'));if(url==='/products/1/'){assert(html.includes('The Everyday Co-ord'));assert(html.indexOf('product-page')<html.indexOf('<footer'));}assert.equal(r.headers.get('x-content-type-options'),'nosniff');
+    const r=await fetch(base+url);assert.equal(r.status,200,`${url} should load`);const html=await r.text();assert(/\/brand\/aurzen-logo(-gold|-header)?\.png/.test(html),url+' should show the logo');if(url==='/products/1/'){assert(html.includes('The Everyday Co-ord'));assert(html.indexOf('product-page')<html.indexOf('<footer'));}assert.equal(r.headers.get('x-content-type-options'),'nosniff');
   }
   const trackingHtml=await (await fetch(base+'/tracking/')).text();assert(trackingHtml.includes('noindex'));assert(trackingHtml.includes('Track your little finds.'));
   const missing=await fetch(base+'/products/99999/');assert([200,404].includes(missing.status));const missingHtml=await missing.text();assert(missingHtml.includes('This page is out of reach.'));assert(missingHtml.includes('noindex'));

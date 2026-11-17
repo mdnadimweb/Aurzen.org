@@ -11,7 +11,7 @@ export default function Login(){
   useEffect(()=>{api('/api/admin/session').then(d=>{setConfigured(d.configured);if(d.authenticated)router.replace('/admin');}).catch(()=>setError('Unable to reach the server. Please refresh.'));},[router]);
   return <main className="admin admin--login">
     <section className="login-brand" aria-label="AURZÉN studio">
-      <BrandLogo/>
+      <BrandLogo variant="light"/>
       <div className="login-brand__copy">
         <p className="login-brand__title">Your private studio.</p>
         <ul>
