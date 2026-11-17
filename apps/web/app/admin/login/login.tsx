@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {api} from '../../providers';
 export default function Login(){
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[configured,setConfigured]=useState<boolean|null>(null);const router=useRouter();
-  useEffect(()=>{api('/api/admin/session').then(d=>{setConfigured(d.configured);if(d.authenticated)router.replace('/admin');}).catch(()=>setError('Unable to reach the server. Please refresh.'));},[router]);
+  useEffect(()=>{api('/api/admin/session/').then(d=>{setConfigured(d.configured);if(d.authenticated)router.replace('/admin');}).catch(()=>setError('Unable to reach the server. Please refresh.'));},[router]);
   return <main className="admin admin--login">
     <section className="login-brand" aria-label="AURZÉN studio">
       <BrandLogo variant="light"/>
@@ -22,7 +22,7 @@ export default function Login(){
       </div>
     </section>
     <section className="login-panel">
-      <form className="a-card login-card" onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');const f=new FormData(e.currentTarget);try{await api('/api/admin/session',{method:'POST',body:JSON.stringify({password:f.get('password')})});router.replace('/admin');router.refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}}>
+      <form className="a-card login-card" onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');const f=new FormData(e.currentTarget);try{await api('/api/admin/session/',{method:'POST',body:JSON.stringify({password:f.get('password')})});router.replace('/admin');router.refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}}>
         <div className="admin-eyebrow">The studio</div>
         <h1>Welcome back.</h1>
         <p>Sign in to manage your collection and orders.</p>

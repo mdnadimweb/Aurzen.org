@@ -117,18 +117,20 @@ export function database(){
 }
 export async function catalog(connection?:Database){
   const db=connection||await database();
-  const products=await db.prepare('SELECT * FROM products ORDER BY id').all();
-  const categories=await db.prepare(`SELECT name,parent,slug,cover FROM categories ORDER BY ${db.dialect==='postgres'?'position':'rowid'}`).all();
+  // Three independent reads sent together: one database round trip of waiting instead of five.
+  const [products,categories,settingRows]=await Promise.all([
+    db.prepare('SELECT * FROM products ORDER BY id').all(),
+    db.prepare(`SELECT name,parent,slug,cover FROM categories ORDER BY ${db.dialect==='postgres'?'position':'rowid'}`).all(),
+    db.prepare("SELECT key,value FROM settings WHERE key IN ('promotions','heroSlides','storefront')").all(),
+  ]);
+  const setting=(key:string)=>{const row=settingRows.find(r=>r.key===key);return row?JSON.parse(String(row.value)):undefined;};
   const categoryDetails:Category[]=categories.map(c=>({name:String(c.name),slug:String(c.slug||slugify(String(c.name))),parent:c.parent?String(c.parent):null,cover:c.cover?String(c.cover):null}));
   // Empty list until the owner adds homepage promotion slides.
-  const promotionsRow=await db.prepare("SELECT value FROM settings WHERE key='promotions'").get();
-  const promotions=promotionsRow?JSON.parse(String(promotionsRow.value)) as Promotion[]:[];
+  const promotions=(setting('promotions')??[]) as Promotion[];
   // null until the owner saves slides; the storefront then shows its automatic defaults.
-  const heroRow=await db.prepare("SELECT value FROM settings WHERE key='heroSlides'").get();
-  const hero=heroRow?JSON.parse(String(heroRow.value)) as HeroSlide[]:null;
+  const hero=(setting('heroSlides')??null) as HeroSlide[]|null;
   // null until the owner saves an announcement or category covers.
-  const storefrontRow=await db.prepare("SELECT value FROM settings WHERE key='storefront'").get();
-  const storefront=storefrontRow?JSON.parse(String(storefrontRow.value)) as Storefront:null;
+  const storefront=(setting('storefront')??null) as Storefront|null;
   return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null')),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){

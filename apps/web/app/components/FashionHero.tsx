@@ -159,6 +159,7 @@ export default function FashionHero() {
                           src={slide.image}
                           category={slide.category}
                           alt={slide.alt}
+                          sizes="(max-width: 900px) 90vw, 45vw"
                           eager={index === 0}
                         />
                       )}

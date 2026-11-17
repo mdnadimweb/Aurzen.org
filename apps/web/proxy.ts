@@ -5,21 +5,20 @@ import {backendConfig} from './server/backend';
 import {categoryList,categoryPath} from '@aurzen/shared/catalog';
 // Older shared links (/shop/?category=Name, e.g. from Facebook ads) get a real HTTP redirect to the
 // collection URL, keeping utm_*/fbclid and every other parameter. Unknown names fall through to /shop/.
-// A former main category that became a subcategory (/collections/abayas/) moves to its new path
-// (/collections/ladies-fashion/abayas/) the same way.
+// (Former main categories such as /collections/abayas/ are redirected by the collection page itself,
+// which reads the cached catalog, so ordinary collection visits never wait on an extra API call here.)
 async function legacyCategoryRedirect(request:NextRequest){
   const {pathname,searchParams}=request.nextUrl;
   const shopName=(pathname==='/shop'||pathname==='/shop/')?searchParams.get('category'):null;
-  const slug=/^\/collections\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
-  if((!shopName||shopName==='All')&&!slug)return null;
+  if(!shopName||shopName==='All')return null;
   try{
     const {url,token}=backendConfig();
     const response=await fetch(url+'/api/catalog/',{cache:'no-store',headers:{'x-aurzen-internal-token':token},signal:AbortSignal.timeout(8000)});
     if(!response.ok)return null;
     const data=await response.json();
     const categories=categoryList(data.categoryDetails,data.categories);
-    const name=slug?(categories.some(c=>!c.parent&&c.slug===slug)?null:categories.find(c=>c.parent&&c.slug===slug)?.name):shopName;
-    if(!name||!categories.some(c=>c.name===name))return null;
+    const name=shopName;
+    if(!categories.some(c=>c.name===name))return null;
     const target=request.nextUrl.clone();
     target.pathname=categoryPath(categories,name);target.searchParams.delete('category');
     return NextResponse.redirect(target,307);

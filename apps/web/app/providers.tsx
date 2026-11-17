@@ -18,7 +18,7 @@ function useStoreState(initialCatalog:Catalog) {
     useEffect(()=>{setBagOpen(false);},[pathname]);
     const [products, setProducts] = useState<Product[]>(initialCatalog.products), [categories, setCategories] = useState<string[]>(initialCatalog.categories), [hero, setHero] = useState<HeroSlide[]|null>(initialCatalog.hero||null), [storefront, setStorefront] = useState<Storefront|null>(initialCatalog.storefront||null), [categoryDetails, setCategoryDetails] = useState<Category[]>(initialCatalog.categoryDetails||[]), [promotions, setPromotions] = useState<Promotion[]>(initialCatalog.promotions||[]), [cart, setCart] = useState<CartItem[]>([]), [ready, setReady] = useState(false), [loaded, setLoaded] = useState(true), [error, setError] = useState('');
     const refresh = useCallback(async () => { try {
-        const d = await api('/api/catalog');
+        const d = await api('/api/catalog/');
         setProducts(d.products);
         setCategories(d.categories);
         setHero(d.hero||null); setStorefront(d.storefront||null); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]);
@@ -38,7 +38,10 @@ function useStoreState(initialCatalog:Catalog) {
         catch { }
         setReady(true);
     }, []);
-    useEffect(()=>{void refresh();},[refresh,pathname]);
+    // The page arrives with a fresh catalog, so the first refresh is skipped; later page changes
+    // pick up stock and price edits made since.
+    const firstPath=useRef(true);
+    useEffect(()=>{if(firstPath.current){firstPath.current=false;return;}void refresh();},[refresh,pathname]);
     // Use server time, including on clients with an inaccurate system clock.
     // Re-render at schedule boundaries so idle pages never retain an expired sale.
     useEffect(()=>{

@@ -22,14 +22,14 @@ export default function ProductGallery({product}:{product:Product}){
   };
   useEffect(()=>{setIndex(0);setZoom(1);setPan({x:0,y:0});setOpen(false);},[product.id,photoKey]);
   const current=images[index]||images[0];
-  if(!images.length)return <ProductImage className="gallery-main" src={product.image} alt={product.name} category={product.category}/>;
+  if(!images.length)return <ProductImage className="gallery-main" sizes="(max-width: 900px) 100vw, 50vw" src={product.image} alt={product.name} category={product.category}/>;
   const arrows=images.length>1&&<div className="gallery-arrows"><button aria-label="Previous photo" onClick={()=>select(index-1)}>←</button><span aria-live="polite">{index+1} / {images.length}</span><button aria-label="Next photo" onClick={()=>select(index+1)}>→</button></div>;
   return <div className="product-gallery">
     <div className="gallery-main" data-category={product.category} style={{touchAction:'pan-y'}} onTouchStart={e=>{swipe.current=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null;}} onTouchEnd={e=>{if(swipe.current){const delta=e.changedTouches[0].clientX-swipe.current.x,vertical=e.changedTouches[0].clientY-swipe.current.y;if(Math.abs(delta)>50&&Math.abs(delta)>Math.abs(vertical))select(index+(delta<0?1:-1));}swipe.current=null;}} onTouchCancel={()=>{swipe.current=null;}}>
       <Photo key={current} src={current} alt={product.name+' — photo '+(index+1)} eager priority={index===0}/>
       <button className="gallery-expand" aria-label="Open full-screen photo viewer" onClick={()=>{setOpen(true);setZoom(1);setPan({x:0,y:0});}}>View & zoom ⤢</button>
     </div>{arrows}
-    {images.length>1&&<div className="gallery-thumbnails" aria-label="Product photos">{images.map((src,i)=><button key={src} aria-label={'Show photo '+(i+1)} aria-pressed={index===i} onClick={()=>select(i)}><ProductImage src={src} alt={product.name+' — thumbnail '+(i+1)} category={product.category}/></button>)}</div>}
+    {images.length>1&&<div className="gallery-thumbnails" aria-label="Product photos">{images.map((src,i)=><button key={src} aria-label={'Show photo '+(i+1)} aria-pressed={index===i} onClick={()=>select(i)}><ProductImage sizes="120px" src={src} alt={product.name+' — thumbnail '+(i+1)} category={product.category}/></button>)}</div>}
     <Modal open={open} onClose={()=>setOpen(false)} label={product.name+' photo viewer'} className="image-viewer">
       <div className="viewer-content" onKeyDown={e=>{if(e.key==='ArrowLeft'){e.preventDefault();select(index-1);}if(e.key==='ArrowRight'){e.preventDefault();select(index+1);}}}>
         <div className="viewer-toolbar"><span>{product.name}</span><button aria-label="Zoom out" disabled={zoom===1} onClick={()=>{setZoom(Math.max(1,zoom-0.5));setPan({x:0,y:0});}}>−</button><span aria-live="polite">{Math.round(zoom*100)}%</span><button aria-label="Zoom in" disabled={zoom===3} onClick={()=>setZoom(Math.min(3,zoom+0.5))}>+</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}}>Reset</button><button autoFocus aria-label="Close photo viewer" onClick={()=>setOpen(false)}>×</button></div>

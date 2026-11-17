@@ -55,9 +55,9 @@ export default function AdminWorkspace() {
     const menuButton=useRef<HTMLButtonElement>(null),sidebar=useRef<HTMLElement>(null);
     const setNotice=(text:string,kind:Notice['kind']='success')=>setNoticeState(text?{text,kind}:null);
     useEffect(()=>{setFormError('');setOfferPrice(editing?.price||0);},[modal,editing?.id]);
-    useEffect(() => { api('/api/admin').then(d => { setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
+    useEffect(() => { api('/api/admin/').then(d => { setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
     // Keep the unread-order badge current while the studio is open (orders only, so edits in progress are untouched).
-    useEffect(() => { const poll = () => { if (document.visibilityState === 'visible') api('/api/admin').then(d => setOrders(d.orders)).catch(() => {}); }; const timer = setInterval(poll, 30000); document.addEventListener('visibilitychange', poll); return () => { clearInterval(timer); document.removeEventListener('visibilitychange', poll); }; }, []);
+    useEffect(() => { const poll = () => { if (document.visibilityState === 'visible') api('/api/admin/').then(d => setOrders(d.orders)).catch(() => {}); }; const timer = setInterval(poll, 30000); document.addEventListener('visibilitychange', poll); return () => { clearInterval(timer); document.removeEventListener('visibilitychange', poll); }; }, []);
     useEffect(() => { if (notice) {
         const t = setTimeout(() => setNoticeState(null), 6000);
         return () => clearTimeout(t);
@@ -73,10 +73,10 @@ export default function AdminWorkspace() {
         document.addEventListener('keydown',onKey);desktop.addEventListener('change',onChange);
         return()=>{document.removeEventListener('keydown',onKey);desktop.removeEventListener('change',onChange);};
     },[navOpen]);
-    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin', { method: 'POST', body: JSON.stringify(data) }); setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); }
+    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin/', { method: 'POST', body: JSON.stringify(data) }); setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); }
     const unread = orders.filter(o => !o.readAt).length;
     // Read status is saved on the server and never changes the fulfilment status.
-    const markRead = (order: Order) => { if (order.readAt) return; const readAt = new Date().toISOString(); setOrders(list => list.map(o => o.id === order.id ? { ...o, readAt } : o)); api('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'markRead', id: order.id }) }).then(d => setOrders(d.orders)).catch(e => setNotice((e as Error).message, 'error')); };
+    const markRead = (order: Order) => { if (order.readAt) return; const readAt = new Date().toISOString(); setOrders(list => list.map(o => o.id === order.id ? { ...o, readAt } : o)); api('/api/admin/', { method: 'POST', body: JSON.stringify({ action: 'markRead', id: order.id }) }).then(d => setOrders(d.orders)).catch(e => setNotice((e as Error).message, 'error')); };
     async function change(data: Record<string, unknown>) { try {
         await mutate(data);
         setNotice('Changes saved');
@@ -109,7 +109,7 @@ export default function AdminWorkspace() {
             <div className="admin-topbar__actions">
                 <span className="admin-chip"><Icon name="lock"/>Private workspace</span>
                 <button type="button" className="a-btn a-btn--secondary a-btn--sm admin-signout" onClick={async () => { try {
-                    await api('/api/admin/session', { method: 'DELETE' });
+                    await api('/api/admin/session/', { method: 'DELETE' });
                     setOrders([]);
                     router.replace('/admin/login');
                     router.refresh();

@@ -1,5 +1,5 @@
 import 'server-only';
-import {backendConfig} from './backend';
+import {backendConfig,catalog,catalogChanged} from './backend';
 import {validMutationOrigin} from './security';
 import {maxImageBytes} from '@aurzen/shared/upload-limits';
 
@@ -8,6 +8,11 @@ export async function forward(request:Request){
   if(!/^\/(?:api\/(?:catalog|orders|tracking|admin(?:\/session|\/images)?)\/?|media\/[a-f0-9-]{36}\.webp\/?)$/.test(path))return Response.json({error:'Not found.'},{status:404});
   const mutation=!['GET','HEAD'].includes(request.method);
   if(mutation&&!validMutationOrigin(request))return Response.json({error:'Request origin is not allowed.'},{status:403});
+  // The storefront's catalog refresh is served from the shared cached copy (see catalog()).
+  if(!mutation&&/^\/api\/catalog\/?$/.test(path)){
+    try{return Response.json(await catalog(),{headers:{'Cache-Control':'no-store'}});}
+    catch{return Response.json({error:'Store service is temporarily unavailable.'},{status:502,headers:{'Cache-Control':'no-store'}});}
+  }
   const limit=path.includes('/images')?maxImageBytes+65536:32000;
   try{
     let body:Uint8Array|undefined;
@@ -28,6 +33,8 @@ export async function forward(request:Request){
     for(const name of ['content-type','cache-control','x-content-type-options']){const value=upstream.headers.get(name);if(value)out.set(name,value);}
     if(!path.startsWith('/media/'))out.set('cache-control','no-store');
     for(const cookie of upstream.headers.getSetCookie())out.append('set-cookie',cookie);
+    // Admin edits and placed orders (stock) change the catalog: drop the cached copy right away.
+    if(mutation&&upstream.ok&&/^\/api\/(?:admin|orders)\/?$/.test(path))catalogChanged();
     return new Response(upstream.body,{status:upstream.status,headers:out});
   }catch{return Response.json({error:'Store service is temporarily unavailable.'},{status:502,headers:{'Cache-Control':'no-store'}});}
 }

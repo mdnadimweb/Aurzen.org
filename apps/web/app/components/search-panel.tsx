@@ -52,7 +52,7 @@ export default function SearchPanel({open,onClose}:{open:boolean;onClose:()=>voi
         :!suggestions.length?<p className="muted">No pieces match “{term}”. Try another word.</p>
         :<>
           <ul id={id+'-list'} role="listbox" aria-label="Suggested products" className="search-suggestions">{suggestions.map((p,i)=><li key={p.id} id={id+'-option-'+i} role="option" aria-selected={i===active}>
-            <Link href={'/products/'+p.id+'/'} onClick={close} tabIndex={-1}><span className="search-suggestions__photo"><ProductImage src={p.image} alt="" category={p.category}/></span><span className="search-suggestions__name">{p.name}<small>{p.category}</small></span><ProductPrice product={p} compact/></Link>
+            <Link href={'/products/'+p.id+'/'} onClick={close} tabIndex={-1}><span className="search-suggestions__photo"><ProductImage sizes="120px" src={p.image} alt="" category={p.category}/></span><span className="search-suggestions__name">{p.name}<small>{p.category}</small></span><ProductPrice product={p} compact/></Link>
           </li>)}</ul>
           <button className="text-link search-panel__all" type="submit">See all {matches.length} result{matches.length===1?'':'s'} for “{term}” ↗</button>
         </>}
