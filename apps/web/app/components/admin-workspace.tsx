@@ -93,7 +93,7 @@ export default function AdminWorkspace() {
     const openProduct=(product:Product|null)=>{setEditing(product);setModal('product');};
     return <div className="admin">
     <aside ref={sidebar} id="admin-sidebar" className={'admin-sidebar'+(navOpen?' is-open':'')} aria-label="Studio navigation">
-        <div className="admin-sidebar__brand"><BrandLogo/><button type="button" className="a-btn a-btn--icon admin-sidebar__close" aria-label="Close navigation" onClick={closeNav}><Icon name="close"/></button></div>
+        <div className="admin-sidebar__brand"><BrandLogo variant="light"/><button type="button" className="a-btn a-btn--icon admin-sidebar__close" aria-label="Close navigation" onClick={closeNav}><Icon name="close"/></button></div>
         <small className="admin-sidebar__label">Workspace</small>
         <nav className="admin-nav">{tabs.map(t => <button type="button" className={tab === t.name ? 'selected' : ''} aria-current={tab===t.name?'page':undefined} key={t.name} onClick={() => choose(t.name)}><Icon name={t.icon}/>{t.name}{t.name==='Orders'&&unread>0&&<span className="admin-nav__badge" aria-label={unread+' unread order'+(unread===1?'':'s')}>{unread>99?'99+':unread}</span>}</button>)}</nav>
         <div className="admin-sidebar__foot">
