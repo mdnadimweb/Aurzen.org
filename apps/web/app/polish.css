@@ -39,3 +39,23 @@
 @media(prefers-reduced-motion:reduce){
   .section-heading>.text-link,.chips a,.store-header-actions>button{transition:none}
 }
+
+/* "Shop by collection" tiles: a slow, premium hover — the card lifts, the photo eases in,
+   a soft shade settles over it and a gold line draws under the collection name. */
+.category-tile .product-media{position:relative;overflow:hidden}
+.category-tile .collection-copy h3{position:relative}
+.category-tile .collection-copy h3::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:1px;background:linear-gradient(90deg,var(--gold),#d9b77a 60%,transparent);transform:scaleX(0);transform-origin:left;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+@media(hover:hover) and (pointer:fine){
+  .category-tile{transition:transform .6s cubic-bezier(.2,.7,.2,1),box-shadow .6s ease}
+  .category-tile:hover{transform:translateY(-6px);box-shadow:0 28px 50px -24px #432b3b70}
+  .category-tile .product-media img{transition:transform 1.2s cubic-bezier(.2,.7,.2,1),filter .6s ease}
+  .category-tile:hover .product-media img{transform:scale(1.07);filter:saturate(1.06)}
+  .category-tile .product-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,#2a101c52 100%);opacity:0;transition:opacity .6s ease;pointer-events:none}
+  .category-tile:hover .product-media::after{opacity:1}
+  .category-tile:hover .collection-copy h3::after{transform:scaleX(1)}
+}
+.category-tile:focus-visible .collection-copy h3::after{transform:scaleX(1)}
+@media(prefers-reduced-motion:reduce){
+  .category-tile,.category-tile .product-media img,.category-tile .collection-copy h3::after{transition:none}
+  .category-tile:hover,.category-tile:hover .product-media img{transform:none}
+}

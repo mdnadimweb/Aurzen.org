@@ -112,7 +112,7 @@ async function main(){
     const r=await fetch(base+url);assert.equal(r.status,200,`${url} should load`);const html=await r.text();assert(/\/brand\/aurzen-logo(-gold|-header)?\.png/.test(html),url+' should show the logo');if(url==='/products/1/'){assert(html.includes('The Everyday Co-ord'));assert(html.indexOf('product-page')<html.indexOf('<footer'));}assert.equal(r.headers.get('x-content-type-options'),'nosniff');
   }
   const trackingHtml=await (await fetch(base+'/tracking/')).text();assert(trackingHtml.includes('noindex'));assert(trackingHtml.includes('Track your little finds.'));
-  const missing=await fetch(base+'/products/99999/');assert([200,404].includes(missing.status));const missingHtml=await missing.text();assert(missingHtml.includes('This page is out of reach.'));assert(missingHtml.includes('noindex'));
+  const missing=await fetch(base+'/products/99999/');assert.equal(missing.status,404,'missing products return a real 404');const missingHtml=await missing.text();assert(missingHtml.includes('This page is out of reach.'));assert(missingHtml.includes('noindex'));
   assert.equal((await request('/api/admin/session/',{method:'DELETE',auth:true})).status,200);assert.equal((await request('/api/admin/',{auth:true})).status,401);
   console.log('Integration checks passed: authenticated uploads, gallery compatibility, protected admin, private tracking, order history, offer validation, no-store quotes, stale-price rejection without writes, saved discounted prices, checkout and inventory.');
 }

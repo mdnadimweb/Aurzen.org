@@ -42,7 +42,7 @@ async function run(){
     // Report a mouse that can hover on every OS. Headless Chrome on Linux CI otherwise has no hover/fine pointer;
     // phone widths still switch to touch through Emulation.setTouchEmulationEnabled.
     '--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4','--remote-debugging-port=0',`--user-data-dir=${path.join(dir,'profile')}`,'--no-first-run','--no-default-browser-check','--disable-background-networking','about:blank'],{stdio:'ignore',windowsHide:true});
-  const portFile=path.join(dir,'profile','DevToolsActivePort');await poll(()=>{if(browser.exitCode!==null)throw new Error('Headless Chrome exited before remote debugging became available.');return fs.existsSync(portFile);});
+  const portFile=path.join(dir,'profile','DevToolsActivePort');await poll(()=>{if(browser.exitCode!==null)throw new Error('Headless Chrome exited before remote debugging became available.');return fs.existsSync(portFile);},30000);
   const [port,endpoint]=fs.readFileSync(portFile,'utf8').trim().split('\n');socket=new WebSocket(`ws://127.0.0.1:${port}${endpoint}`);await Promise.race([once(socket,'open'),pause(10000).then(()=>{throw new Error('Headless Chrome remote debugging did not connect.');})]);
   socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const waiter=pending.get(message.id);if(waiter){pending.delete(message.id);message.error?waiter.reject(new Error(JSON.stringify(message.error))):waiter.resolve(message.result);}}});
 

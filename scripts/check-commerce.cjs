@@ -39,7 +39,7 @@ async function run(){
   server.stdout.on('data',chunk=>output+=chunk);server.stderr.on('data',chunk=>output+=chunk);
   await poll(()=>{if(server.exitCode!==null)throw new Error(output);return output.includes('Ready in');});
   browser=spawn(process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=0',`--user-data-dir=${path.join(dir,'profile')}`,'--no-first-run','--no-default-browser-check','--disable-background-networking','about:blank'],{stdio:'ignore',windowsHide:true});
-  const portFile=path.join(dir,'profile','DevToolsActivePort');await poll(()=>{if(browser.exitCode!==null)throw new Error('Headless Chrome exited before remote debugging became available.');return fs.existsSync(portFile);});
+  const portFile=path.join(dir,'profile','DevToolsActivePort');await poll(()=>{if(browser.exitCode!==null)throw new Error('Headless Chrome exited before remote debugging became available.');return fs.existsSync(portFile);},30000);
   const [port,endpoint]=fs.readFileSync(portFile,'utf8').trim().split('\n');socket=new WebSocket(`ws://127.0.0.1:${port}${endpoint}`);await Promise.race([once(socket,'open'),pause(10000).then(()=>{throw new Error('Headless Chrome remote debugging did not connect.');})]);
   socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const waiter=pending.get(message.id);if(waiter){pending.delete(message.id);message.error?waiter.reject(new Error(JSON.stringify(message.error))):waiter.resolve(message.result);}}});
 
