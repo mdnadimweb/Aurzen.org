@@ -118,3 +118,32 @@ test('opening an order marks it read without changing its fulfilment status, and
   assert.equal((await orders()).find(o=>o.id===id).readAt,first,'marking again keeps the first read time');
   assert.equal((await admin({action:'markRead',id:'AZ-missing'})).status,404);
 });
+
+test('owners can mark an active order Delivered directly; final statuses stay final with a clear message',async()=>{
+  const p=(await catalog()).products.find(x=>x.stock>0);
+  const place=async()=>{const input={key:randomUUID(),name:'Status Flow',phone:'01712345678',address:'House 10, Road 2, Dhaka',area:'dhaka',items:[{id:p.id,qty:1,size:shared.productOptions(p)[0]}]};input.quote=(await quoteOrder(input)).quote;return (await placeOrder(input)).id;};
+  const id=await place();
+  assert.deepEqual(shared.statusOptions('New'),['New','Confirmed','Processing','Shipped','Delivered','Cancelled']);
+  let r=await admin({action:'status',id,status:'Delivered'});
+  assert.equal(r.status,200,'New -> Delivered without courier details');
+  assert.equal((await orders()).find(o=>o.id===id).status,'Delivered');
+  const cancelled=await place();
+  assert.equal((await admin({action:'status',id:cancelled,status:'Cancelled'})).status,200);
+  r=await admin({action:'status',id:cancelled,status:'Delivered'});
+  assert.equal(r.status,400);assert.match(r.body.error,/Cancelled cannot be changed to Delivered\. Cancelled is a final status/);
+  assert.deepEqual(shared.statusOptions('Cancelled'),['Cancelled']);
+});
+
+test('a main category can become a subcategory; products move in bulk; a subcategory is required when one exists',async()=>{
+  assert.equal((await admin({action:'addCategory',name:'Love & Care'})).status,200,'main categories can still be added');
+  assert.equal((await admin({action:'editCategory',original:'Mystery Boxes',name:'Mystery Boxes',parent:'Love & Care'})).status,200);
+  assert.equal(shared.categoryPath((await tree()),'Mystery Boxes'),'/collections/love-and-care/mystery-boxes/');
+  const box=(await catalog()).products.find(p=>p.category==='Mystery Boxes');
+  assert.equal((await admin({action:'addCategory',name:'Self-care',parent:'Love & Care'})).status,200);
+  assert.equal((await admin({action:'moveProducts',ids:[box.id],category:'Self-care'})).status,200);
+  const moved=(await catalog()).products.find(p=>p.id===box.id);
+  assert.equal(moved.category,'Self-care');assert.equal(moved.price,box.price);assert.equal(moved.stock,box.stock);
+  const r=await admin({action:'saveProduct',id:box.id,name:box.name,category:'Love & Care',price:box.price,stock:box.stock,image:box.image,tag:box.tag});
+  assert.equal(r.status,400);assert.match(r.body.error,/Choose a subcategory of Love & Care/);
+  assert.equal((await admin({action:'moveProducts',ids:[box.id],category:'Missing'})).status,400);
+});

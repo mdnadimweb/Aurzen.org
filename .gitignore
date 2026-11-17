@@ -25,3 +25,6 @@ Thumbs.db
 config.bat
 .playwright-mcp/
 .neon
+
+# Local data backups (never commit)
+backups/

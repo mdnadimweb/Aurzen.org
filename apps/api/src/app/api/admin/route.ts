@@ -1,8 +1,8 @@
 import { requireAdmin } from '../../../lib/auth';
 import { catalog, database, orders, transaction } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
-import { statuses, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
-import { addCategory, editCategory, deleteCategory } from '../../../lib/categories';
+import { statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
+import { addCategory, editCategory, deleteCategory, moveProducts } from '../../../lib/categories';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
 function productOffer(value:unknown){
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
             if (d.action === 'saveProduct') {
                 const name = text(d.name, 2, 100, 'Product name'), category = text(d.category, 1, 100, 'Category');
                 assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(category), 'Choose an existing category.');
+                assert(!await db.prepare('SELECT name FROM categories WHERE parent=?').get(category), 'Choose a subcategory of ' + category + ' for this product.');
                 assert(Number.isSafeInteger(d.price) && d.price > 0 && d.price <= 1000000, 'Enter a whole taka price between 1 and 1,000,000.');
                 assert(Number.isSafeInteger(d.stock) && d.stock >= 0 && d.stock <= 1000000, 'Stock must be a whole number from 0 to 1,000,000.');
                 if(d.id!==undefined)assert(Number.isSafeInteger(d.id)&&d.id>0,'Invalid product.');
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
             else if (d.action === 'addCategory') await addCategory(db, d);
             else if (d.action === 'editCategory') await editCategory(db, d);
             else if (d.action === 'deleteCategory') await deleteCategory(db, d);
+            else if (d.action === 'moveProducts') await moveProducts(db, d);
             else if (d.action === 'markRead') {
                 // Read status is separate from the fulfilment status and never changes it.
                 const row = await db.prepare('SELECT payload FROM orders WHERE id=?').get(text(d.id, 1, 100, 'Order ID'));
@@ -95,8 +97,7 @@ export async function POST(request: Request) {
                 const row = await db.prepare('SELECT payload FROM orders WHERE id=?').get(text(d.id, 1, 100, 'Order ID'));
                 assert(row, 'Order not found.', 404);
                 const order = JSON.parse(String(row.payload)) as Order;
-                const transitions: Record<string, readonly string[]> = { New: ['Confirmed', 'Cancelled'], Confirmed: ['Processing', 'Cancelled'], Processing: ['Shipped', 'Cancelled'], Shipped: ['Delivered', 'Returned'], Delivered: ['Returned'], Cancelled: [], Returned: [] };
-                assert(order.status === d.status || transitions[order.status].includes(d.status), 'That order status transition is not allowed.');
+                assert(order.status === d.status || (statusTransitions[order.status] || []).includes(d.status), statusChangeError(order.status, d.status));
                 if (order.status !== d.status && (d.status === 'Cancelled' || d.status === 'Returned'))
                     for (const item of order.items)
                         await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(item.qty, item.id);
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
                 }
                 for(const [category,id] of Object.entries(storefront.covers)){
                     assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(category),`Category "${category}" no longer exists.`);
-                    assert(await db.prepare('SELECT id FROM products WHERE id=? AND category=?').get(id,category),`Choose a cover product from ${category}.`);
+                    assert(await db.prepare('SELECT id FROM products WHERE id=? AND (category=? OR category IN (SELECT name FROM categories WHERE parent=?))').get(id,category,category),`Choose a cover product from ${category} or its subcategories.`);
                 }
                 await db.prepare("INSERT INTO settings(key,value) VALUES('storefront',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(storefront));
             }
