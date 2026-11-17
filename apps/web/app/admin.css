@@ -593,3 +593,6 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .admin .promo-state[data-state="ended"],.admin .promo-state[data-state="hidden"]{background:#f1ecee;color:var(--a-muted)}
 .admin .promo-editor-slide[data-hidden]{opacity:.75}
 @media(max-width:640px){.admin .image-field{grid-template-columns:1fr}.admin .category-row--sub{padding-left:20px}}
+
+/* Product form: hint under the category/subcategory pair */
+.form-hint{margin:-4px 0 14px;font-size:.8125rem;line-height:1.5;color:var(--a-muted,#7a6a70)}
