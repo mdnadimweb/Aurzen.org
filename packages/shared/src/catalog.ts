@@ -104,13 +104,22 @@ export function normalizeStorefront(value:unknown):Storefront{
   return {announcement:{message,detail},covers,featured};
 }
 /** The product whose photo represents a category: the owner's choice if it still belongs there, else the first with a photo. */
-export function categoryCover(category:string,products:Product[],covers:Record<string,number>={}){
-  const chosen=products.find(p=>p.id===covers[category]&&p.category===category);
-  return chosen||products.find(p=>p.category===category&&p.image&&p.image!=='box')||products.find(p=>p.category===category);
+export function categoryCover(category:string,products:Product[],covers:Record<string,number>={},family:string[]=[category]){
+  const chosen=products.find(p=>p.id===covers[category]&&family.includes(p.category));
+  return chosen||products.find(p=>family.includes(p.category)&&p.image&&p.image!=='box')||products.find(p=>family.includes(p.category));
 }
 export const statuses = ['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'] as const;
 /** Orders can be corrected by the owner until they ship. */
 export const editableStatuses:readonly string[] = ['New','Confirmed','Processing'];
+/** Where an order may go next. Active orders can move forward (skipping steps) or straight to
+ *  Delivered; Cancelled and Returned are final. Used by the API and the admin status menu. */
+export const statusTransitions:Record<string,readonly string[]> = {New:['Confirmed','Processing','Shipped','Delivered','Cancelled'],Confirmed:['Processing','Shipped','Delivered','Cancelled'],Processing:['Shipped','Delivered','Cancelled'],Shipped:['Delivered','Returned'],Delivered:['Returned'],Cancelled:[],Returned:[]};
+/** The current status plus every status it may change to, in workflow order. */
+export const statusOptions=(current:string)=>statuses.filter(s=>s===current||(statusTransitions[current]||[]).includes(s));
+export function statusChangeError(from:string,to:string){
+  const next=statusTransitions[from]||[];
+  return 'An order that is '+from+' cannot be changed to '+to+'.'+(next.length?' It can be changed to: '+next.join(', ')+'.':' '+from+' is a final status.');
+}
 /** Cash-on-delivery charge per delivery area, in taka. */
 export const deliveryFees = {dhaka:80,outside:150} as const;
 export type Order = {paymentMethod?:'cod';id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};

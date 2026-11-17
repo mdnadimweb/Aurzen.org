@@ -97,7 +97,7 @@ export default function BrandIntro({children}:{children:ReactNode}){
       onAnimationEnd={event=>{if(event.target===event.currentTarget&&event.animationName==='brand-intro-exit')dismiss();}}
     >
       <div className="brand-intro__logo">
-        <img ref={logo} src="/aurzen-logo.png" alt="" width={1698} height={926} decoding="async" fetchPriority="high"/>
+        <img ref={logo} src="/aurzen-logo.png?v=2" alt="" width={958} height={586} decoding="async" fetchPriority="high"/>
         <span className="brand-intro__mask" aria-hidden="true"><span className="brand-intro__shine"/></span>
       </div>
     </div>}

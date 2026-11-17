@@ -1,14 +1,16 @@
 'use client';
 import {useState} from 'react';
-import {categoryCover,defaultStorefront,maxFeaturedCategories,storefrontLimits,type Product,type Storefront} from '@aurzen/shared/catalog';
+import {categoryCover,categoryFamily,type Category,defaultStorefront,maxFeaturedCategories,storefrontLimits,type Product,type Storefront} from '@aurzen/shared/catalog';
 
 /** Announcement bar text, featured categories and the product photo used for each category tile.
  *  categories: main category names (featured tiles and covers only use main categories). */
-export default function StorefrontEditor({initial,categories,products,onSave}:{initial:Storefront|null;categories:string[];products:Product[];onSave:(storefront:Storefront)=>Promise<void>}){
+export default function StorefrontEditor({initial,categories,tree=[],products,onSave}:{initial:Storefront|null;categories:string[];tree?:Category[];products:Product[];onSave:(storefront:Storefront)=>Promise<void>}){
+  // A main category's cover can be any product in it or in its subcategories.
+  const family=(category:string)=>tree.length?categoryFamily(tree,category):[category];
   const start=initial||defaultStorefront;
   const [message,setMessage]=useState(start.announcement.message),[detail,setDetail]=useState(start.announcement.detail);
   // Only keep choices that still point at a product in that category.
-  const [covers,setCovers]=useState<Record<string,number>>(()=>Object.fromEntries(Object.entries(start.covers).filter(([c,id])=>products.some(p=>p.id===id&&p.category===c))));
+  const [covers,setCovers]=useState<Record<string,number>>(()=>Object.fromEntries(Object.entries(start.covers).filter(([c,id])=>products.some(p=>p.id===id&&family(c).includes(p.category)))));
   const [featured,setFeatured]=useState<string[]>(()=>(start.featured||[]).filter(name=>categories.includes(name)));
   const [saving,setSaving]=useState(false),[error,setError]=useState('');
   const draft:Storefront={announcement:{message,detail},covers,featured};
@@ -41,9 +43,9 @@ export default function StorefrontEditor({initial,categories,products,onSave}:{i
     <section className="form-section"><h3>Category covers</h3>
       <p className="hero-slide__hint mt-0">Used when a category has no uploaded cover (set that in Categories). Automatic uses the first product with a photo.</p>
       <div className="form-pair">{categories.map(category=>{
-        const choices=products.filter(p=>p.category===category);
+        const choices=products.filter(p=>family(category).includes(p.category));
         return <label key={category}>{category}<select value={covers[category]??''} disabled={saving} onChange={e=>{const id=Number(e.target.value);setCovers(current=>{const next={...current};if(id)next[category]=id;else delete next[category];return next;});}}>
-          <option value="">Automatic{choices.length?` (${categoryCover(category,products)?.name})`:''}</option>
+          <option value="">Automatic{choices.length?` (${categoryCover(category,products,{},family(category))?.name})`:''}</option>
           {choices.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
         </select></label>;
       })}</div>

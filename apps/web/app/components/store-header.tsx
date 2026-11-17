@@ -47,7 +47,7 @@ export default function StoreHeader({view,count,onBag,bagOpen,categories,onNavig
   return <div className={'store-header-wrap'+(scrolled?' is-scrolled':'')}>
     <div className="announcement store-header-announcement">{announcement.message}{announcement.detail&&<> <span>{announcement.detail}</span></>}</div>
     <header className="store-header">
-      <BrandLogo/>
+      <BrandLogo variant="header"/>
       <nav className="store-header-desktop-nav" aria-label="Main navigation">{links()}</nav>
       <div className="store-header-actions"><button type="button" className="store-search-button" aria-label="Open product search" aria-haspopup="dialog" aria-expanded={searchOpen} onClick={()=>{setMenuOpen(false);setSearchOpen(true);}}><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><span className="store-search-button__label">Search</span></button><button className="store-menu-button" aria-label="Open navigation menu" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls={navigationId} onClick={()=>setMenuOpen(true)}><span aria-hidden="true">☰</span> Menu</button><button className="bag store-header-bag" aria-label={`Open shopping bag, ${count} item${count===1?'':'s'}`} aria-haspopup="dialog" aria-expanded={bagOpen} onClick={()=>{setMenuOpen(false);onBag();}}>Bag <span key={count}>{count}</span></button></div>
     </header>

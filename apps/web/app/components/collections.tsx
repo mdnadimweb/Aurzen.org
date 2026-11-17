@@ -37,10 +37,11 @@ export function FeaturedCategories(){
   </FadeIn>;
 }
 
-/** One small preview row per main category that has products; new categories appear automatically. */
-export function CategoryPreviews(){
+/** One small preview row per main category that has products; new categories appear automatically.
+ *  Products already shown above (exclude) are skipped so the homepage never repeats a piece. */
+export function CategoryPreviews({exclude=[]}:{exclude?:number[]}){
   const {products,categoryTree}=useStore();
-  const rows=mainCategories(categoryTree).map(c=>({category:c,items:published(products,categoryFamily(categoryTree,c.name))})).filter(r=>r.items.length);
+  const rows=mainCategories(categoryTree).map(c=>({category:c,items:published(products,categoryFamily(categoryTree,c.name)).filter(p=>!exclude.includes(p.id))})).filter(r=>r.items.length);
   if(!rows.length)return null;
   return <>{rows.map(({category,items})=><FadeIn as="section" key={category.slug} className="section category-preview" aria-labelledby={'preview-'+category.slug}>
     <div className="section-heading"><div className="eyebrow">THE {category.name.toUpperCase()} EDIT</div><h2 id={'preview-'+category.slug}>{category.name}</h2><Link className="text-link" href={categoryPath(categoryTree,category.name)}>View collection ↗</Link></div>

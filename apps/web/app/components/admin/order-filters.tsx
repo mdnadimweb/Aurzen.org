@@ -1,8 +1,8 @@
 'use client';
-// Orders search (ID, customer name or phone; debounced) and an inclusive date range in
+// Orders search (ID, customer name or phone; debounced), a status filter and an inclusive date range in
 // Asia/Dhaka time. Every order is already loaded in the studio, so filtering runs here.
 import {useEffect,useMemo,useState} from 'react';
-import type {Order} from '@aurzen/shared/catalog';
+import {statuses,type Order} from '@aurzen/shared/catalog';
 import Icon from '../admin-icons';
 
 const digits=(value:string)=>value.replace(/\D/g,'');
@@ -23,19 +23,21 @@ export function inDateRange(order:Order,from:string,to:string){
 }
 
 export function useOrderFilters(orders:Order[]){
-  const [input,setInput]=useState(''),[query,setQuery]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState('');
+  const [input,setInput]=useState(''),[query,setQuery]=useState(''),[status,setStatus]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState('');
   useEffect(()=>{const timer=window.setTimeout(()=>setQuery(input),300);return()=>window.clearTimeout(timer);},[input]);
-  const filtered=useMemo(()=>orders.filter(o=>matchesOrder(o,query)&&inDateRange(o,from,to)),[orders,query,from,to]);
-  const active=!!(input.trim()||from||to);
-  const reset=()=>{setInput('');setQuery('');setFrom('');setTo('');};
+  const filtered=useMemo(()=>orders.filter(o=>matchesOrder(o,query)&&(!status||o.status===status)&&inDateRange(o,from,to)),[orders,query,status,from,to]);
+  const active=!!(input.trim()||status||from||to);
+  const reset=()=>{setInput('');setQuery('');setStatus('');setFrom('');setTo('');};
+  // How many orders are in each status, so the menu shows where the work is.
+  const counts=useMemo(()=>Object.fromEntries(statuses.map(s=>[s,orders.filter(o=>o.status===s).length])),[orders]);
   // A "from" later than "to" moves the other side along, so the range is never empty by mistake.
   const changeFrom=(value:string)=>{setFrom(value);if(value&&to&&value>to)setTo(value);};
   const changeTo=(value:string)=>{setTo(value);if(value&&from&&value<from)setFrom(value);};
-  return {input,setInput,from,to,changeFrom,changeTo,filtered,active,reset,total:orders.length};
+  return {input,setInput,status,setStatus,counts,from,to,changeFrom,changeTo,filtered,active,reset,total:orders.length};
 }
 
 export default function OrderFilters({state}:{state:ReturnType<typeof useOrderFilters>}){
-  const {input,setInput,from,to,changeFrom,changeTo,filtered,active,reset,total}=state;
+  const {input,setInput,status,setStatus,counts,from,to,changeFrom,changeTo,filtered,active,reset,total}=state;
   return <div className="admin-filters admin-order-filters" role="search">
     <label className="admin-order-filters__search">Search orders
       <span className="admin-search-field">
@@ -43,6 +45,10 @@ export default function OrderFilters({state}:{state:ReturnType<typeof useOrderFi
         {input&&<button type="button" className="admin-search-field__clear" aria-label="Clear search" onClick={()=>setInput('')}><Icon name="close"/></button>}
       </span>
     </label>
+    <label>Status<select value={status} onChange={e=>setStatus(e.target.value)} aria-describedby="order-filter-count">
+      <option value="">All statuses</option>
+      {statuses.map(s=><option key={s} value={s}>{s} ({counts[s]})</option>)}
+    </select></label>
     <label>From date<input type="date" value={from} max={to||undefined} onChange={e=>changeFrom(e.target.value)}/></label>
     <label>To date<input type="date" value={to} min={from||undefined} onChange={e=>changeTo(e.target.value)}/></label>
     <button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-filters__reset" disabled={!active} onClick={reset}>Reset filters</button>

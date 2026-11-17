@@ -59,6 +59,14 @@ export async function editCategory(db: Database, d: Record<string, unknown>) {
     if (name !== original) await renameReferences(db, original, name);
 }
 
+/** Move products to another category without touching anything else about them. */
+export async function moveProducts(db: Database, d: Record<string, unknown>) {
+    const category = text(d.category, 1, categoryLimits.name, 'Category');
+    assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(category), 'Choose an existing category.');
+    assert(Array.isArray(d.ids) && d.ids.length > 0 && d.ids.length <= 500 && d.ids.every(id => Number.isSafeInteger(id) && Number(id) > 0), 'Choose the products to move.');
+    for (const id of d.ids as number[]) await db.prepare('UPDATE products SET category=? WHERE id=?').run(category, id);
+}
+
 export async function deleteCategory(db: Database, d: Record<string, unknown>) {
     const name = text(d.name, 1, categoryLimits.name, 'Category');
     assert(!await db.prepare('SELECT id FROM products WHERE category=?').get(name), 'Move or remove products before deleting this category.');
