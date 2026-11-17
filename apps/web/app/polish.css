@@ -27,7 +27,7 @@
 
 /* Header actions: soft pill hover so they read as buttons. */
 .store-header-actions>button{border-radius:999px;transition:background-color .2s ease,color .2s ease}
-.store-header-actions .store-search-button,.store-header-actions .store-menu-button{min-height:40px;padding-inline:12px}
+.store-header-actions .store-search-button,.store-header-actions .store-menu-button{min-height:44px;padding-inline:12px}
 @media(hover:hover) and (pointer:fine){.store-header-actions>button:hover{background:var(--blush)}}
 
 /* "View details" label on product photos: frosted pill. */
