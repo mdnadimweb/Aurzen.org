@@ -596,3 +596,15 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 
 /* Product form: hint under the category/subcategory pair */
 .form-hint{margin:-4px 0 14px;font-size:.8125rem;line-height:1.5;color:var(--a-muted,#7a6a70)}
+
+/* Orders search and date range */
+.admin .admin-order-filters .admin-order-filters__search{flex:2 1 260px}
+.admin .admin-order-filters input[type=date]{min-width:0;width:100%}
+.admin-search-field{position:relative;display:block}
+.admin .admin-search-field input{width:100%;padding-right:44px}
+.admin-search-field__clear{position:absolute;top:50%;right:4px;display:grid;place-items:center;width:36px;height:36px;margin-top:2px;transform:translateY(-50%);border-radius:8px;color:var(--a-muted)}
+.admin-search-field__clear:hover{background:var(--a-tint);color:var(--a-ink)}
+.admin-search-field__clear:focus-visible{outline:2px solid var(--a-plum);outline-offset:1px}
+.admin-search-field input::-webkit-search-cancel-button{display:none}
+.admin .admin-order-filters__reset{align-self:flex-end;min-height:40px}
+@media(max-width:640px){.admin .admin-order-filters label{flex:1 1 100%}.admin .admin-order-filters__reset{width:100%}}
