@@ -6,8 +6,13 @@ import {mediaWidths} from '@aurzen/shared/upload-limits';
 const unsplashWidths=[400,600,900,1200];
 export function responsiveSrcSet(src?:string){
   if(!src)return undefined;
-  if(/^\/media\/[a-f0-9-]{36}\.webp$/.test(src))return mediaWidths.map(width=>src+'?w='+width+' '+width+'w').concat(src+' 1600w').join(', ');
-  if(src==='/images/fashion-hero.jpeg')return '/images/fashion-hero-800.webp 800w, /images/fashion-hero-1312.webp 1312w';
+  // Banners may be saved as a full address of this shop (https://…/media/…); keep its origin.
+  const own=/^(https:\/\/[^/?#]+)?(\/media\/[a-f0-9-]{36}\.webp|\/images\/fashion-hero\.jpeg)$/.exec(src);
+  if(own){
+    const [,origin='',path]=own;
+    if(path.startsWith('/media/'))return mediaWidths.map(width=>origin+path+'?w='+width+' '+width+'w').concat(origin+path+' 1600w').join(', ');
+    return origin+'/images/fashion-hero-800.webp 800w, '+origin+'/images/fashion-hero-1312.webp 1312w';
+  }
   if(!src.startsWith('https://images.unsplash.com/'))return undefined;
   try{
     const url=new URL(src);

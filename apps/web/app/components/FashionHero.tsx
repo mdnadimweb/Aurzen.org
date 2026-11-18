@@ -6,6 +6,7 @@ import type { HeroSlide, Product } from "@aurzen/shared/catalog";
 import { useStore } from "../providers";
 import BoxArt from "./box-art";
 import ProductImage from "./product-image";
+import { usePageLoaded } from "./use-page-loaded";
 import "./FashionHero.css";
 
 const gentlemenPhoto = "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=1200&q=85";
@@ -77,21 +78,22 @@ export default function FashionHero() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [interacting, setInteracting] = useState(false);
+  const pageLoaded = usePageLoaded();
 
   const slides = hero?.length ? hero : defaultHeroSlides(products, categories);
   // Slides can be removed in the studio while this page is open.
   useEffect(() => { if (activeIndex >= slides.length) setActiveIndex(0); }, [activeIndex, slides.length]);
   const current = slides[activeIndex] || slides[0];
 
-  // Advance every 7s. Any slide change (auto or manual) restarts the timer.
+  // Advance every 7s, counting from when the page has finished loading. Any slide change restarts the timer.
   // Stops only for the pause button, keyboard focus inside, a hidden tab or reduced motion.
   useEffect(() => {
-    if (paused || interacting || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!pageLoaded || paused || interacting || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setTimeout(function next() {
       if (document.visibilityState === "visible") setActiveIndex((index) => (index + 1) % slides.length);
     }, 7000);
     return () => window.clearTimeout(timer);
-  }, [activeIndex, interacting, paused, slides.length]);
+  }, [activeIndex, interacting, paused, slides.length, pageLoaded]);
 
   function handleBlur(event: FocusEvent<HTMLElement>) {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setInteracting(false);
@@ -153,7 +155,7 @@ export default function FashionHero() {
                     <div className="lux-hero__image-card">
                       {slide.image === "box" ? (
                         <div className="lux-hero__box-art" aria-hidden="true"><BoxArt /></div>
-                      ) : (
+                      ) : !active && !pageLoaded ? null : (
                         <ProductImage
                           className="lux-hero__photo"
                           src={slide.image}
