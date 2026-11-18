@@ -31,6 +31,9 @@ export default function BrandIntro({children}:{children:ReactNode}){
     if(!visible)return;
     const covered=content.current,screen=overlay.current,image=logo.current;
     if(!covered||!screen||!image){dismiss();return;}
+    // The server-rendered cover hides itself after 2.5s (CSS failsafe). On a slow phone the page
+    // can hydrate after that; starting the intro then would cover the visible page a second time.
+    if(performance.now()>2000){dismiss();return;}
 
     const previousFocus=document.activeElement;
     const previousInert=covered.inert;
@@ -97,7 +100,7 @@ export default function BrandIntro({children}:{children:ReactNode}){
       onAnimationEnd={event=>{if(event.target===event.currentTarget&&event.animationName==='brand-intro-exit')dismiss();}}
     >
       <div className="brand-intro__logo">
-        <img ref={logo} src="/aurzen-logo.png?v=2" alt="" width={958} height={586} decoding="async" fetchPriority="high"/>
+        <img ref={logo} src="/aurzen-logo.png?v=2" crossOrigin="anonymous" alt="" width={958} height={586} decoding="async" fetchPriority="high"/>
         <span className="brand-intro__mask" aria-hidden="true"><span className="brand-intro__shine"/></span>
       </div>
     </div>}

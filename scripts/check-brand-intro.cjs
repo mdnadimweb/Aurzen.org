@@ -39,8 +39,9 @@ async function run(){
   await poll(()=>{if(server.exitCode!==null)throw new Error(output);return output.includes('Ready in');});
   const chrome=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe';
   browser=spawn(chrome,['--headless=new','--remote-debugging-port=0',`--user-data-dir=${path.join(dir,'profile')}`,'--no-first-run','--no-default-browser-check','--disable-background-networking','about:blank'],{stdio:'ignore',windowsHide:true});
-  const portFile=path.join(dir,'profile','DevToolsActivePort');await poll(()=>fs.existsSync(portFile),30000);
-  const [port,endpoint]=fs.readFileSync(portFile,'utf8').trim().split('\n');
+  // Chrome can create DevToolsActivePort before writing both lines (port, then endpoint).
+  const portFile=path.join(dir,'profile','DevToolsActivePort');
+  const [port,endpoint]=await poll(()=>{try{const lines=fs.readFileSync(portFile,'utf8').trim().split('\n');return lines.length>=2&&/^\d+$/.test(lines[0])&&lines[1].startsWith('/')?lines:null;}catch{return null;}},30000);
   socket=new WebSocket(`ws://127.0.0.1:${port}${endpoint}`);await once(socket,'open');
   socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const waiter=pending.get(message.id);if(waiter){pending.delete(message.id);message.error?waiter.reject(new Error(JSON.stringify(message.error))):waiter.resolve(message.result);}}else for(const listener of listeners)Promise.resolve(listener(message)).catch(console.error);});
 
