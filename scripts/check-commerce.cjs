@@ -229,6 +229,12 @@ async function run(){
     await current.evaluate(`(()=>{const form=document.querySelector('.checkout-form');form.elements.namedItem('name').value='Buy Now Test';form.elements.namedItem('phone').value='01712345678';form.elements.namedItem('address').value='House 10, Road 2, Dhaka';form.requestSubmit();form.requestSubmit();})()`);
     await poll(()=>current.evaluate(`!!document.querySelector('.receipt')`));
     const receipt=await current.evaluate(`document.querySelector('.order-reference').textContent`);
+    // Order received: both buttons share one height and either sit side by side or stack at full width.
+    const actions=await current.evaluate(`Array.from(document.querySelectorAll('.receipt__actions>a')).map(a=>{const r=a.getBoundingClientRect();return {top:Math.round(r.top),height:Math.round(r.height),width:Math.round(r.width)};})`);
+    assert.equal(actions.length,2,'Receipt shows Continue shopping and Track your order');
+    assert.equal(actions[0].height,actions[1].height,'Receipt buttons have the same height: '+JSON.stringify(actions));
+    assert(actions[0].top===actions[1].top||actions[0].width===actions[1].width,'Receipt buttons are aligned: '+JSON.stringify(actions));
+    if(id===1)await screenshot('qa-receipt.png');
     await bagUnchanged();
     const orders=await savedOrders(),order=orders.find(o=>o.id===receipt);
     assert.equal(order.items.length,1);assert.equal(order.items[0].id,id);assert.equal(order.items[0].size,option);assert.equal(order.items[0].qty,1);

@@ -13,16 +13,20 @@ import {matchesSearch} from './components/search-panel';
 import { useStore } from './providers';
 import Box from './components/box-art';
 import Card from './components/product-card';
-import Checkout,{type DirectCheckout} from './components/checkout';
+import type {DirectCheckout} from './components/checkout';
+import dynamic from 'next/dynamic';
+// Checkout, tracking and the owner studio are split into their own chunks so the shop pages
+// (home, collections, product) never download or parse their code.
+const Checkout=dynamic(()=>import('./components/checkout'));
+const OrderTracking=dynamic(()=>import('./components/order-tracking'));
+const AdminWorkspace=dynamic(()=>import('./components/admin-workspace'));
 import BagDrawer from './components/bag-drawer';
 import ProductPurchase from './components/product-purchase';
 import ProductGallery from './components/product-gallery';
 import ProductPrice,{OfferBadge} from './components/product-price';
 import ProductImage from './components/product-image';
 import StoreHeader from './components/store-header';
-import OrderTracking from './components/order-tracking';
 import {validOption,validColor,styleOptions,productOptions,productColors,hasSizeChoice,sameLine,type CartItem} from '@aurzen/shared/catalog';
-import AdminWorkspace from './components/admin-workspace';
 export default function Store({ initial = 'home', product, directCheckout, collection }: {
     initial?: string;
     product?: Product;

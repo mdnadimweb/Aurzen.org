@@ -8,7 +8,6 @@ import './presentation.css';
 import './premium.css';
 import './collections.css';
 import './polish.css';
-import './admin.css';
 import type {Viewport} from 'next';
 import localFont from 'next/font/local';
 import BrandIntro from './components/brand-intro';

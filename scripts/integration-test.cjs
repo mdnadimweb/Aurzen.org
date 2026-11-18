@@ -41,6 +41,11 @@ async function main(){
   const uploaded=await upload(logo,'image/png',true,base);assert.equal(uploaded.status,201);assert(uploaded.data.url.startsWith('/media/'));
   const image=await fetch(base+uploaded.data.url);assert.equal(image.status,200);assert.equal(image.headers.get('content-type'),'image/webp');assert(image.headers.get('cache-control').includes('immutable'));assert((await image.arrayBuffer()).byteLength>0);
   assert.equal((await fetch(base+'/media/00000000-0000-0000-0000-000000000000.webp')).status,404);
+  // Smaller copies for phones: only the fixed widths are served, each a cacheable WebP no larger than the original.
+  const full=(await (await fetch(base+uploaded.data.url)).arrayBuffer()).byteLength,small=await fetch(base+uploaded.data.url+'?w=400');
+  assert.equal(small.status,200);assert.equal(small.headers.get('content-type'),'image/webp');assert(small.headers.get('cache-control').includes('immutable'));
+  assert((await small.arrayBuffer()).byteLength<full);
+  assert.equal((await fetch(base+uploaded.data.url+'?w=401')).status,404);
   assert.equal((await fetch(base+'/brand/aurzen-logo.png')).status,200);
   const mutate=data=>request('/api/admin/',{method:'POST',data,auth:true});
   assert.equal((await request('/api/admin/',{method:'POST',data:{action:'addCategory',name:'Denied'},auth:true,origin:'https://attacker.example'})).status,403);

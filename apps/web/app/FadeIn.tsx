@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 
 /** Matches --ease-premium in motion.css. */
 export const easePremium = [0.22, 1, 0.36, 1] as const;
@@ -12,49 +11,31 @@ type FadeInProps = {
   className?: string;
   /** Delay in milliseconds, matching the product card stagger. */
   delay?: number;
+  "aria-labelledby"?: string;
 };
 
-export default function FadeIn({
-  children,
-  as = "div",
-  className,
-  delay = 0,
-}: FadeInProps) {
-  const reduceMotion = useReducedMotion();
-  const Component = as === "section" ? motion.section : as === "article" ? motion.article : motion.div;
-  const seconds = reduceMotion ? 0 : Math.min(Math.max(delay, 0), 240) / 1000;
-  const variants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      // Children such as FadeInMedia start just after their card.
-      transition: { duration: reduceMotion ? 0 : 0.45, delay: seconds, delayChildren: seconds + 0.05, ease: easePremium },
-    },
-  };
+// One shared observer for every reveal on the page. The animation itself is plain CSS
+// (motion.css), so shop pages no longer download an animation library just for this.
+let observer: IntersectionObserver | null = null;
+function reveal(element: Element) {
+  if (typeof IntersectionObserver === "undefined") { element.classList.add("is-visible"); return () => {}; }
+  observer ??= new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer?.unobserve(entry.target); }
+  }, { rootMargin: "0px 0px -10% 0px" });
+  observer.observe(element);
+  return () => observer?.unobserve(element);
+}
 
-  // Server and client both start "hidden" so hydration matches; the reduced-motion
-  // stylesheet rule shows [data-fade] content immediately, with no animation.
-  return (
-    <Component
-      className={className}
-      data-fade=""
-      variants={variants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.15 }}
-    >
-      {children}
-    </Component>
-  );
+/** Fades and lifts its content into place the first time it scrolls into view. */
+export default function FadeIn({ children, as = "div", className, delay = 0, ...rest }: FadeInProps) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => { if (ref.current) return reveal(ref.current); }, []);
+  const Component = as;
+  const style = { "--fade-delay": Math.min(Math.max(delay, 0), 240) + "ms" } as CSSProperties;
+  return <Component ref={ref as never} className={className} data-fade="" style={style} {...rest}>{children}</Component>;
 }
 
 /** Soft clip-path reveal for media inside a FadeIn; follows the parent's stagger. */
 export function FadeInMedia({ children, className }: { children: ReactNode; className?: string }) {
-  const reduceMotion = useReducedMotion();
-  const variants: Variants = {
-    hidden: { clipPath: "inset(8% 6% 8% 6% round 14px)" },
-    visible: { clipPath: "inset(0% 0% 0% 0% round 14px)", transition: { duration: reduceMotion ? 0 : 0.7, ease: easePremium } },
-  };
-  return <motion.div className={className} data-fade-media="" variants={variants}>{children}</motion.div>;
+  return <div className={className} data-fade-media="">{children}</div>;
 }

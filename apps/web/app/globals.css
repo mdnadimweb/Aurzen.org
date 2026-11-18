@@ -96,6 +96,8 @@ i{font-style:normal;background:#eee5df;padding:3px 5px;font-size:0.6875rem;margi
 footer{background:#eee9e2;padding:45px 5% 0;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:30px}
 footer p,footer button{font-size:var(--text-label);line-height:1.8}
 footer button{display:block;padding:0}
+/* Footer column links (Explore, Track your order) each sit on their own line. */
+footer>div:not(.footer-bottom)>a{display:flex;align-items:center;width:max-content;max-width:100%;font-size:var(--text-label);line-height:1.5}
 footer h4{font-size:var(--text-nav);margin:0 0 17px}
 footer .logo{font-size:27px}
 footer p{margin-top:15px}

@@ -21,6 +21,12 @@ footer .brand-logo img{width:220px;height:120px}
 .receipt{max-width:900px;margin:0 auto;min-height:60vh}
 .receipt .panel{margin:25px 0;overflow-wrap:anywhere}
 .receipt .panel p{margin:15px 0 0}
+/* Order received: both actions sit on one line at the same height, and stack full-width on phones. */
+.receipt__actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px}
+.receipt__actions>a{min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:0 26px;border-radius:999px;font-size:var(--text-nav);line-height:1.4;font-weight:600}
+.receipt__actions>.secondary-link{border:1px solid #d9c7cf;background:#fffdfa;color:var(--plum)}
+.receipt__actions>.secondary-link:hover{border-color:var(--plum)}
+@media(max-width:600px){.receipt__actions{flex-direction:column;align-items:stretch}.receipt__actions>a{width:100%}}
 .shop-toolbar{flex-wrap:wrap}
 .shop-toolbar .chips{flex:1 1 450px}
 .shop-toolbar input{flex:1 1 180px}
