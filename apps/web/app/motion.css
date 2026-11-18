@@ -64,6 +64,11 @@ html{scroll-padding-top:96px}
 .product .product-image{box-shadow:0 6px 18px -14px #432b3b2e}
 
 @media(prefers-reduced-motion:no-preference){
+  /* Scroll reveals (FadeIn.tsx adds .is-visible once the element enters the viewport). */
+  [data-fade]{opacity:0;transform:translateY(20px)}
+  [data-fade].is-visible{opacity:1;transform:none;transition:opacity .45s var(--ease-premium) var(--fade-delay,0ms),transform .45s var(--ease-premium) var(--fade-delay,0ms),translate .45s var(--ease-premium)}
+  [data-fade-media]{clip-path:inset(0% 0% 0% 0% round 14px);transition:clip-path .7s var(--ease-premium) calc(var(--fade-delay,0ms) + 50ms)}
+  [data-fade]:not(.is-visible) [data-fade-media]{clip-path:inset(8% 6% 8% 6% round 14px)}
   .store-header-wrap header.store-header{transition:height .45s var(--ease-premium),margin .45s var(--ease-premium),padding .45s var(--ease-premium),background-color .35s ease,box-shadow .35s ease,border-color .35s ease}
   .store-header-wrap .store-header .brand-logo img{transition:width .45s var(--ease-premium),height .45s var(--ease-premium)}
   .product{transition:translate .45s var(--ease-premium)}

@@ -39,7 +39,7 @@ const server=createServer({maxHeaderSize:16384,requestTimeout:30000,headersTimeo
     if(!timingSafeEqual(hash(String(message.headers['x-aurzen-internal-token']||'')),hash(token))){out.writeHead(401);out.end();return;}
     const method=message.method||'GET';
     let handler=routes[path]?.[method];
-    if(path.startsWith('/media/')&&method==='GET')handler=request=>media.GET(request,{params:Promise.resolve({id:path.slice(7)})});
+    if(path.startsWith('/media/')&&method==='GET'){const width=new URL(message.url||'/','http://api.internal').searchParams.get('w');handler=request=>media.GET(request,{params:Promise.resolve({id:path.slice(7),width})});}
     if(!handler){out.writeHead(routes[path]?405:404);out.end();return;}
     const bytes=!['GET','HEAD'].includes(method)?await readBody(message,path==='/api/admin/images'?maxImageBytes+65536:32000):undefined;
     const headers=new Headers();for(const [key,value]of Object.entries(message.headers))if(value)headers.set(key,Array.isArray(value)?value.join(','):value);

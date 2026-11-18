@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {useEffect,useRef,useState,type TouchEvent} from 'react';
 import {activePromotions,categoryPath,type Category,type Promotion} from '@aurzen/shared/catalog';
 import {useStore} from '../providers';
+import {responsiveSrcSet} from './responsive-image';
 
 export function promotionHref(p:Promotion,categories:Category[]){
   if(p.link.type==='sale')return '/sale/';
@@ -40,7 +41,7 @@ export default function PromoCarousel(){
     onFocusCapture={e=>{if((e.target as Element).matches(':focus-visible'))setFocused(true);}} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node|null))setFocused(false);}}>
     <div className="promo-banner__viewport" onTouchStart={e=>{touch.current=e.touches[0].clientX;}} onTouchEnd={onTouchEnd}>
       {slides.map((slide,i)=>{const active=i===current;return <article key={slide.id} className="promo-slide" data-active={active} data-state={active?(previous<0?'shown':'active'):i===previous?'leaving':undefined} aria-hidden={!active} inert={!active||undefined} aria-roledescription={count>1?'slide':undefined} aria-label={count>1?`${i+1} of ${count}: ${slide.headline}`:undefined}>
-        <picture>{slide.mobileImage&&<source media="(max-width: 640px)" srcSet={slide.mobileImage}/>}<img src={slide.image} alt="" width={1600} height={400} loading={i===0?'eager':'lazy'} decoding="async"/></picture>
+        <picture>{slide.mobileImage&&<source media="(max-width: 640px)" sizes="100vw" srcSet={responsiveSrcSet(slide.mobileImage)||slide.mobileImage}/>}<img src={slide.image} sizes="100vw" srcSet={responsiveSrcSet(slide.image)} alt="" width={1600} height={400} loading={i===0?'eager':'lazy'} decoding="async"/></picture>
         <div className="promo-slide__copy"><span className="promo-slide__eyebrow">NEW ARRIVALS &amp; OFFERS</span><h2>{slide.headline}</h2><Link className="promo-slide__button" href={promotionHref(slide,categoryTree)}>{slide.cta} <span aria-hidden="true">↗</span></Link></div>
       </article>;})}
     </div>

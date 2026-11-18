@@ -28,7 +28,10 @@ export async function forward(request:Request){
     const {url,token}=backendConfig();
     const headers=new Headers({'x-aurzen-internal-token':token});
     for(const name of ['content-type','cookie','origin']){const value=request.headers.get(name);if(value)headers.set(name,value);}
-    const upstream=await fetch(url+path,{method:request.method,headers,body:body as BodyInit|undefined,cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(30000)});
+    // Photos may ask for a smaller copy (?w=400); nothing else forwards a query string.
+    const width=path.startsWith('/media/')?new URL(request.url).searchParams.get('w'):null;
+    const query=width&&/^\d{3,4}$/.test(width)?'?w='+width:'';
+    const upstream=await fetch(url+path+query,{method:request.method,headers,body:body as BodyInit|undefined,cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(30000)});
     const out=new Headers();
     for(const name of ['content-type','cache-control','x-content-type-options']){const value=upstream.headers.get(name);if(value)out.set(name,value);}
     if(!path.startsWith('/media/'))out.set('cache-control','no-store');

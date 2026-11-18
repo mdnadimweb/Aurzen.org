@@ -2,12 +2,13 @@
 import {useEffect,useRef,useState} from 'react';
 import type {Product} from '@aurzen/shared/catalog';
 import ProductImage from './product-image';
+import {responsiveSrcSet} from './responsive-image';
 import Modal from './modal';
-function Photo({src,alt,eager=false,priority=false}:{src:string;alt:string;eager?:boolean;priority?:boolean}){
+function Photo({src,alt,eager=false,priority=false,sizes='(max-width: 900px) 100vw, 50vw'}:{src:string;alt:string;eager?:boolean;priority?:boolean;sizes?:string}){
   const [state,setState]=useState<'loading'|'ready'|'error'>('loading'),[retry,setRetry]=useState(0);
   const image=useRef<HTMLImageElement>(null);
   useEffect(()=>{if(image.current?.complete)setState(image.current.naturalWidth?'ready':'error');},[retry,src]);
-  return <><img ref={image} key={retry} className={state==='error'?'photo-failed':undefined} src={src} alt={state==='error'?'':alt} draggable={false} loading={eager?'eager':'lazy'} fetchPriority={priority?'high':'auto'} decoding="async" onLoad={()=>setState('ready')} onError={()=>setState('error')}/>{state==='loading'&&<span className="photo-state" role="status">Loading photo…</span>}{state==='error'&&<div className="photo-state" role="alert">Photo unavailable. <button type="button" aria-label={'Retry '+alt} onClick={e=>{e.stopPropagation();setState('loading');setRetry(n=>n+1);}}>Retry</button></div>}</>;
+  return <><img ref={image} key={retry} className={state==='error'?'photo-failed':undefined} sizes={sizes} srcSet={responsiveSrcSet(src)} src={src} alt={state==='error'?'':alt} draggable={false} loading={eager?'eager':'lazy'} fetchPriority={priority?'high':'auto'} decoding="async" onLoad={()=>setState('ready')} onError={()=>setState('error')}/>{state==='loading'&&<span className="photo-state" role="status">Loading photo…</span>}{state==='error'&&<div className="photo-state" role="alert">Photo unavailable. <button type="button" aria-label={'Retry '+alt} onClick={e=>{e.stopPropagation();setState('loading');setRetry(n=>n+1);}}>Retry</button></div>}</>;
 }
 export default function ProductGallery({product}:{product:Product}){
   const images=Array.from(new Set([product.image,...(product.images||[])])).filter(src=>src&&src!=='box');
@@ -38,7 +39,7 @@ export default function ProductGallery({product}:{product:Product}){
           onPointerDown={e=>{if(!e.isPrimary||e.button!==0)return;pointer.current={x:e.clientX,y:e.clientY,panX:pan.x,panY:pan.y};e.currentTarget.setPointerCapture(e.pointerId);}}
           onPointerMove={e=>{const start=pointer.current;if(start&&zoom>1)setPan(clampPan(start.panX+e.clientX-start.x,start.panY+e.clientY-start.y));}}
           onPointerUp={e=>{const start=pointer.current;if(start&&zoom===1&&Math.abs(e.clientX-start.x)>50&&Math.abs(e.clientX-start.x)>Math.abs(e.clientY-start.y))select(index+(e.clientX<start.x?1:-1));pointer.current=null;}} onPointerCancel={()=>{pointer.current=null;}}>
-          <div style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`}}><Photo key={current} src={current} alt={product.name+' — photo '+(index+1)} eager/></div>
+          <div style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`}}><Photo key={current} src={current} alt={product.name+' — photo '+(index+1)} eager sizes="100vw"/></div>
         </div>{arrows}
       </div>
     </Modal>
