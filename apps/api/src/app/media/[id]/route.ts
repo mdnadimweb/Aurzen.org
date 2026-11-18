@@ -26,5 +26,6 @@ export async function GET(request: Request, { params }: {
     return new Response(data, { headers: {
             'Content-Type': 'image/webp', 'Content-Length': String(data.byteLength),
             'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff',
+            ...(width ? { 'X-Aurzen-Width': String(width) } : {}),
         } });
 }

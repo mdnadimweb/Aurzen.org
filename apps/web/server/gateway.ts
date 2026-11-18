@@ -35,6 +35,9 @@ export async function forward(request:Request){
     const out=new Headers();
     for(const name of ['content-type','cache-control','x-content-type-options']){const value=upstream.headers.get(name);if(value)out.set(name,value);}
     if(!path.startsWith('/media/'))out.set('cache-control','no-store');
+    // A smaller copy is cached for a year only when the API confirms it resized the photo
+    // (an older API ignores ?w=, and its full-size answer must not stick to the small URL).
+    else if(query&&upstream.headers.get('x-aurzen-width')!==width)out.set('cache-control','public, max-age=300');
     for(const cookie of upstream.headers.getSetCookie())out.append('set-cookie',cookie);
     // Admin edits and placed orders (stock) change the catalog: drop the cached copy right away.
     if(mutation&&upstream.ok&&/^\/api\/(?:admin|orders)\/?$/.test(path))catalogChanged();
