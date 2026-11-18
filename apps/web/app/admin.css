@@ -608,3 +608,9 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .admin-search-field input::-webkit-search-cancel-button{display:none}
 .admin .admin-order-filters__reset{align-self:flex-end;min-height:40px}
 @media(max-width:640px){.admin .admin-order-filters label{flex:1 1 100%}.admin .admin-order-filters__reset{width:100%}}
+
+/* Product add/edit page (was a popup): a card in the studio, the save bar stays in reach. */
+.form-page{background:var(--a-surface);border:1px solid var(--a-line);border-radius:20px;overflow:clip}
+.form-page .form-modal__head{position:static;border-radius:20px 20px 0 0}
+.form-page__back{display:inline-block;margin:0 0 10px;padding:0;border:0;background:none;color:var(--a-plum);font:inherit;font-size:.875rem;cursor:pointer}
+.form-page__back:hover{text-decoration:underline}

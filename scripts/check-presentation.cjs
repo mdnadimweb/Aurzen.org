@@ -138,15 +138,20 @@ async function run(){
     await current.viewport(width);await current.navigate('/admin/');
     await current.evaluate(`Array.from(document.querySelectorAll('.admin aside button')).find(button=>button.textContent.includes('Products')).click()`);await pause(80);
     await current.click('.admin-main tbody tr:first-child button[data-row-action="edit"]');
-    await poll(()=>current.evaluate(`!!document.querySelector('.form-modal')`));
+    await poll(()=>current.evaluate(`!!document.querySelector('.form-page')&&location.pathname.startsWith('/admin/products/')&&location.pathname!=='/admin/products/new/'`));
     await current.fits(width+' admin product form');await current.screenshot(width+'-admin-form');
-    assert(await current.evaluate(`(()=>{const rect=document.querySelector('.form-modal').getBoundingClientRect();return rect.width<=window.innerWidth;})()`),'Admin form exceeds viewport at '+width);
-    for(let i=0;i<20;i++)await current.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
-    assert(await current.evaluate(`document.querySelector('.admin-edit-dialog').contains(document.activeElement)`));
-    await current.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});await pause(80);
-    assert(await current.evaluate(`!document.querySelector('.admin-edit-dialog[open]')&&document.activeElement===document.querySelector('.admin-main tbody tr:first-child button[data-row-action="edit"]')`));
+    assert(await current.evaluate(`(()=>{const rect=document.querySelector('.form-page').getBoundingClientRect();return rect.width<=window.innerWidth;})()`),'Admin form exceeds viewport at '+width);
+    // A click outside the form no longer closes it.
+    await current.click('.admin-breadcrumb');await pause(80);
+    assert(await current.evaluate(`!!document.querySelector('.form-page')`));
+    // Unsaved changes: Cancel asks first and stays when the owner says no.
+    await current.evaluate(`(()=>{const input=document.querySelector('.form-page input[name="name"]');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(input,input.value+' edited');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);await pause(80);
+    await current.evaluate(`window.__asked=0;window.confirm=()=>{window.__asked++;return false;};Array.from(document.querySelectorAll('.form-page button')).find(b=>b.textContent==='Cancel').click()`);await pause(80);
+    assert(await current.evaluate(`window.__asked===1&&!!document.querySelector('.form-page')`),'Cancel with unsaved changes must ask first');
+    await current.evaluate(`window.confirm=()=>true;Array.from(document.querySelectorAll('.form-page button')).find(b=>b.textContent==='Cancel').click()`);
+    await poll(()=>current.evaluate(`location.pathname==='/admin/'&&!document.querySelector('.form-page')&&!!document.querySelector('.admin-main tbody tr:first-child button[data-row-action="edit"]')`));
   }
-  console.log('PASS 360/390/768/1440px authenticated admin product forms: no horizontal document overflow, focus trap, Escape and focus restoration.');
+  console.log('PASS 360/390/768/1440px authenticated admin product pages: no horizontal document overflow, outside clicks keep the form, unsaved-change warning, back to Products.');
 
   const openHomepage=async()=>{await current.navigate('/admin/');await current.evaluate(`Array.from(document.querySelectorAll('.admin aside button')).find(button=>button.textContent.includes('Homepage')).click()`);await poll(()=>current.evaluate(`!!document.querySelector('.hero-editor .hero-slide')`));};
   for(const width of [360,1440]){
