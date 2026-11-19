@@ -192,7 +192,7 @@ test('admin gallery validates photo limits, preserves old clients, and never del
   try {
     assert.equal((await admin(adminRequest(payload))).status, 401);
     // Exercise authenticated handler behavior without creating production sessions.
-    auth.requireAdmin = async () => {};
+    auth.requireAdmin = async () => ({id:null,name:'Owner',role:'owner',mustReset:false});
     const photos = ['https://example.com/front.jpg', 'https://example.com/back.jpg'];
     assert.equal((await admin(adminRequest({ ...payload, images: photos }))).status, 200);
     assert.equal((await catalog()).products.find(p => p.id === 100).image, photos[0]);
@@ -222,7 +222,7 @@ test('admin records only real status changes and requires paired courier fields'
   const { POST: admin } = require('../apps/api/dist/app/api/admin/route.js');
   const order = await store(oldOrder({ status: 'New' }));
   const change = data => admin(new Request('https://aurzen.netlify.app/api/admin/', { method: 'POST', headers: { Origin: 'https://aurzen.netlify.app', 'Content-Type': 'application/json' }, body: JSON.stringify({ id: order.id, ...data }) }));
-  auth.requireAdmin = async () => {};
+  auth.requireAdmin = async () => ({id:null,name:'Owner',role:'owner',mustReset:false});
   try {
     const before = Date.now();
     assert.equal((await change({ action: 'status', status: 'Confirmed' })).status, 200);

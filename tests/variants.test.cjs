@@ -19,7 +19,7 @@ const {publicOrder}=require('../apps/api/dist/lib/tracking.js');
 const base={action:'saveProduct',id:3,name:'Soft Satin Scarf',category:'Accessories',price:490,stock:30,image:'box',images:[],tag:'TEST'};
 const request=data=>new Request('https://aurzen.netlify.app/api/admin/',{method:'POST',headers:{Origin:'https://aurzen.netlify.app','Content-Type':'application/json'},body:JSON.stringify(data)});
 const product=async(id=3)=>(await catalog()).products.find(p=>p.id===id);
-async function asAdmin(run){const original=auth.requireAdmin;auth.requireAdmin=async()=>{};try{return await run();}finally{auth.requireAdmin=original;}}
+async function asAdmin(run){const original=auth.requireAdmin;auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});try{return await run();}finally{auth.requireAdmin=original;}}
 const checkout=(items)=>({key:randomUUID(),name:'Variant Customer',phone:'01712345678',address:'House 10, Road 2, Dhaka',area:'dhaka',items});
 async function order(items){const input=checkout(items);input.quote=(await quoteOrder(input)).quote;const receipt=await placeOrder(input);return (await orders()).find(o=>o.id===receipt.id);}
 test.after(async()=>{(await database()).close();const relative=path.relative(path.resolve(os.tmpdir()),path.resolve(directory));assert(relative&&!relative.startsWith('..')&&!path.isAbsolute(relative));fs.rmSync(directory,{recursive:true,force:true});});
