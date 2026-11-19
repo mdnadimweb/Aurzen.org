@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { catalog } from '@/server/backend';
+import { catalog, content } from '@/server/backend';
 import { pageMetadata } from '@/server/seo';
 import Store from '../../store';
 export const dynamic = 'force-dynamic';
@@ -22,5 +22,5 @@ export default async function Page({ params }: {
     const product = (await catalog()).products.find(p => String(p.id) === id);
     if (!product)
         notFound();
-    return <Store initial="product" product={product}/>;
+    return <Store initial="product" product={product} reviews={(await content()).reviews.filter(r=>r.product===product.id)}/>;
 }

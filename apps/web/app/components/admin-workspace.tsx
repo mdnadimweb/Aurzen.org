@@ -18,7 +18,7 @@ import BrandLogo from './brand-logo';
 
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { defaultContent, type Content } from '@aurzen/shared/site';
-import { StorefrontSettings, GeneralSettings, SeoSettings, PopupSettings, PagesEditor, FaqEditor, ReviewsEditor, Subscribers, ActivityLog, type SiteProps } from './admin/site-settings';
+import { CategorySettingsEditor, StorefrontSettings, GeneralSettings, SeoSettings, PopupSettings, PagesEditor, FaqEditor, ReviewsEditor, Subscribers, ActivityLog, type SiteProps } from './admin/site-settings';
 import Backup from './admin/backup';
 import './admin/editable-card.css';
 import { useRouter, usePathname } from 'next/navigation';
@@ -156,6 +156,7 @@ export default function AdminWorkspace() {
     {tab === 'Overview' && (adminLoaded?<Overview orders={orders} products={products} onEditProduct={openProduct} onViewOrders={()=>setTab('Orders')} onAddProduct={()=>{ setTab('Products'); openProduct(null); }} onAddCategory={()=>{ setTab('Categories'); setCategoryRequest(true); }} onStorefront={()=>go('home')}/>:<div className="ov-skeleton" aria-hidden="true">{[0,1,2,3].map(i=><div key={i} className="a-card"/>)}</div>)}
     {tab === 'Products' && <ProductsTable products={products} categories={categoryTree} onEdit={openProduct} onStockInput={(id, stock) => setProducts(products.map(x => x.id === id ? { ...x, stock } : x))} onStockSave={(id, stock) => void change({ action: 'stock', id, stock })} onRemove={p => { if (confirm('Remove ' + p.name + ' from the store?')) void change({ action: 'deleteProduct', id: p.id }); }}/>}
     {tab === 'Categories' && <CategoryManager categories={categoryTree} products={products} requestNew={categoryRequest} onRequestHandled={() => setCategoryRequest(false)} onSave={async data => { await mutate(data); setNotice('Category saved'); }} onDelete={name => change({ action: 'deleteCategory', name })}/>}
+    {adminLoaded && tab === 'Categories' && <div className="mt-6"><CategorySettingsEditor {...siteProps}/></div>}
     {tab === 'Homepage' && (adminLoaded?<HeroEditor key={'hero:'+JSON.stringify(hero)} initialSlides={hero?.length?hero:defaultHeroSlides(products,categories)} custom={!!hero?.length} categories={categories} onSave={async slides=>{await mutate({action:'saveHero',slides});setNotice('Homepage slides saved');}} onReset={async()=>{await mutate({action:'resetHero'});setNotice('Automatic slides restored');}}/>:<p className="admin-loading" role="status">Loading your slides…</p>)}
     {tab === 'Homepage' && adminLoaded && <StorefrontEditor key={'storefront:'+JSON.stringify(storefront)+categoryTree.length} initial={storefront} categories={mainCategories(categoryTree).map(c=>c.name)} tree={categoryTree} products={products} onSave={async value=>{await mutate({action:'saveStorefront',storefront:value});setNotice('Storefront saved');}}/>}
     {tab === 'Homepage' && adminLoaded && <PromotionsEditor key={'promotions:'+JSON.stringify(promotions)} initial={promotions} products={products} categories={categoryTree} onSave={async value=>{await mutate({action:'savePromotions',promotions:value});setNotice('Promotions saved');}}/>}

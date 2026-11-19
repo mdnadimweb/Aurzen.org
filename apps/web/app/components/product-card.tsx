@@ -5,8 +5,9 @@ import ProductImage from './product-image';
 import FadeIn,{FadeInMedia} from '../FadeIn';
 import ProductPrice,{OfferBadge} from './product-price';
 import {useStore} from '../providers';
+import {cardLabel} from '@aurzen/shared/site';
 export default function ProductCard({p,delay=0}:{p:Product;delay?:number}){
-  const {now}=useStore(),onOffer=productPricing(p,now).active;
+  const {now,site,categoryTree}=useStore(),onOffer=productPricing(p,now).active;
   const secondary=p.images?.find(src=>src&&src!=='box'&&src!==p.image);
   return <FadeIn as="article" className={'product'+(p.stock===0?' product--sold-out':'')+(onOffer?' product--on-offer':'')} delay={delay}>
     <Link className="product-image" href={`/products/${p.id}/`} aria-label={`View ${p.name}`}>
@@ -15,6 +16,6 @@ export default function ProductCard({p,delay=0}:{p:Product;delay?:number}){
       {(p.stock===0||p.tag)&&<span className="tag">{p.stock===0?'SOLD OUT':p.tag}</span>}
       <span className="quick">View details <span aria-hidden="true">↗</span></span>
     </Link>
-    <div className="product-info"><div><small>{p.category}</small><h3><Link href={`/products/${p.id}/`}>{p.name}</Link></h3></div><ProductPrice product={p}/><span className="product-card-status">{p.stock===0?'Currently unavailable':p.category==='Mystery Boxes'&&!p.sizes?.length?'Choose your style':hasSizeChoice(p)?'Choose your size':'Available'}</span></div>
+    <div className="product-info"><div><small>{p.category}</small><h3><Link href={`/products/${p.id}/`}>{p.name}</Link></h3></div><ProductPrice product={p}/><span className="product-card-status">{cardLabel(site,categoryTree,p,hasSizeChoice(p))}</span></div>
   </FadeIn>;
 }

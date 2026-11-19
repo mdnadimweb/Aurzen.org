@@ -25,6 +25,9 @@ export function linkHref(link:SiteLink,categories:Category[]=[]):string{
 export type NavItem={id:string;label:string;link:SiteLink;hidden:boolean};
 export type FooterColumn={id:string;title:string;hidden:boolean;links:NavItem[]};
 export type Announcement={id:string;text:string;detail:string;link:SiteLink|null;active:boolean;startsAt:string|null;endsAt:string|null};
+export const cardLabels=['auto','size','bag','reveal','available'] as const;
+export const cardLabelText:Record<typeof cardLabels[number],string>={auto:'Automatic',size:'Choose your size',bag:'Add to bag',reveal:'Reveal your box',available:'Available'};
+export type CategorySettings={label:typeof cardLabels[number];description:string;seoTitle:string;seoDescription:string};
 export type TrustItem={id:string;icon:string;text:string;hidden:boolean};
 
 export type SiteSettings={
@@ -37,6 +40,10 @@ export type SiteSettings={
   seo:{title:string;titleTemplate:string;description:string;ogImage:string;indexing:boolean};
   integrations:{pixel:string;analytics:string;searchConsole:string;whatsapp:{enabled:boolean;number:string;message:string;position:'left'|'right'};messenger:{enabled:boolean;link:string}};
   popup:{enabled:boolean;title:string;text:string;image:string;cta:string;link:SiteLink|null;days:number;startsAt:string|null;endsAt:string|null};
+  /** Per category, keyed by its URL slug (stable after renames). */
+  categories:Record<string,CategorySettings>;
+  /** WhatsApp/SMS message templates per order status. Placeholders: {order_id} {name} {total} {status} {courier} {tracking}. */
+  messages:Record<string,string>;
 };
 
 const nav=(id:string,label:string,type:SiteLink['type'],value=''):NavItem=>({id,label,link:{type,value},hidden:false});
@@ -67,6 +74,8 @@ export const defaultSite:SiteSettings={
   seo:{title:'AURZÉN | A little elegance. A little unexpected.',titleTemplate:'%s | AURZÉN',description:'Discover thoughtfully selected fashion and Mystery Style Boxes from AURZÉN. Premium style for everyday moments, delivered across Bangladesh.',ogImage:'',indexing:true},
   integrations:{pixel:'',analytics:'',searchConsole:'',whatsapp:{enabled:false,number:'',message:'Hi AURZÉN, I have a question.',position:'right'},messenger:{enabled:false,link:''}},
   popup:{enabled:false,title:'',text:'',image:'',cta:'',link:null,days:7,startsAt:null,endsAt:null},
+  categories:{},
+  messages:{Confirmed:'Hi {name}, your AURZÉN order {order_id} is confirmed. Total {total}. We will let you know when it ships.',Shipped:'Hi {name}, your AURZÉN order {order_id} is on its way with {courier} (tracking {tracking}).',Delivered:'Hi {name}, your AURZÉN order {order_id} has been delivered. Thank you for choosing us!',Cancelled:'Hi {name}, your AURZÉN order {order_id} has been cancelled. Reply if you have any questions.'},
 };
 
 // ---- Validation helpers ----
@@ -221,6 +230,25 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
     if(result.cta&&!result.link)fail('Choose where the popup button goes.');
     return result;
   },
+  categories(v){
+    const c=obj(v,'category settings'),out:Record<string,CategorySettings>={};
+    const entries=Object.entries(c);if(entries.length>200)fail('Too many categories.');
+    for(const [slug,input] of entries){
+      if(!/^[a-z0-9-]{1,60}$/.test(slug))fail('Invalid category address.');
+      const s=obj(input,'category settings'),at=` for ${slug}`;
+      if(!cardLabels.includes(s.label as CategorySettings['label']))fail('Choose a card button label'+at+'.');
+      out[slug]={label:s.label as CategorySettings['label'],description:str(s.description,400,'Description'+at,{multiline:true}),seoTitle:str(s.seoTitle,90,'SEO title'+at),seoDescription:str(s.seoDescription,170,'SEO description'+at)};
+    }
+    return out;
+  },
+  messages(v){
+    const m=obj(v,'message templates'),out:Record<string,string>={};
+    for(const [status,text] of Object.entries(m)){
+      if(!['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'].includes(status))fail('Unknown order status in message templates.');
+      const t=str(text,500,status+' message',{multiline:true});if(t)out[status]=t;
+    }
+    return out;
+  },
 };
 export const siteSections=Object.keys(defaultSite) as (keyof SiteSettings)[];
 
@@ -318,4 +346,24 @@ export function renderMarkdown(source:string):string{
     if(lines.every(l=>/^[-*] /.test(l)))return '<ul>'+lines.map(l=>'<li>'+inline(l.slice(2))+'</li>').join('')+'</ul>';
     return '<p>'+lines.map(inline).join('<br>')+'</p>';
   }).join('');
+}
+/** Mystery Box categories (and their subcategories) never ask for a size. */
+export function isMystery(categories:Category[],name:string){
+  const c=categories.find(x=>x.name===name);
+  const main=c?.parent||name;
+  return /mystery/i.test(main)||/mystery/i.test(name);
+}
+/** Card button text for a product: subcategory setting, else its main category, else automatic. */
+export function cardLabel(site:SiteSettings,categories:Category[],product:{category:string;stock:number;sizes?:string[]},sizeChoice:boolean){
+  if(product.stock===0)return 'Currently unavailable';
+  const c=categories.find(x=>x.name===product.category),main=c?.parent?categories.find(x=>x.name===c.parent):undefined;
+  const chosen=[c,main].map(x=>x&&site.categories[x.slug]?.label).find(l=>l&&l!=='auto');
+  const mystery=isMystery(categories,product.category);
+  const label=chosen||(mystery?'reveal':sizeChoice?'size':'available');
+  // Mystery Box products never say "Choose your size", whatever the setting.
+  return cardLabelText[mystery&&label==='size'?'reveal':label as Exclude<typeof label,'auto'>];
+}
+/** Fills {order_id} {name} {total} {status} {courier} {tracking} in a message template. */
+export function fillTemplate(template:string,values:Record<string,string>){
+  return template.replace(/\{(\w+)\}/g,(m,key:string)=>key in values?values[key]:m);
 }

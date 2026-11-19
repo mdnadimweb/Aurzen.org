@@ -10,7 +10,7 @@ export default function ProductImage({src,alt,category,className='',eager=false,
   const [requested,setRequested]=useState(false),[hovered,setHovered]=useState(false),[secondaryReady,setSecondaryReady]=useState(false);
   const photo=src&&src!=='box'?src:undefined;
   const secondary=secondarySrc&&secondarySrc!=='box'&&secondarySrc!==photo?secondarySrc:undefined;
-  const illustration=!photo&&category==='Mystery Boxes';
+  const illustration=!photo&&/mystery/i.test(category||'');
   useEffect(()=>{
     setState('loading');setRequested(false);setSecondaryReady(false);
     if(image.current?.complete)setState(image.current.naturalWidth?'ready':'error');

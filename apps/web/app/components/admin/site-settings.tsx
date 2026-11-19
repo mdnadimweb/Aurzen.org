@@ -3,7 +3,7 @@
 // Every section is an EditableCard: collapsed summary, Edit opens the form, Save goes to the server.
 import {useState,type ReactNode} from 'react';
 import {money,type Category,type Product} from '@aurzen/shared/catalog';
-import {linkHref,linkTypeLabels,type Content,type ContentPage,type FaqGroup,type NavItem,type Review,type SiteLink,type SiteSettings} from '@aurzen/shared/site';
+import {cardLabels,cardLabelText,type CategorySettings,linkHref,linkTypeLabels,type Content,type ContentPage,type FaqGroup,type NavItem,type Review,type SiteLink,type SiteSettings} from '@aurzen/shared/site';
 import EditableCard,{EditableGroup,RowTools,move,newId} from './editable-card';
 import LinkPicker from './link-picker';
 import ImageField from './image-field';
@@ -276,3 +276,21 @@ export function ActivityLog({list}:{list:{at:string;actor:string;area:string;det
   </section>;
 }
 export const linkLabel=(link:SiteLink,categories:Category[])=>linkHref(link,categories);
+
+/** Per category: card button label, short description on its page, and SEO. Keyed by the category's URL slug. */
+export function CategorySettingsEditor(p:SiteProps){
+  const all=p.site.categories;
+  const blank:CategorySettings={label:'auto',description:'',seoTitle:'',seoDescription:''};
+  const ordered=p.categories.filter(c=>!c.parent).flatMap(m=>[m,...p.categories.filter(s=>s.parent===m.name)]);
+  return <EditableGroup>
+    <h2 className="ec-heading">Category cards, descriptions & SEO</h2>
+    <p className="hero-slide__hint">Mystery Box categories never show “Choose your size”, whatever is chosen here.</p>
+    {ordered.map(c=>{const value=all[c.slug]||blank;return <EditableCard key={c.slug} title={(c.parent?'↳ ':'')+c.name} summary={cardLabelText[value.label]+(value.description?' · '+value.description:'')} initial={value}
+      onSave={v=>p.saveSite('categories',{...all,[c.slug]:v})}
+      render={(d,set)=><>
+        <label>Product card button<select value={d.label} onChange={e=>set({...d,label:e.target.value as CategorySettings['label']})}>{cardLabels.map(l=><option key={l} value={l}>{l==='auto'?(c.parent?'Same as main category':'Automatic'):cardLabelText[l]}</option>)}</select></label>
+        <Text label="Short description (shown under the title)" draft={d} set={set} k="description" max={400} area/>
+        <Pair><Text label="SEO title" draft={d} set={set} k="seoTitle" max={90}/><Text label="SEO description" draft={d} set={set} k="seoDescription" max={170}/></Pair>
+      </>}/>;})}
+  </EditableGroup>;
+}
