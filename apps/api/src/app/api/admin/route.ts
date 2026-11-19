@@ -1,6 +1,7 @@
 import { requireAdmin } from '../../../lib/auth';
 import { catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
-import { normalizeSiteSection, normalizeContentSection, siteSections } from '@aurzen/shared/site';
+import { normalizeSiteSection, normalizeContentSection, normalizeCustomer, siteSections } from '@aurzen/shared/site';
+import type { Database } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
 import { statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
 import { addCategory, editCategory, deleteCategory, moveProducts } from '../../../lib/categories';
@@ -14,7 +15,7 @@ function productVariants(value:unknown,label:'size'|'colour'){
     try{return normalizeVariants(value,label);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid '+label+' list.');}
 }
-const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing'};
+const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers'};
 const activityArea=(d:Record<string,any>)=>areas[d.action]||'Other';
 function activityDetail(d:Record<string,any>){
     const what=(x:unknown)=>typeof x==='string'||typeof x==='number'?String(x).slice(0,80):'';
@@ -22,7 +23,10 @@ function activityDetail(d:Record<string,any>){
         case 'saveProduct':return (d.id?'Edited product ':'Added product ')+what(d.name);
         case 'stock':return 'Stock of product #'+what(d.id)+' set to '+what(d.stock);
         case 'deleteProduct':return 'Removed product #'+what(d.id);
-        case 'status':return 'Order '+what(d.id)+' → '+what(d.status);
+        case 'status':return 'Order '+what(d.id)+' → '+what(d.status)+(d.reason?' ('+what(d.reason)+')':'');
+        case 'bulkStatus':return (Array.isArray(d.ids)?d.ids.length:0)+' orders → '+what(d.status);
+        case 'orderNotes':return 'Notes on order '+what(d.id);
+        case 'saveCustomer':return 'Customer '+what(d.phone);
         case 'editOrder':return 'Edited order '+what(d.id);
         case 'delivery':return 'Courier details for order '+what(d.id);
         case 'markRead':return 'Opened order '+what(d.id);
@@ -34,8 +38,8 @@ function activityDetail(d:Record<string,any>){
 }
 async function adminData(){
     const db=await database();
-    const [base,list,pages,subscribers,activity]=await Promise.all([catalog(db),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all()]);
-    return {...base,orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
+    const [base,list,pages,subscribers,activity,customerRow]=await Promise.all([catalog(db),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all(),db.prepare("SELECT value FROM settings WHERE key='customers'").get()]);
+    return {...base,customers:customerRow?JSON.parse(String(customerRow.value)):{},orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
 }
 export const runtime = 'nodejs';
 export async function GET() { try {
@@ -116,18 +120,28 @@ export async function POST(request: Request) {
                 }
                 await db.prepare("INSERT INTO settings(key,value) VALUES('promotions',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(promotions));
             }
-            else if (d.action === 'status') {
-                assert(statuses.includes(d.status), 'Invalid order status.');
+            else if (d.action === 'status') await changeStatus(db, text(d.id, 1, 100, 'Order ID'), d.status, d.reason, d.restock !== false);
+            else if (d.action === 'bulkStatus') {
+                assert(Array.isArray(d.ids) && d.ids.length > 0 && d.ids.length <= 200, 'Choose 1–200 orders.');
+                for (const id of d.ids) await changeStatus(db, text(id, 1, 100, 'Order ID'), d.status, d.reason, d.restock !== false);
+            }
+            else if (d.action === 'orderNotes') {
                 const row = await db.prepare('SELECT payload FROM orders WHERE id=?').get(text(d.id, 1, 100, 'Order ID'));
                 assert(row, 'Order not found.', 404);
                 const order = JSON.parse(String(row.payload)) as Order;
-                assert(order.status === d.status || (statusTransitions[order.status] || []).includes(d.status), statusChangeError(order.status, d.status));
-                if (order.status !== d.status && (d.status === 'Cancelled' || d.status === 'Returned'))
-                    for (const item of order.items)
-                        await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(item.qty, item.id);
-                if(order.status!==d.status)order.history=[...(order.history||[]),{status:d.status,date:new Date().toISOString()}];
-                order.status = d.status;
+                const notes = typeof d.notes === 'string' ? d.notes.trim() : '';
+                assert(notes.length <= 2000, 'Notes must be at most 2,000 characters.');
+                order.notes = notes;
                 await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order), order.id);
+            }
+            else if (d.action === 'saveCustomer') {
+                const phone = text(d.phone, 6, 20, 'Phone');
+                let info;
+                try { info = normalizeCustomer(d.info); } catch (error) { throw new HttpError(400, error instanceof Error ? error.message : 'Invalid customer.'); }
+                const row = await db.prepare("SELECT value FROM settings WHERE key='customers'").get();
+                const all = row ? JSON.parse(String(row.value)) : {};
+                if (!info.note && !info.tags.length && !info.blocked) delete all[phone]; else all[phone] = info;
+                await saveSetting(db, 'customers', all);
             }
             else if(d.action==='saveHero'){
                 let slides;
@@ -207,4 +221,21 @@ export async function POST(request: Request) {
     catch (e) {
         return failure(e);
     }
+}
+/** One status change: allowed transitions only, optional restock on cancel/return, history and reason recorded. */
+async function changeStatus(db:Database,id:string,status:unknown,reason:unknown,restock:boolean){
+    assert(statuses.includes(status as Order['status']), 'Invalid order status.');
+    const next=status as Order['status'];
+    const row = await db.prepare('SELECT payload FROM orders WHERE id=?').get(id);
+    assert(row, 'Order not found.', 404);
+    const order = JSON.parse(String(row.payload)) as Order;
+    assert(order.status === next || (statusTransitions[order.status] || []).includes(next), order.id+': '+statusChangeError(order.status, next));
+    if (order.status === next) return;
+    if (restock && (next === 'Cancelled' || next === 'Returned'))
+        for (const item of order.items)
+            await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(item.qty, item.id);
+    if (next === 'Cancelled' && typeof reason === 'string' && reason.trim()) order.cancelReason = reason.trim().slice(0, 300);
+    order.history = [...(order.history || []), { status: next, date: new Date().toISOString() }];
+    order.status = next;
+    await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order), order.id);
 }

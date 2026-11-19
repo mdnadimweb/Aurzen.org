@@ -152,6 +152,12 @@ export function GeneralSettings(p:SiteProps){
   </EditableGroup>;
 }
 
+export function MessageTemplates(p:SiteProps){
+  const m=p.site.messages,statuses=['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'];
+  return <EditableGroup><EditableCard title="Order messages (WhatsApp / SMS)" summary={Object.keys(m).length+' templates · '+Object.keys(m).join(', ')} initial={m} onSave={v=>p.saveSite('messages',v)} onReset={()=>p.resetSite('messages')}
+    render={(d,set)=><><p className="hero-slide__hint">On each order, a button opens WhatsApp (or SMS) with this text ready to send. Placeholders: {'{order_id} {name} {total} {status} {courier} {tracking}'}. Leave empty for no message.</p>
+      {statuses.map(s=><label key={s}>{s}<textarea rows={2} maxLength={500} value={d[s]||''} onChange={e=>set({...d,[s]:e.target.value})}/></label>)}</>}/></EditableGroup>;
+}
 export function SeoSettings(p:SiteProps){
   const {seo,integrations:i}=p.site,[busy,setBusy]=useState(false);
   return <EditableGroup>

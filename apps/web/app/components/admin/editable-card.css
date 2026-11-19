@@ -44,3 +44,19 @@
   .ec__row>.a-btn{margin-left:auto}
   .ec__buttons .a-btn{flex:1}
 }
+/* Orders: bulk bar, selection column, notes/history panel. */
+.order-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid #efe6ec;background:#fbf8fa}
+.order-bulk>span{font-size:13px;color:#6f6170;margin-right:auto}
+.order-bulk select{min-height:40px}
+.admin-table .order-select{width:44px;text-align:center}
+.admin .admin-table .order-select input{width:20px;height:20px;min-height:0;padding:0;margin:0;accent-color:#5b2a63}
+.order-tools .order-tools__body{display:grid;gap:10px;padding:10px 0}
+.order-tools__body label{display:grid;gap:6px}
+.order-tools__actions{display:flex;flex-wrap:wrap;gap:6px}
+.order-flag{color:#9b3b2b;font-weight:600;font-size:12px;margin-left:6px}
+.order-flag-text{color:#9b3b2b;margin:0;font-size:13px}
+.order-timeline{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
+.ec-tags{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:4px 18px}
+.ec-tags legend{font-weight:600;margin-bottom:4px}
+.customer-orders{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
+@media (max-width:760px){.admin-table .order-select{width:auto;text-align:left}}

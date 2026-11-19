@@ -367,3 +367,25 @@ export function cardLabel(site:SiteSettings,categories:Category[],product:{categ
 export function fillTemplate(template:string,values:Record<string,string>){
   return template.replace(/\{(\w+)\}/g,(m,key:string)=>key in values?values[key]:m);
 }
+
+// ---- Customers (private: stored in the `customers` settings row, never in the public catalog) ----
+export const customerTags=['VIP','Risky','Wholesale','Repeat'] as const;
+export type CustomerInfo={note:string;tags:string[];blocked:boolean};
+export function normalizeCustomer(value:unknown):CustomerInfo{
+  try{
+    const c=obj(value,'customer');
+    if(!Array.isArray(c.tags)||c.tags.length>8)fail('Use at most 8 tags.');
+    const tags=Array.from(new Set((c.tags as unknown[]).map((t,i)=>str(t,20,'Tag '+(i+1),{required:true}))));
+    return {note:str(c.note,1000,'Customer note',{multiline:true}),tags,blocked:c.blocked===true};
+  }catch(error){if(error instanceof Invalid)throw new Error(error.message);throw error;}
+}
+/** Orders worth a second look: several orders from one phone within a day, or a history of cancellations. */
+export function orderFlags(order:{id:string;phone:string;date:string;status:string},all:{id:string;phone:string;date:string;status:string}[]){
+  const same=all.filter(o=>o.phone===order.phone);
+  const flags:string[]=[];
+  const day=86400000,t=Date.parse(order.date);
+  if(same.some(o=>o.id!==order.id&&Math.abs(Date.parse(o.date)-t)<day&&o.status!=='Cancelled'))flags.push('Possible duplicate: another order from this phone within 24 hours');
+  const cancelled=same.filter(o=>o.status==='Cancelled'||o.status==='Returned').length;
+  if(cancelled>=2)flags.push(`${cancelled} cancelled or returned orders from this phone`);
+  return flags;
+}

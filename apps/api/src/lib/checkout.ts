@@ -1,5 +1,5 @@
 import { randomInt,randomUUID,createHash } from 'node:crypto';
-import { catalog, transaction,type Database } from './database';
+import { catalog, database, transaction,type Database } from './database';
 import { assert, text } from './http';
 import { deliveryCharge } from '@aurzen/shared/site';
 import { validOption,validColor,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
@@ -65,6 +65,9 @@ export async function placeOrder(d: Record<string, unknown>) {
     const name = text(d.name, 2, 100, 'Name'), address = text(d.address, 10, 500, 'Address');
     const phone = normalizePhone(text(d.phone, 11, 20, 'Phone number'));
     assert(/^01[3-9]\d{8}$/.test(phone), 'Enter a valid Bangladesh mobile number.');
+    // Studio → Customers can block a phone number from ordering.
+    const blockedRow = await (await database()).prepare("SELECT value FROM settings WHERE key='customers'").get();
+    assert(!(blockedRow && JSON.parse(String(blockedRow.value))[phone]?.blocked), 'We could not place this order. Please contact us directly.', 403);
     assert(d.area === 'dhaka' || d.area === 'outside', 'Choose your delivery area.');
     assert(Array.isArray(d.items) && d.items.length > 0 && d.items.length <= 50, 'Your bag must contain 1–50 items.');
     return transaction(async (db) => {
