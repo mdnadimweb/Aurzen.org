@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { categoryList, type Product, type CartItem, type HeroSlide, type Storefront, type Category, type Promotion } from '@aurzen/shared/catalog';
 import {usePathname} from 'next/navigation';
 import {mergeSite,type SiteSettings} from '@aurzen/shared/site';
-export type Catalog={products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;site?:SiteSettings;serverNow?:number};
+export type Catalog={products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;site?:SiteSettings;bestsellers?:number[];serverNow?:number};
 export async function api<T = any>(url: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers }, cache: 'no-store' });
     const result = await response.json();
@@ -18,12 +18,13 @@ function useStoreState(initialCatalog:Catalog) {
     const [bagOpen,setBagOpen]=useState(false);
     useEffect(()=>{setBagOpen(false);},[pathname]);
     const [site, setSite] = useState<SiteSettings>(()=>initialCatalog.site||mergeSite(null));
+    const [bestsellers, setBestsellers] = useState<number[]>(initialCatalog.bestsellers||[]);
     const [products, setProducts] = useState<Product[]>(initialCatalog.products), [categories, setCategories] = useState<string[]>(initialCatalog.categories), [hero, setHero] = useState<HeroSlide[]|null>(initialCatalog.hero||null), [storefront, setStorefront] = useState<Storefront|null>(initialCatalog.storefront||null), [categoryDetails, setCategoryDetails] = useState<Category[]>(initialCatalog.categoryDetails||[]), [promotions, setPromotions] = useState<Promotion[]>(initialCatalog.promotions||[]), [cart, setCart] = useState<CartItem[]>([]), [ready, setReady] = useState(false), [loaded, setLoaded] = useState(true), [error, setError] = useState('');
     const refresh = useCallback(async () => { try {
         const d = await api('/api/catalog/');
         setProducts(d.products);
         setCategories(d.categories);
-        setHero(d.hero||null); setStorefront(d.storefront||null); if(d.site)setSite(d.site); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]);
+        setHero(d.hero||null); setStorefront(d.storefront||null); if(d.site)setSite(d.site);if(Array.isArray(d.bestsellers))setBestsellers(d.bestsellers); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]);
         if(Number.isFinite(d.serverNow)){clockOffset.current=d.serverNow-Date.now();setNow(d.serverNow);}
         setLoaded(true);
         setError('');
@@ -66,7 +67,7 @@ function useStoreState(initialCatalog:Catalog) {
         catch { } }, [ready, cart]);
     // categoryTree: every category with its parent and URL slug (older API responses fall back to names only).
     const categoryTree=useMemo(()=>categoryList(categoryDetails,categories),[categoryDetails,categories]);
-    return { site, setSite, products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront, cart, setCart, ready, loaded, error, refresh, bagOpen, setBagOpen, now };
+    return { bestsellers, site, setSite, products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront, cart, setCart, ready, loaded, error, refresh, bagOpen, setBagOpen, now };
 }
 const StoreContext = createContext<ReturnType<typeof useStoreState> | null>(null);
 export function StoreProvider({ children,initialCatalog }: {

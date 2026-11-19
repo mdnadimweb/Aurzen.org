@@ -34,7 +34,7 @@ export async function forward(request:Request){
     const upstream=await fetch(url+path+query,{method:request.method,headers,body:body as BodyInit|undefined,cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(30000)});
     const out=new Headers();
     for(const name of ['content-type','cache-control','x-content-type-options']){const value=upstream.headers.get(name);if(value)out.set(name,value);}
-    if(!path.startsWith('/media/'))out.set('cache-control','no-store');
+    if(!path.startsWith('/media/')){out.set('cache-control','no-store');out.set('x-robots-tag','noindex');}
     // A smaller copy is cached for a year only when the API confirms it resized the photo
     // (an older API ignores ?w=, and its full-size answer must not stick to the small URL).
     else if(query&&upstream.headers.get('x-aurzen-width')!==width)out.set('cache-control','public, max-age=300');

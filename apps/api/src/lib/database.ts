@@ -143,7 +143,14 @@ export async function catalog(connection?:Database,{raw=false}:{raw?:boolean}={}
   // raw: the studio edits products' own offers, so it gets them unchanged.
   const family=(name:string)=>categoryFamily(categoryDetails,name);
   const offerFor=(p:Record<string,unknown>)=>{const own=JSON.parse(String(p.offer||'null'));return raw||own?.enabled?own:(saleOffer(site.sales.items,{id:Number(p.id),category:String(p.category)},family)||own);};
-  return {site,products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:offerFor(p),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
+  // Best sellers for the homepage favourites row: most units sold in the last 90 days (IDs only).
+  let bestsellers:number[]=[];
+  if(site.home.favourites.source==='bestsellers'){
+    const since=new Date(Date.now()-90*86400000).toISOString(),sold=new Map<number,number>();
+    for(const row of await db.prepare('SELECT payload FROM orders WHERE created>=?').all(since)){const o=JSON.parse(String(row.payload)) as Order;if(o.status==='Cancelled'||o.status==='Returned')continue;for(const i of o.items)sold.set(i.id,(sold.get(i.id)||0)+i.qty);}
+    bestsellers=[...sold.entries()].sort((a,b)=>b[1]-a[1]).map(([id])=>id).slice(0,16);
+  }
+  return {bestsellers,site,products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:offerFor(p),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){
   return (await (await database()).prepare('SELECT payload FROM orders ORDER BY created DESC').all()).map(o=>JSON.parse(String(o.payload)) as Order);
