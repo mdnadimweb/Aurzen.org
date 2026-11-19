@@ -24,7 +24,33 @@ async function legacyCategoryRedirect(request:NextRequest){
     return NextResponse.redirect(target,307);
   }catch{return null;}
 }
+// Studio → Redirects: old address → new address (301). The list is cached for a minute and
+// refreshed in the background, so a page never waits for it (a cold start just skips redirects once).
+let redirectCache:{at:number;items:{from:string;to:string}[];loading?:Promise<void>}={at:0,items:[]};
+function loadRedirects(){
+  if(redirectCache.loading)return;
+  redirectCache.loading=(async()=>{
+    try{
+      const {url,token}=backendConfig();
+      const response=await fetch(url+'/api/redirects/',{cache:'no-store',headers:{'x-aurzen-internal-token':token},signal:AbortSignal.timeout(8000)});
+      if(response.ok)redirectCache={at:Date.now(),items:await response.json()};
+    }catch{}finally{redirectCache.loading=undefined;}
+  })();
+}
+function ownerRedirect(request:NextRequest){
+  if(Date.now()-redirectCache.at>60000)loadRedirects();
+  const path=request.nextUrl.pathname.endsWith('/')?request.nextUrl.pathname:request.nextUrl.pathname+'/';
+  const match=redirectCache.items.find(r=>r.from.toLowerCase()===path.toLowerCase());
+  if(!match)return null;
+  const external=/^https?:/.test(match.to);
+  const target=external?new URL(match.to):new URL(match.to,request.nextUrl.origin);
+  // Keep utm_*/fbclid and other parameters on internal redirects.
+  if(!external)request.nextUrl.searchParams.forEach((value,key)=>{if(!target.searchParams.has(key))target.searchParams.set(key,value);});
+  return NextResponse.redirect(target,301);
+}
 export async function proxy(request:NextRequest){
+  const moved=ownerRedirect(request);
+  if(moved)return moved;
   const redirect=await legacyCategoryRedirect(request);
   if(redirect)return redirect;
   const nonce=randomBytes(18).toString('base64');

@@ -10,7 +10,7 @@ export async function absoluteUrl(path:string){
   const proto=h.get('x-forwarded-proto')||(host?.startsWith('localhost')||host?.startsWith('127.0.0.1')?'http':'https');
   return host?`${proto}://${host}${path}`:path;
 }
-export async function pageMetadata({title,description,image}:{title:string;description:string;image?:string}):Promise<Metadata>{
+export async function pageMetadata({title,description,image,path}:{title:string;description:string;image?:string;path?:string}):Promise<Metadata>{
   const images=image&&image!=='box'?[await absoluteUrl(image)]:undefined;
-  return {title,description,openGraph:{title,description,images,type:'website'},twitter:{card:images?'summary_large_image':'summary',title,description,images}};
+  return {title,description,...(path?{alternates:{canonical:await absoluteUrl(path)}}:{}),openGraph:{title,description,images,type:'website'},twitter:{card:images?'summary_large_image':'summary',title,description,images}};
 }
