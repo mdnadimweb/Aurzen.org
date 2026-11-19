@@ -170,7 +170,7 @@
 
 .lux-hero__backdrop {
   position: absolute;
-  inset: 8% 8% 8% 3%;
+  inset: 8% 5.5%;
   border-radius: var(--radius);
   background: var(--sand);
   box-shadow: 0 35px 80px #392b241f;
@@ -179,7 +179,7 @@
 
 .lux-hero__image-card {
   position: absolute;
-  inset: 5% 7% 7% 5%;
+  inset: 6%;
   overflow: hidden;
   border-radius: var(--radius);
   background: var(--sand);
@@ -346,7 +346,7 @@
   }
 
   .lux-hero__image-card {
-    inset: 0 10% 8% 5%;
+    inset: 0 7.5% 8%;
   }
 }
 
