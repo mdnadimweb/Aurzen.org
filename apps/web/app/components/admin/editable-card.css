@@ -64,3 +64,17 @@
 .color-field input[type=color]{width:52px;height:44px;padding:2px;border-radius:8px}
 .sale-products{max-height:260px;overflow:auto}
 .ec .size-guide__table input{min-width:70px}
+/* Overview: at-a-glance strip. */
+.ov-extras{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.ov-extras__stat{display:grid;gap:2px;padding:14px 16px;text-align:left;font:inherit}
+.ov-extras__stat small{color:#7d6f7a;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.ov-extras__stat strong{font-size:22px}
+.ov-extras__stat span{font-size:13px;color:#6f6170}
+.ov-extras__pending{cursor:pointer;border:1px solid #e3cfa2}
+.ov-extras__list{grid-column:span 2;padding:14px 16px}
+.ov-extras__list h3{margin:0 0 8px;font-size:15px}
+.ov-extras__list ol,.ov-extras__list ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+.ov-extras__list li{display:flex;justify-content:space-between;gap:10px}
+.ov-extras__list b{font-weight:600;white-space:nowrap}.ov-extras__list b.is-out{color:#9b3b2b}
+.ov-extras__list p{margin:0;color:#6f6170;font-size:14px}
+@media (max-width:640px){.ov-extras__list{grid-column:1/-1}}

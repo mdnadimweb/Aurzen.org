@@ -31,6 +31,9 @@ export type CategorySettings={label:typeof cardLabels[number];description:string
 export type Sale={id:string;name:string;percent:number;target:'all'|'category'|'products';category:string;products:number[];startsAt:string|null;endsAt:string|null;active:boolean};
 export type Appearance={primary:string;accent:string;background:string;text:string;headingFont:'cormorant'|'georgia'|'system';bodyFont:'dm-sans'|'system';buttons:'pill'|'rounded'|'square';buttonFill:'filled'|'outline';imageRatio:'default'|'4/5'|'1/1';showBadge:boolean;showSaved:boolean;motion:'off'|'slow'|'normal';maintenance:boolean;maintenanceMessage:string;notFoundTitle:string;notFoundText:string};
 export type SizeGuide={id:string;name:string;columns:string[];rows:string[][];note:string;categories:string[];products:number[]};
+/** Homepage blocks below the hero, in the owner's order. */
+export const homeSections=['trust','collections','promos','favourites','categoryRows','mystery','testimonials','note'];
+export const homeSectionLabels:Record<string,string>={trust:'Trust strip',collections:'Shop by collection',promos:'Promotion banners',favourites:'Favourites row',categoryRows:'Category rows',mystery:'Mystery box section',testimonials:'Customer reviews',note:'A note from the brand'};
 export type TrustItem={id:string;icon:string;text:string;hidden:boolean};
 
 export type SiteSettings={
@@ -39,7 +42,7 @@ export type SiteSettings={
   navigation:{items:NavItem[]};
   footer:{columns:FooterColumn[];bottomText:string;payments:string[];legal:NavItem[];newsletter:{enabled:boolean;title:string;text:string}};
   checkout:{dhaka:number;outside:number;freeThreshold:number;cod:boolean;codFee:number;bkash:{enabled:boolean;instructions:string};nagad:{enabled:boolean;instructions:string};advance:{enabled:boolean;instructions:string};minOrder:number;email:'hidden'|'optional'|'required';note:boolean;paymentNote:string;returnsNote:string;confirmTitle:string;confirmText:string;trackingIntro:string;estimate:string};
-  home:{trust:TrustItem[];favourites:{hidden:boolean;eyebrow:string;title:string;cta:string;count:number};mystery:{hidden:boolean;eyebrow:string;title:string;text:string;cta:string;small:string};note:{hidden:boolean;eyebrow:string;title:string;emphasis:string;text:string}};
+  home:{trust:TrustItem[];order:string[];hidden:string[];favourites:{hidden:boolean;eyebrow:string;title:string;cta:string;count:number;source:'first'|'newest'|'bestsellers'|'sale'|'category'|'manual';category:string;ids:number[]};mystery:{hidden:boolean;eyebrow:string;title:string;text:string;cta:string;small:string};note:{hidden:boolean;eyebrow:string;title:string;emphasis:string;text:string}};
   seo:{title:string;titleTemplate:string;description:string;ogImage:string;indexing:boolean};
   integrations:{pixel:string;analytics:string;searchConsole:string;whatsapp:{enabled:boolean;number:string;message:string;position:'left'|'right'};messenger:{enabled:boolean;link:string}};
   popup:{enabled:boolean;title:string;text:string;image:string;cta:string;link:SiteLink|null;days:number;startsAt:string|null;endsAt:string|null};
@@ -52,6 +55,7 @@ export type SiteSettings={
   redirects:{items:{from:string;to:string}[]};
   sizeGuides:{items:SizeGuide[]};
   gifts:{wrap:boolean;wrapPrice:number;card:boolean;cardLimit:number;categories:string[]};
+  mysteryBox:{guaranteed:string;worth:number;noSpoiler:string;steps:string[]};
 };
 
 const nav=(id:string,label:string,type:SiteLink['type'],value=''):NavItem=>({id,label,link:{type,value},hidden:false});
@@ -76,7 +80,8 @@ export const defaultSite:SiteSettings={
     trackingIntro:'',estimate:''},
   home:{
     trust:[{id:'selected',icon:'♧',text:'Thoughtfully selected',hidden:false},{id:'premium',icon:'◇',text:'Premium, within reach',hidden:false},{id:'cod',icon:'▧',text:'Cash on delivery',hidden:false},{id:'love',icon:'♡',text:'Packed with a little love',hidden:false}],
-    favourites:{hidden:false,eyebrow:'LOVED FOR A REASON',title:'The current favourites.',cta:'Discover the edit ↗',count:4},
+    order:homeSections.slice(),hidden:[],
+    favourites:{hidden:false,eyebrow:'LOVED FOR A REASON',title:'The current favourites.',cta:'Discover the edit ↗',count:4,source:'first',category:'',ids:[]},
     mystery:{hidden:false,eyebrow:'A SURPRISE WITH YOUR NAME ON IT',title:'Good things come\nin mystery boxes.',text:'Tell us a little about your style. We’ll take care of the surprise. A thoughtfully curated box of fashion and accessories, made to brighten your everyday.',cta:'Find your mystery box ↗',small:'Thoughtfully selected · Beautifully wrapped · Uniquely you'},
     note:{hidden:false,eyebrow:'A NOTE FROM AURZÉN',title:'Beautiful things.',emphasis:'Without the extraordinary price.',text:'We believe a little elegance belongs in every day. We’re building AURZÉN around pieces that feel special, thoughtful details, and the joy of finding something that feels like you.'},
   },
@@ -89,6 +94,7 @@ export const defaultSite:SiteSettings={
   redirects:{items:[{from:'/collections/bridal-and-party/',to:'/collections/ladies-fashion/bridal-and-party/'},{from:'/collections/abayas/',to:'/collections/ladies-fashion/abayas/'}]},
   sizeGuides:{items:[{id:'clothing',name:'Clothing (inches)',columns:['Size','Chest','Waist','Length'],rows:[['S','36','30','27'],['M','38','32','28'],['L','40','34','29'],['XL','42','36','30'],['XXL','44','38','31']],note:'Measurements are in inches. Between sizes? Choose the larger one.',categories:[],products:[]}]},
   gifts:{wrap:false,wrapPrice:50,card:false,cardLimit:150,categories:[]},
+  mysteryBox:{guaranteed:'',worth:0,noSpoiler:'',steps:[]},
   messages:{Confirmed:'Hi {name}, your AURZÉN order {order_id} is confirmed. Total {total}. We will let you know when it ships.',Shipped:'Hi {name}, your AURZÉN order {order_id} is on its way with {courier} (tracking {tracking}).',Delivered:'Hi {name}, your AURZÉN order {order_id} has been delivered. Thank you for choosing us!',Cancelled:'Hi {name}, your AURZÉN order {order_id} has been cancelled. Reply if you have any questions.'},
 };
 
@@ -217,8 +223,14 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
     const trust=(h.trust as unknown[]).map((input,i)=>{const t=obj(input,'trust item');return {id:id(t.id),icon:str(t.icon,4,`Icon of item ${i+1}`),text:str(t.text,40,`Text of item ${i+1}`,{required:true}),hidden:t.hidden===true};});
     const fv=obj(h.favourites,'favourites'),my=obj(h.mystery,'mystery box section'),no=obj(h.note,'brand note');
     if(fv.count!==4&&fv.count!==8)fail('Show 4 or 8 favourites.');
-    return {trust,
-      favourites:{hidden:fv.hidden===true,eyebrow:str(fv.eyebrow,60,'Favourites eyebrow'),title:str(fv.title,80,'Favourites heading',{required:true}),cta:str(fv.cta,40,'Favourites button'),count:fv.count as number},
+    if(!['first','newest','bestsellers','sale','category','manual'].includes(fv.source as string))fail('Choose where the favourites come from.');
+    if(!Array.isArray(fv.ids)||fv.ids.length>8)fail('Pick at most 8 favourites.');
+    if(!Array.isArray(h.order)||!Array.isArray(h.hidden))fail('Invalid homepage sections.');
+    const order=(h.order as unknown[]).filter((s):s is string=>homeSections.includes(s as string));
+    for(const s of homeSections)if(!order.includes(s))order.push(s);
+    const hidden=Array.from(new Set((h.hidden as unknown[]).filter((s):s is string=>homeSections.includes(s as string))));
+    return {trust,order,hidden,
+      favourites:{hidden:fv.hidden===true,eyebrow:str(fv.eyebrow,60,'Favourites eyebrow'),title:str(fv.title,80,'Favourites heading',{required:true}),cta:str(fv.cta,40,'Favourites button'),count:fv.count as number,source:fv.source as SiteSettings['home']['favourites']['source'],category:fv.source==='category'?str(fv.category,100,'Favourites category',{required:true}):'',ids:fv.source==='manual'?(fv.ids as unknown[]).map(n=>int(n,1,1e9,'Favourite product')):[]},
       mystery:{hidden:my.hidden===true,eyebrow:str(my.eyebrow,60,'Mystery eyebrow'),title:str(my.title,80,'Mystery heading',{required:true,multiline:true}),text:str(my.text,400,'Mystery text',{multiline:true}),cta:str(my.cta,40,'Mystery button'),small:str(my.small,120,'Mystery small print')},
       note:{hidden:no.hidden===true,eyebrow:str(no.eyebrow,60,'Note eyebrow'),title:str(no.title,80,'Note heading',{required:true}),emphasis:str(no.emphasis,80,'Note highlight'),text:str(no.text,600,'Note text',{multiline:true})}};
   },
@@ -318,6 +330,7 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
     if(!Array.isArray(g.categories)||g.categories.length>100)fail('Invalid gift categories.');
     return {wrap:bool(g.wrap,'Gift wrap'),wrapPrice:int(g.wrapPrice,0,5000,'Gift wrap price'),card:bool(g.card,'Message card'),cardLimit:int(g.cardLimit,20,500,'Message length'),categories:(g.categories as unknown[]).map(c=>str(c,60,'Category',{required:true}))};
   },
+mysteryBox(v){    const m=obj(v,'mystery box details');    if(!Array.isArray(m.steps)||m.steps.length>6)fail('Use at most 6 steps.');    return {guaranteed:str(m.guaranteed,600,'What is guaranteed',{multiline:true}),worth:int(m.worth,0,1000000,'Worth at least'),noSpoiler:str(m.noSpoiler,300,'No-spoiler note',{multiline:true}),steps:(m.steps as unknown[]).map((s,i)=>str(s,160,'Step '+(i+1),{required:true}))};  },
   messages(v){
     const m=obj(v,'message templates'),out:Record<string,string>={};
     for(const [status,text] of Object.entries(m)){
@@ -335,7 +348,12 @@ export function mergeSite(saved:unknown):SiteSettings{
   const out={} as Record<string,unknown>;
   for(const key of siteSections){
     const value=s[key];
-    out[key]=value&&typeof value==='object'&&!Array.isArray(value)?{...defaultSite[key],...value}:defaultSite[key];
+    const base=defaultSite[key] as Record<string,unknown>;
+    if(!value||typeof value!=='object'||Array.isArray(value)){out[key]=base;continue;}
+    // One level deeper too, so settings added later (e.g. home.favourites.source) get their defaults.
+    const merged:Record<string,unknown>={...base,...value};
+    for(const [k,v] of Object.entries(base))if(v&&typeof v==='object'&&!Array.isArray(v)&&merged[k]&&typeof merged[k]==='object'&&!Array.isArray(merged[k])&&key!=='categories'&&key!=='messages')merged[k]={...v,...(merged[k] as object)};
+    out[key]=merged;
   }
   return out as SiteSettings;
 }

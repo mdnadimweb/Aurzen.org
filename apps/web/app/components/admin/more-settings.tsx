@@ -119,3 +119,16 @@ export function GiftsEditor(p:SiteProps){
       <p className="hero-slide__hint">With nothing ticked, Mystery Box and Love &amp; Care get gift options automatically. Choices show on the order and the printed invoice.</p>
     </>}/></EditableGroup>;
 }
+
+export function MysteryEditor(p:SiteProps){
+  const m=p.site.mysteryBox;
+  return <EditableGroup><EditableCard title="Mystery Box details" summary={(m.worth?'Worth at least ৳'+m.worth.toLocaleString('en-BD')+' · ':'')+(m.steps.length?m.steps.length+' steps':'Not filled in yet')} initial={m} onSave={v=>p.saveSite('mysteryBox',v)}
+    render={(d,set)=><>
+      <p className="hero-slide__hint">Shown on every Mystery Box product page. Customers still choose their style before adding to the bag.</p>
+      <label>What’s guaranteed inside<textarea rows={3} maxLength={600} value={d.guaranteed} onChange={e=>set({...d,guaranteed:e.target.value})}/></label>
+      <label>Worth at least (৳, 0 = hide)<input type="number" min={0} value={d.worth} onChange={e=>set({...d,worth:Math.round(Number(e.target.value)||0)})}/></label>
+      <div className="ec-list"><strong>How it works</strong>{d.steps.map((s,i)=><div key={i} className="ec-list__head"><input aria-label={'Step '+(i+1)} value={s} maxLength={160} onChange={e=>set({...d,steps:d.steps.map((x,j)=>j===i?e.target.value:x)})}/><RowTools index={i} count={d.steps.length} label={'step '+(i+1)} onMove={(a,b)=>set({...d,steps:move(d.steps,a,b)})} onRemove={()=>set({...d,steps:d.steps.filter((_,j)=>j!==i)})}/></div>)}
+        {d.steps.length<6&&<button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={()=>set({...d,steps:[...d.steps,'']})}>+ Add step</button>}</div>
+      <label>No-spoiler note<textarea rows={2} maxLength={300} value={d.noSpoiler} onChange={e=>set({...d,noSpoiler:e.target.value})}/></label>
+    </>} validate={v=>v.steps.some(s=>!s.trim())?'Fill in or remove empty steps.':''}/></EditableGroup>;
+}

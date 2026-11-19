@@ -107,3 +107,8 @@ body:has(.has-mobile-purchase) .chat-buttons{bottom:96px}
 .size-guide table{width:100%;border-collapse:collapse;font-size:var(--text-label)}
 .size-guide th,.size-guide td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
 .size-guide thead th{color:var(--muted);font-weight:600}
+.mystery-details{border:1px solid #eadfd8;border-radius:16px;padding:16px 18px;margin:8px 0 14px;background:#fffdfa}
+.mystery-details h2{font-size:20px;margin:10px 0 6px}
+.mystery-details p,.mystery-details li{line-height:1.7;white-space:pre-line}
+.mystery-details ol{margin:0;padding-left:20px}
+.mystery-details__worth{font-weight:600;color:var(--plum);margin:0}
