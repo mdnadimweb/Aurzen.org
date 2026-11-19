@@ -8,11 +8,13 @@ import './presentation.css';
 import './premium.css';
 import './collections.css';
 import './polish.css';
+import './site.css';
 import type {Viewport} from 'next';
 import localFont from 'next/font/local';
 import BrandIntro from './components/brand-intro';
 import { StoreProvider } from './providers';
-import { catalog } from '@/server/backend';
+import { catalog, site } from '@/server/backend';
+import type { Metadata } from 'next';
 // Self-hosted brand fonts, loaded once for the whole site and exposed as CSS variables.
 const headingFont = localFont({
     src: [
@@ -27,7 +29,11 @@ const bodyFont = localFont({
 });
 export const dynamic = 'force-dynamic';
 export const viewport:Viewport={width:'device-width',initialScale:1,viewportFit:'cover',interactiveWidget:'resizes-content'};
-export const metadata = { title: 'AURZÉN | A little elegance. A little unexpected.', description: 'Discover thoughtfully selected fashion, accessories and Mystery Style Boxes from AURZÉN. Premium style for everyday moments.', robots: { index: process.env.CHECKOUT_ENABLED === 'true', follow: true } };
+// Title, description, social image, favicon and search verification come from Studio → Settings.
+export async function generateMetadata(): Promise<Metadata> {
+    const s = await site();
+    return { title: s.seo.title, description: s.seo.description, robots: { index: process.env.CHECKOUT_ENABLED === 'true' && s.seo.indexing, follow: true }, ...(s.general.favicon ? { icons: { icon: s.general.favicon } } : {}), ...(s.seo.ogImage ? { openGraph: { images: [s.seo.ogImage] }, twitter: { card: 'summary_large_image', images: [s.seo.ogImage] } } : {}), ...(s.integrations.searchConsole ? { verification: { google: s.integrations.searchConsole } } : {}) };
+}
 export default async function RootLayout({ children }: {
     children: React.ReactNode;
 }) { return <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`}><body suppressHydrationWarning><noscript><style>{'[data-fade],[data-fade-media]{opacity:1!important;transform:none!important;clip-path:none!important}'}</style></noscript><StoreProvider initialCatalog={await catalog()}><BrandIntro>{children}</BrandIntro></StoreProvider></body></html>; }
