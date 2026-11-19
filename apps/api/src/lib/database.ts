@@ -3,6 +3,7 @@ import {mkdirSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 import {localClient} from './local-database';
 import {postgresClient} from './postgres-database';
+import {mergeSite,mergeContent,type SiteSettings,type Content} from '@aurzen/shared/site';
 import {seed,slugify,type Product,type Order,type HeroSlide,type Storefront,type Category,type Promotion} from '@aurzen/shared/catalog';
 
 export type Dialect='postgres'|'sqlite';
@@ -35,7 +36,9 @@ const postgresSchema=`
   CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,idempotency TEXT NOT NULL UNIQUE,payload TEXT NOT NULL,created TEXT NOT NULL);
   CREATE INDEX IF NOT EXISTS orders_created ON orders(created);
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires BIGINT NOT NULL);
-  CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires BIGINT NOT NULL);`;
+  CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires BIGINT NOT NULL);
+  CREATE TABLE IF NOT EXISTS activity(id BIGSERIAL PRIMARY KEY,at TEXT NOT NULL,actor TEXT NOT NULL,area TEXT NOT NULL,detail TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);`;
 const sqliteSchema=`
   CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS categories(name TEXT PRIMARY KEY);
@@ -43,7 +46,9 @@ const sqliteSchema=`
   CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,category TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),stock INTEGER NOT NULL CHECK(stock>=0),image TEXT NOT NULL,tag TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,idempotency TEXT NOT NULL UNIQUE,payload TEXT NOT NULL,created TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires INTEGER NOT NULL);
-  CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL);`;
+  CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL);
+  CREATE TABLE IF NOT EXISTS activity(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,actor TEXT NOT NULL,area TEXT NOT NULL,detail TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);`;
 
 /** Gives every category a unique URL slug once; later renames keep it, so shared links stay valid. */
 export async function uniqueCategorySlug(db:Database,name:string,parent:string|null,except?:string){
@@ -121,7 +126,7 @@ export async function catalog(connection?:Database){
   const [products,categories,settingRows]=await Promise.all([
     db.prepare('SELECT * FROM products ORDER BY id').all(),
     db.prepare(`SELECT name,parent,slug,cover FROM categories ORDER BY ${db.dialect==='postgres'?'position':'rowid'}`).all(),
-    db.prepare("SELECT key,value FROM settings WHERE key IN ('promotions','heroSlides','storefront')").all(),
+    db.prepare("SELECT key,value FROM settings WHERE key IN ('promotions','heroSlides','storefront','site')").all(),
   ]);
   const setting=(key:string)=>{const row=settingRows.find(r=>r.key===key);return row?JSON.parse(String(row.value)):undefined;};
   const categoryDetails:Category[]=categories.map(c=>({name:String(c.name),slug:String(c.slug||slugify(String(c.name))),parent:c.parent?String(c.parent):null,cover:c.cover?String(c.cover):null}));
@@ -131,7 +136,10 @@ export async function catalog(connection?:Database){
   const hero=(setting('heroSlides')??null) as HeroSlide[]|null;
   // null until the owner saves an announcement or category covers.
   const storefront=(setting('storefront')??null) as Storefront|null;
-  return {products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null')),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
+  // Settings not saved yet use the built-in defaults; an older announcement keeps showing.
+  const site:SiteSettings=mergeSite(setting('site'));
+  if(!setting('site')?.announcement&&storefront?.announcement)site.announcement={...site.announcement,items:[{...site.announcement.items[0],text:storefront.announcement.message,detail:storefront.announcement.detail}]};
+  return {site,products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null')),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){
   return (await (await database()).prepare('SELECT payload FROM orders ORDER BY created DESC').all()).map(o=>JSON.parse(String(o.payload)) as Order);
@@ -140,4 +148,17 @@ export async function transaction<T>(action:(db:Database)=>Promise<T>):Promise<T
   const db=await database(),tx=await (db.connection as Client).transaction('write');
   try{const result=await action(new Database(tx,db.dialect));await tx.commit();return result;}
   catch(error){if(!tx.closed)await tx.rollback();throw error;}finally{tx.close();}
+}
+/** Pages, FAQ and reviews: one settings row, read only by the pages that show them. */
+export async function content(connection?:Database):Promise<Content>{
+  const db=connection||await database();
+  const row=await db.prepare("SELECT value FROM settings WHERE key='content'").get();
+  return mergeContent(row?JSON.parse(String(row.value)):null);
+}
+export async function saveSetting(db:Database,key:string,value:unknown){
+  await db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify(value));
+}
+/** Who changed what and when. One owner password today, so the actor is the role. */
+export async function logActivity(db:Database,area:string,detail:string,actor='Owner'){
+  await db.prepare('INSERT INTO activity(at,actor,area,detail) VALUES(?,?,?,?)').run(new Date().toISOString(),actor,area,detail.slice(0,300));
 }

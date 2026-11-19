@@ -1,8 +1,8 @@
-import { placeOrder, quoteOrder, deliverySettings } from '../../../lib/checkout';
+import { placeOrder, quoteOrder, checkoutSettings } from '../../../lib/checkout';
 import { body, failure, json, sameOrigin } from '../../../lib/http';
 export const runtime = 'nodejs';
 export async function GET() { try {
-    return json(deliverySettings());
+    return json(await checkoutSettings());
 }
 catch (e) {
     return failure(e);

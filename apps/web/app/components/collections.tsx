@@ -20,7 +20,9 @@ export function CategoryTile({category,eyebrow}:{category:Category;eyebrow?:stri
   const family=categoryFamily(categoryTree,category.name),count=published(products,family).length;
   // Describe the actual photo: the product it comes from, or the category's own cover.
   const source=products.find(p=>family.includes(p.category)&&p.image===cover);
-  const alt=source?source.name+' - '+category.name+' collection':category.name+' collection';
+  // "Men's collection" must not become "Men's collection collection".
+  const label=/collection$/i.test(category.name)?category.name:category.name+' collection';
+  const alt=source?source.name+' – '+label:label;
   return <Link className="collection category-tile" href={categoryPath(categoryTree,category.name)}>
     {cover?<ProductImage src={cover} category={category.name} alt={alt}/>:<div className="category-tile__placeholder" aria-hidden="true"><BoxArt/></div>}
     <div className="collection-copy"><small>{eyebrow||(count?count+' piece'+(count===1?'':'s'):'COMING SOON')}</small><h3>{category.name} <span aria-hidden="true">↗</span></h3></div>
@@ -73,13 +75,13 @@ function ProductBrowser({items,label,emptyText}:{items:Product[];label:string;em
 
 /** A main category (all its products, with subcategory chips) or one subcategory. */
 export function CollectionView({main,sub}:{main:Category;sub:Category|null}){
-  const {products,categoryTree,loaded}=useStore();
+  const {products,categoryTree,loaded,site}=useStore();
   const subs=subcategoriesOf(categoryTree,main.name);
   const family=sub?[sub.name]:categoryFamily(categoryTree,main.name);
   const items=published(products,family);
   return <main className="section shop collection-page">
     <nav className="breadcrumbs" aria-label="Breadcrumb"><ol><li><Link href="/collections/">Collections</Link></li>{sub?<><li><Link href={categoryPath(categoryTree,main.name)}>{main.name}</Link></li><li aria-current="page">{sub.name}</li></>:<li aria-current="page">{main.name}</li>}</ol></nav>
-    <div className="eyebrow">THE AURZÉN COLLECTION</div><h1>{sub?sub.name:main.name}</h1>
+    <div className="eyebrow">THE AURZÉN COLLECTION</div><h1>{sub?sub.name:main.name}</h1>{site.categories[(sub||main).slug]?.description&&<p className="collection-intro">{site.categories[(sub||main).slug].description}</p>}
     {subs.length>0&&<nav className="chips subcategory-chips" aria-label={'Browse '+main.name}>
       <Link className={!sub?'chosen':''} aria-current={!sub?'page':undefined} href={categoryPath(categoryTree,main.name)}>All {main.name}</Link>
       {subs.map(s=><Link key={s.slug} className={sub?.name===s.name?'chosen':''} aria-current={sub?.name===s.name?'page':undefined} href={categoryPath(categoryTree,s.name)}>{s.name}</Link>)}

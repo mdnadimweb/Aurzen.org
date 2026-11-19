@@ -1,0 +1,62 @@
+/* Collapsible editor cards used across Studio settings. Matches the plum + gold studio look. */
+.ec-group{display:grid;gap:12px;max-width:980px}
+.ec-heading{font-size:20px;margin:22px 0 2px}
+.ec-heading:first-child{margin-top:0}
+.ec{background:#fff;border:1px solid #e7dde4;border-radius:14px;overflow:hidden;transition:box-shadow .2s}
+.ec.is-open{box-shadow:0 10px 30px rgba(52,24,58,.08);border-color:#cdb7c8}
+.ec__row{display:flex;align-items:center;gap:14px;padding:12px 16px;min-height:64px}
+.ec__thumb{flex:0 0 44px;height:44px;border-radius:8px;background:#f4eef2;overflow:hidden}
+.ec__thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ec__text{flex:1;min-width:0}
+.ec__text h3{margin:0;font-size:15px;font-family:inherit;font-weight:600}
+.ec__text p{margin:2px 0 0;font-size:13px;color:#6f6170;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ec__badge{font-size:11px;font-weight:600;letter-spacing:.04em;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.ec__badge--on{background:#efe6d2;color:#7a5b1d}
+.ec__badge--off{background:#f1ecef;color:#7d6f7a}
+.ec__badge--warn{background:#fde8e4;color:#9b3b2b}
+.ec__actions{display:flex;gap:4px;align-items:center}
+.ec__row .a-btn{min-height:44px}
+.ec__panel{border-top:1px solid #efe6ec;padding:18px 16px 16px;animation:ec-open .2s ease}
+@keyframes ec-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ec__panel{animation:none}.ec{transition:none}}
+.ec__fields{border:0;margin:0;padding:0;display:grid;gap:14px;min-width:0}
+.ec__fields label{display:grid;gap:6px}
+.ec__fields h4{margin:10px 0 0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#8a6d2f}
+.ec__buttons{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:16px;position:sticky;bottom:0;background:#fff;padding-top:10px}
+.ec__reset{margin-right:auto}
+.ec-toggle{display:flex!important;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.admin .ec-toggle input[type=checkbox]{width:20px;height:20px;min-height:0;flex:0 0 20px;padding:0;margin:0;border:0;box-shadow:none;accent-color:#5b2a63}
+.ec-list{display:grid;gap:10px}
+.ec-list__item{border:1px dashed #dccfd8;border-radius:12px;padding:12px;display:grid;gap:10px}
+.ec-list__head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ec-list__head small{color:#7d6f7a}
+.ec-list__head .ec-rowtools{margin-left:auto}
+.ec-rowtools{display:inline-flex;gap:2px}
+.ec-rowtools .a-btn{min-height:40px;min-width:40px}
+.link-picker{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.admin-nav__group{display:block;margin:16px 0 4px}
+.backup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:14px 0 24px}
+@media (max-width:640px){
+  .ec__row{flex-wrap:wrap;gap:10px}
+  .ec__text{flex-basis:calc(100% - 60px)}
+  .ec__text p{white-space:normal}
+  .ec__actions{order:5}
+  .ec__row>.a-btn{margin-left:auto}
+  .ec__buttons .a-btn{flex:1}
+}
+/* Orders: bulk bar, selection column, notes/history panel. */
+.order-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid #efe6ec;background:#fbf8fa}
+.order-bulk>span{font-size:13px;color:#6f6170;margin-right:auto}
+.order-bulk select{min-height:40px}
+.admin-table .order-select{width:44px;text-align:center}
+.admin .admin-table .order-select input{width:20px;height:20px;min-height:0;padding:0;margin:0;accent-color:#5b2a63}
+.order-tools .order-tools__body{display:grid;gap:10px;padding:10px 0}
+.order-tools__body label{display:grid;gap:6px}
+.order-tools__actions{display:flex;flex-wrap:wrap;gap:6px}
+.order-flag{color:#9b3b2b;font-weight:600;font-size:12px;margin-left:6px}
+.order-flag-text{color:#9b3b2b;margin:0;font-size:13px}
+.order-timeline{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
+.ec-tags{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:4px 18px}
+.ec-tags legend{font-weight:600;margin-bottom:4px}
+.customer-orders{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
+@media (max-width:760px){.admin-table .order-select{width:auto;text-align:left}}

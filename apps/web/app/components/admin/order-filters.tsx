@@ -23,21 +23,22 @@ export function inDateRange(order:Order,from:string,to:string){
 }
 
 export function useOrderFilters(orders:Order[]){
-  const [input,setInput]=useState(''),[query,setQuery]=useState(''),[status,setStatus]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState('');
+  const [input,setInput]=useState(''),[query,setQuery]=useState(''),[status,setStatus]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[payment,setPayment]=useState(''),[courier,setCourier]=useState('');
   useEffect(()=>{const timer=window.setTimeout(()=>setQuery(input),300);return()=>window.clearTimeout(timer);},[input]);
-  const filtered=useMemo(()=>orders.filter(o=>matchesOrder(o,query)&&(!status||o.status===status)&&inDateRange(o,from,to)),[orders,query,status,from,to]);
-  const active=!!(input.trim()||status||from||to);
-  const reset=()=>{setInput('');setQuery('');setStatus('');setFrom('');setTo('');};
+  const filtered=useMemo(()=>orders.filter(o=>matchesOrder(o,query)&&(!status||o.status===status)&&inDateRange(o,from,to)&&(!payment||(o.paymentMethod||'cod')===payment)&&(!courier||(courier==='none'?!o.courier:o.courier===courier))),[orders,query,status,from,to,payment,courier]);
+  const active=!!(input.trim()||status||from||to||payment||courier);
+  const couriers=useMemo(()=>Array.from(new Set(orders.map(o=>o.courier).filter((c):c is string=>!!c))).sort(),[orders]);
+  const reset=()=>{setInput('');setQuery('');setStatus('');setFrom('');setTo('');setPayment('');setCourier('');};
   // How many orders are in each status, so the menu shows where the work is.
   const counts=useMemo(()=>Object.fromEntries(statuses.map(s=>[s,orders.filter(o=>o.status===s).length])),[orders]);
   // A "from" later than "to" moves the other side along, so the range is never empty by mistake.
   const changeFrom=(value:string)=>{setFrom(value);if(value&&to&&value>to)setTo(value);};
   const changeTo=(value:string)=>{setTo(value);if(value&&from&&value<from)setFrom(value);};
-  return {input,setInput,status,setStatus,counts,from,to,changeFrom,changeTo,filtered,active,reset,total:orders.length};
+  return {payment,setPayment,courier,setCourier,couriers,input,setInput,status,setStatus,counts,from,to,changeFrom,changeTo,filtered,active,reset,total:orders.length};
 }
 
 export default function OrderFilters({state}:{state:ReturnType<typeof useOrderFilters>}){
-  const {input,setInput,status,setStatus,counts,from,to,changeFrom,changeTo,filtered,active,reset,total}=state;
+  const {payment,setPayment,courier,setCourier,couriers,input,setInput,status,setStatus,counts,from,to,changeFrom,changeTo,filtered,active,reset,total}=state;
   return <div className="admin-filters admin-order-filters" role="search">
     <label className="admin-order-filters__search">Search orders
       <span className="admin-search-field">
@@ -49,6 +50,8 @@ export default function OrderFilters({state}:{state:ReturnType<typeof useOrderFi
       <option value="">All statuses</option>
       {statuses.map(s=><option key={s} value={s}>{s} ({counts[s]})</option>)}
     </select></label>
+    <label>Payment<select value={payment} onChange={e=>setPayment(e.target.value)}><option value="">All payments</option><option value="cod">Cash on delivery</option><option value="bkash">bKash</option><option value="nagad">Nagad</option><option value="advance">Advance</option></select></label>
+    <label>Courier<select value={courier} onChange={e=>setCourier(e.target.value)}><option value="">All couriers</option><option value="none">Not assigned</option>{couriers.map(c=><option key={c}>{c}</option>)}</select></label>
     <label>From date<input type="date" value={from} max={to||undefined} onChange={e=>changeFrom(e.target.value)}/></label>
     <label>To date<input type="date" value={to} min={from||undefined} onChange={e=>changeTo(e.target.value)}/></label>
     <button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-filters__reset" disabled={!active} onClick={reset}>Reset filters</button>

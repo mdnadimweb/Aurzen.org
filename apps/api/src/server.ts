@@ -10,6 +10,8 @@ import * as admin from './app/api/admin/route';
 import * as session from './app/api/admin/session/route';
 import * as images from './app/api/admin/images/route';
 import * as media from './app/media/[id]/route';
+import * as content from './app/api/content/route';
+import * as subscribe from './app/api/subscribe/route';
 
 const token=process.env.INTERNAL_API_TOKEN;
 if(!token||token.length<32)throw new Error('INTERNAL_API_TOKEN must contain at least 32 characters.');
@@ -22,6 +24,7 @@ const routes:Record<string,Record<string,Handler>>={
   '/api/tracking':{POST:tracking.POST},'/api/admin':{GET:admin.GET,POST:admin.POST},
   '/api/admin/session':{GET:session.GET,POST:session.POST,DELETE:session.DELETE},
   '/api/admin/images':{POST:images.POST},
+  '/api/content':{GET:content.GET},'/api/subscribe':{POST:subscribe.POST},
 };
 async function readBody(message:IncomingMessage,limit:number){
   if(Number(message.headers['content-length']||0)>limit)throw new Error('PAYLOAD_LIMIT');
@@ -41,7 +44,7 @@ const server=createServer({maxHeaderSize:16384,requestTimeout:30000,headersTimeo
     let handler=routes[path]?.[method];
     if(path.startsWith('/media/')&&method==='GET'){const width=new URL(message.url||'/','http://api.internal').searchParams.get('w');handler=request=>media.GET(request,{params:Promise.resolve({id:path.slice(7),width})});}
     if(!handler){out.writeHead(routes[path]?405:404);out.end();return;}
-    const bytes=!['GET','HEAD'].includes(method)?await readBody(message,path==='/api/admin/images'?maxImageBytes+65536:32000):undefined;
+    const bytes=!['GET','HEAD'].includes(method)?await readBody(message,path==='/api/admin/images'?maxImageBytes+65536:path==='/api/admin'?1000000:32000):undefined;
     const headers=new Headers();for(const [key,value]of Object.entries(message.headers))if(value)headers.set(key,Array.isArray(value)?value.join(','):value);
     const request=new Request('http://api.internal'+path,{method,headers,body:bytes as BodyInit|undefined});
     const context={request,setCookies:[] as string[]};

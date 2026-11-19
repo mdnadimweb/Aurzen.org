@@ -4,7 +4,9 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import BrandLogo from './brand-logo';
 import Modal from './modal';
-import {categoryPath,defaultStorefront,mainCategories} from '@aurzen/shared/catalog';
+import {categoryPath,mainCategories} from '@aurzen/shared/catalog';
+import {linkHref} from '@aurzen/shared/site';
+import AnnouncementBar from './announcement-bar';
 import SearchPanel from './search-panel';
 import {useStore} from '../providers';
 import './store-header.css';
@@ -12,7 +14,7 @@ import './store-header.css';
 type Props={view:string;count:number;onBag:()=>void;bagOpen:boolean;categories:string[];onNavigate:(view:string,category?:string)=>void};
 export default function StoreHeader({view,count,onBag,bagOpen,categories,onNavigate}:Props){
   const [menuOpen,setMenuOpen]=useState(false),[searchOpen,setSearchOpen]=useState(false),[scrolled,setScrolled]=useState(false);
-  const store=useStore(),{announcement}=store.storefront||defaultStorefront;
+  const store=useStore();
   // Main categories link to their shareable collection pages.
   const mains=mainCategories(store.categoryTree).filter(c=>categories.includes(c.name));
   const navigationId=useId(),pathname=usePathname();
@@ -37,15 +39,21 @@ export default function StoreHeader({view,count,onBag,bagOpen,categories,onNavig
     if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
     event.preventDefault();onNavigate(target,category);
   };
+  // Studio → Navigation: the owner's menu, in order. "Every main category" expands to the live list.
   const links=(mobile=false)=><>
-    <Link href="/" aria-current={view==='home'?'page':undefined} onClick={e=>navigate(e,'home')}>Home</Link>
-    <Link href="/shop/" aria-current={view==='shop'?'page':undefined} onClick={e=>navigate(e,'shop','All')}>Shop all</Link>
-    {mains.map(category=><Link key={category.slug} href={categoryPath(store.categoryTree,category.name)} aria-current={pathname.startsWith(categoryPath(store.categoryTree,category.name))?'page':undefined} onClick={()=>setMenuOpen(false)}>{category.name==='Mystery Boxes'?'Mystery boxes':category.name}<span aria-hidden="true">{mobile?'↗':''}</span></Link>)}
-    <Link href="/sale/" aria-current={pathname.startsWith('/sale')?'page':undefined} onClick={()=>setMenuOpen(false)}>Sale<span aria-hidden="true">{mobile?'↗':''}</span></Link>
-    {mobile&&<Link href="/tracking/" onClick={e=>navigate(e,'tracking')}>Track your order <span aria-hidden="true">↗</span></Link>}
+    {store.site.navigation.items.filter(item=>!item.hidden).map(item=>{
+      const arrow=<span aria-hidden="true">{mobile?'↗':''}</span>;
+      if(item.link.type==='categories')return mains.map(category=><Link key={item.id+category.slug} href={categoryPath(store.categoryTree,category.name)} aria-current={pathname.startsWith(categoryPath(store.categoryTree,category.name))?'page':undefined} onClick={()=>setMenuOpen(false)}>{category.name}{arrow}</Link>);
+      if(item.link.type==='home')return <Link key={item.id} href="/" aria-current={view==='home'?'page':undefined} onClick={e=>navigate(e,'home')}>{item.label}</Link>;
+      if(item.link.type==='shop')return <Link key={item.id} href="/shop/" aria-current={view==='shop'?'page':undefined} onClick={e=>navigate(e,'shop','All')}>{item.label}</Link>;
+      const href=linkHref(item.link,store.categoryTree);
+      if(item.link.type==='url'&&/^https?:/.test(href))return <a key={item.id} href={href} target="_blank" rel="noopener noreferrer">{item.label}{arrow}</a>;
+      return <Link key={item.id} href={href} aria-current={href!=='/'&&pathname.startsWith(href)?'page':undefined} onClick={()=>setMenuOpen(false)}>{item.label}{arrow}</Link>;
+    })}
+    {mobile&&!store.site.navigation.items.some(i=>!i.hidden&&i.link.type==='tracking')&&<Link href="/tracking/" onClick={e=>navigate(e,'tracking')}>Track your order <span aria-hidden="true">↗</span></Link>}
   </>;
   return <div className={'store-header-wrap'+(scrolled?' is-scrolled':'')}>
-    <div className="announcement store-header-announcement">{announcement.message}{announcement.detail&&<> <span>{announcement.detail}</span></>}</div>
+    <AnnouncementBar/>
     <header className="store-header">
       <BrandLogo variant="header"/>
       <nav className="store-header-desktop-nav" aria-label="Main navigation">{links()}</nav>

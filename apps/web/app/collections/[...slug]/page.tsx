@@ -18,6 +18,8 @@ export async function generateMetadata({params}:Props){
   const category=found.sub||found.main;
   const count=data.products.filter(p=>categoryFamily(categories,category.name).includes(p.category)).length;
   const name=found.sub?`${found.sub.name} · ${found.main.name}`:found.main.name;
+  const seo=data.site?.categories[category.slug];
+  if(seo?.seoTitle||seo?.seoDescription)return pageMetadata({title:seo.seoTitle||`${name} | AURZÉN`,description:seo.seoDescription||seo.description||`Shop ${count} ${category.name} pieces at AURZÉN.`,image:categoryCoverImage(found.main,categories,data.products,data.storefront?.covers||{})});
   return pageMetadata({title:`${name} | AURZÉN`,description:`Shop ${count} ${category.name} piece${count===1?'':'s'} at AURZÉN. Cash on delivery across Bangladesh.`,image:categoryCoverImage(found.main,categories,data.products,data.storefront?.covers||{})});
 }
 export default async function Page({params,searchParams}:Props&{searchParams:Promise<Record<string,string|string[]|undefined>>}){
