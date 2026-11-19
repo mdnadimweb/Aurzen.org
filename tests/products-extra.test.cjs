@@ -1,0 +1,35 @@
+require('../scripts/test-environment.cjs');
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {randomUUID}=require('node:crypto');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'aurzen-products-'));
+process.env.DATABASE_PATH=path.join(dir,'test.sqlite');process.env.CHECKOUT_ENABLED='true';
+const {database,catalog}=require('../apps/api/dist/lib/database.js');
+const auth=require('../apps/api/dist/lib/auth.js');
+const {POST}=require('../apps/api/dist/app/api/admin/route.js');
+const {quoteOrder,placeOrder}=require('../apps/api/dist/lib/checkout.js');
+auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
+const admin=async data=>{const r=await POST(new Request('https://shop.example/api/admin/',{method:'POST',headers:{Origin:'https://shop.example','Content-Type':'application/json'},body:JSON.stringify(data)}));const j=await r.json();assert.equal(r.status,200,j.error);return j;};
+test.after(async()=>{(await database()).close();fs.rmSync(dir,{recursive:true,force:true});});
+const base={action:'saveProduct',id:1,name:'Everyday Co-ord',category:'Clothing',price:1000,stock:10,image:'box',images:[],tag:'NEW',sizes:['S','M']};
+test('hidden products leave the shop; per-size stock limits checkout and is reduced by orders',async()=>{
+  let data=await admin({...base,extra:{status:'hidden',sku:'CO-1',sizeStock:{S:2,M:0}}});
+  const own=data.products.find(p=>p.id===1);assert.equal(own.extra.sku,'CO-1');assert.equal(own.stock,2,'total = sum of sizes');
+  assert(!(await catalog()).products.some(p=>p.id===1),'hidden products are not public');
+  await assert.rejects(()=>quoteOrder({area:'dhaka',items:[{id:1,qty:1,size:'S'}]}),/no longer available/);
+  await admin({...base,extra:{status:'active',sizeStock:{S:2,M:0}}});
+  await assert.rejects(()=>quoteOrder({area:'dhaka',items:[{id:1,qty:1,size:'M'}]}),/\(M\): only 0/);
+  const order={key:randomUUID(),name:'Test Buyer',phone:'01712345678',address:'House 1, Road 2, Dhaka',area:'dhaka',items:[{id:1,qty:2,size:'S'}]};
+  order.quote=(await quoteOrder(order)).quote;await placeOrder(order);
+  const after=(await catalog()).products.find(p=>p.id===1);assert.equal(after.extra.sizeStock.S,0);assert.equal(after.stock,0);
+});
+test('bulk price change, duplicate as draft and CSV import with validation',async()=>{
+  let data=await admin({action:'bulkProducts',op:'price',ids:[1],value:10});
+  assert.equal(data.products.find(p=>p.id===1).price,1100);
+  data=await admin({action:'duplicateProduct',id:1});
+  const copy=data.products.find(p=>p.name==='Everyday Co-ord (copy)');assert.equal(copy.extra.status,'draft');
+  data=await admin({action:'importProducts',rows:[{id:'',name:'Imported Scarf',category:'Accessories',price:450,stock:3,tag:'',sku:'SC-9',status:'',description:''}]});
+  const imported=data.products.find(p=>p.name==='Imported Scarf');assert.equal(imported.extra.status,'draft');assert.equal(imported.extra.sku,'SC-9');
+  const r=await POST(new Request('https://shop.example/api/admin/',{method:'POST',headers:{Origin:'https://shop.example','Content-Type':'application/json'},body:JSON.stringify({action:'importProducts',rows:[{name:'Bad',category:'Nope',price:10,stock:1}]})}));
+  assert.equal(r.status,400);assert.match((await r.json()).error,/row 2/);
+});
