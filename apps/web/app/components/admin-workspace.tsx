@@ -16,12 +16,19 @@ import {defaultHeroSlides} from './FashionHero';
 
 import BrandLogo from './brand-logo';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
+import { defaultContent, type Content } from '@aurzen/shared/site';
+import { StorefrontSettings, GeneralSettings, SeoSettings, PopupSettings, PagesEditor, FaqEditor, ReviewsEditor, Subscribers, ActivityLog, type SiteProps } from './admin/site-settings';
+import Backup from './admin/backup';
+import './admin/editable-card.css';
 import { useRouter, usePathname } from 'next/navigation';
 import { money, editableStatuses, statusOptions, lineKey, optionLabel, mainCategories, type Product, type Order } from '@aurzen/shared/catalog';
 import { api, useStore } from '../providers';
 
-const tabs:{name:string;icon:IconName}[]=[{name:'Overview',icon:'overview'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Homepage',icon:'slides'},{name:'Orders',icon:'orders'},{name:'Customers',icon:'customers'}];
+const tabs:{name:string;icon:IconName;group?:string}[]=[{name:'Overview',icon:'overview'},{name:'Orders',icon:'orders'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Customers',icon:'customers'},
+    {name:'Homepage',icon:'slides',group:'Storefront'},{name:'Menus & text',icon:'storefront',group:'Storefront'},{name:'Pages',icon:'edit',group:'Storefront'},{name:'FAQ',icon:'info',group:'Storefront'},{name:'Reviews',icon:'check',group:'Storefront'},
+    {name:'Popup',icon:'plus',group:'Marketing'},{name:'Subscribers',icon:'customers',group:'Marketing'},
+    {name:'Settings',icon:'lock',group:'Settings'},{name:'SEO & integrations',icon:'external',group:'Settings'},{name:'Activity log',icon:'overview',group:'Settings'},{name:'Backup',icon:'truck',group:'Settings'}];
 const statusKey=(status:string)=>status.toLowerCase().replace(/[^a-z]/g,'');
 const stockLevel=(stock:number)=>stock===0?'out':stock<=5?'low':'in';
 const stockText=(stock:number)=>stock===0?'Out of stock':stock<=5?'Low stock':'In stock';
@@ -44,7 +51,8 @@ function DeliveryEditor({order,onSave,onOpen}:{order:Order;onSave:(data:Record<s
 }
 export default function AdminWorkspace() {
     const router = useRouter();
-    const { products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront } = useStore();
+    const { site, setSite, products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront } = useStore();
+    const [content,setContent]=useState<Content>(defaultContent),[subscribers,setSubscribers]=useState<{contact:string;created:string}[]>([]),[activity,setActivity]=useState<{at:string;actor:string;area:string;detail:string}[]>([]);
     const [categoryRequest,setCategoryRequest]=useState(false);
     const [orders, setOrders] = useState<Order[]>([]), [tab, setTab] = useState('Overview'), [notice, setNoticeState] = useState<Notice|null>(null), [adminLoaded, setAdminLoaded] = useState(false), [dirty, setDirty] = useState(false);
     const orderFilter=useOrderFilters(orders);
@@ -71,7 +79,7 @@ export default function AdminWorkspace() {
         return()=>{window.removeEventListener('beforeunload',warn);document.removeEventListener('click',onClick,true);};
     },[dirty]);
     const leave=(url:string)=>{if(dirty&&!confirm(leaveMessage))return false;setDirty(false);router.push(url);return true;};
-    useEffect(() => { api('/api/admin/').then(d => { setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
+    useEffect(() => { api('/api/admin/').then(d => { applyExtras(d); setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); setAdminLoaded(true); }).catch(e => setNotice(e.message,'error')); }, []);
     // Keep the unread-order badge current while the studio is open (orders only, so edits in progress are untouched).
     useEffect(() => { const poll = () => { if (document.visibilityState === 'visible') api('/api/admin/').then(d => setOrders(d.orders)).catch(() => {}); }; const timer = setInterval(poll, 30000); document.addEventListener('visibilitychange', poll); return () => { clearInterval(timer); document.removeEventListener('visibilitychange', poll); }; }, []);
     useEffect(() => { if (notice) {
@@ -89,7 +97,12 @@ export default function AdminWorkspace() {
         document.addEventListener('keydown',onKey);desktop.addEventListener('change',onChange);
         return()=>{document.removeEventListener('keydown',onKey);desktop.removeEventListener('change',onChange);};
     },[navOpen]);
-    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin/', { method: 'POST', body: JSON.stringify(data) }); setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); }
+    const applyExtras=(d:any)=>{if(d.site)setSite(d.site);if(d.content)setContent(d.content);if(d.subscribers)setSubscribers(d.subscribers);if(d.activity)setActivity(d.activity);};
+    const siteProps:SiteProps={site,content,categories:categoryTree,products,
+        saveSite:async(section,value)=>{await mutate({action:'saveSite',section,value});setNotice('Saved to your store');},
+        resetSite:async section=>{await mutate({action:'resetSite',section});setNotice('Original content restored');},
+        saveContent:async(section,value)=>{await mutate({action:'saveContent',section,value});setNotice('Saved to your store');}};
+    async function mutate(data: Record<string, unknown>) { const d = await api('/api/admin/', { method: 'POST', body: JSON.stringify(data) }); applyExtras(d); setProducts(d.products); setCategories(d.categories); setCategoryDetails(d.categoryDetails||[]); setPromotions(d.promotions||[]); setHero(d.hero||null); setStorefront(d.storefront||null); setOrders(d.orders); }
     const unread = orders.filter(o => !o.readAt).length;
     // Read status is saved on the server and never changes the fulfilment status.
     const markRead = (order: Order) => { if (order.readAt) return; const readAt = new Date().toISOString(); setOrders(list => list.map(o => o.id === order.id ? { ...o, readAt } : o)); api('/api/admin/', { method: 'POST', body: JSON.stringify({ action: 'markRead', id: order.id }) }).then(d => setOrders(d.orders)).catch(e => setNotice((e as Error).message, 'error')); };
@@ -111,7 +124,7 @@ export default function AdminWorkspace() {
     <aside ref={sidebar} id="admin-sidebar" className={'admin-sidebar'+(navOpen?' is-open':'')} aria-label="Studio navigation">
         <div className="admin-sidebar__brand"><BrandLogo variant="light"/><button type="button" className="a-btn a-btn--icon admin-sidebar__close" aria-label="Close navigation" onClick={closeNav}><Icon name="close"/></button></div>
         <small className="admin-sidebar__label">Workspace</small>
-        <nav className="admin-nav">{tabs.map(t => <button type="button" className={tab === t.name ? 'selected' : ''} aria-current={tab===t.name?'page':undefined} key={t.name} onClick={() => choose(t.name)}><Icon name={t.icon}/>{t.name}{t.name==='Orders'&&unread>0&&<span className="admin-nav__badge" aria-label={unread+' unread order'+(unread===1?'':'s')}>{unread>99?'99+':unread}</span>}</button>)}</nav>
+        <nav className="admin-nav">{tabs.map((t,i) => <Fragment key={t.name}>{t.group&&tabs[i-1]?.group!==t.group&&<small className="admin-sidebar__label admin-nav__group">{t.group}</small>}<button type="button" className={tab === t.name ? 'selected' : ''} aria-current={tab===t.name?'page':undefined} key={t.name} onClick={() => choose(t.name)}><Icon name={t.icon}/>{t.name}{t.name==='Orders'&&unread>0&&<span className="admin-nav__badge" aria-label={unread+' unread order'+(unread===1?'':'s')}>{unread>99?'99+':unread}</span>}</button></Fragment>)}</nav>
         <div className="admin-sidebar__foot">
             <a href="/" className="admin-sidebar__link"><Icon name="storefront"/>View storefront<Icon name="external" className="a-icon admin-sidebar__ext"/></a>
             <div className="admin-user"><span aria-hidden="true">N</span><div>Nadim<small>Store owner</small></div></div>
@@ -146,6 +159,16 @@ export default function AdminWorkspace() {
     {tab === 'Homepage' && (adminLoaded?<HeroEditor key={'hero:'+JSON.stringify(hero)} initialSlides={hero?.length?hero:defaultHeroSlides(products,categories)} custom={!!hero?.length} categories={categories} onSave={async slides=>{await mutate({action:'saveHero',slides});setNotice('Homepage slides saved');}} onReset={async()=>{await mutate({action:'resetHero'});setNotice('Automatic slides restored');}}/>:<p className="admin-loading" role="status">Loading your slides…</p>)}
     {tab === 'Homepage' && adminLoaded && <StorefrontEditor key={'storefront:'+JSON.stringify(storefront)+categoryTree.length} initial={storefront} categories={mainCategories(categoryTree).map(c=>c.name)} tree={categoryTree} products={products} onSave={async value=>{await mutate({action:'saveStorefront',storefront:value});setNotice('Storefront saved');}}/>}
     {tab === 'Homepage' && adminLoaded && <PromotionsEditor key={'promotions:'+JSON.stringify(promotions)} initial={promotions} products={products} categories={categoryTree} onSave={async value=>{await mutate({action:'savePromotions',promotions:value});setNotice('Promotions saved');}}/>}
+    {adminLoaded && tab === 'Menus & text' && <StorefrontSettings {...siteProps}/>}
+    {adminLoaded && tab === 'Pages' && <PagesEditor {...siteProps}/>}
+    {adminLoaded && tab === 'FAQ' && <FaqEditor {...siteProps}/>}
+    {adminLoaded && tab === 'Reviews' && <ReviewsEditor {...siteProps}/>}
+    {adminLoaded && tab === 'Popup' && <PopupSettings {...siteProps}/>}
+    {adminLoaded && tab === 'Subscribers' && <Subscribers list={subscribers} onDelete={contact=>void change({action:'deleteSubscriber',contact})}/>}
+    {adminLoaded && tab === 'Settings' && <GeneralSettings {...siteProps}/>}
+    {adminLoaded && tab === 'SEO & integrations' && <SeoSettings {...siteProps}/>}
+    {adminLoaded && tab === 'Activity log' && <ActivityLog list={activity}/>}
+    {adminLoaded && tab === 'Backup' && <Backup products={products} categories={categoryTree} orders={orders} site={site} content={content} onImport={async value=>{for(const [section,data] of Object.entries(value))await mutate({action:'saveSite',section,value:data});setNotice('Settings imported');}}/>}
     {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <><OrderFilters state={orderFilter}/>{!orderFilter.filtered.length ? <div className="admin-empty" role="status"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders found</h3><p>Try another search, status or date range.</p><button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={orderFilter.reset}>Reset filters</button></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orderFilter.filtered.map(o => <tr key={o.id}>
         <td data-label="Order"><span className="admin-mono">{o.id}</span>{!o.readAt&&<span className="admin-new-marker">New<span className="sr-only"> unread order</span></span>}<small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>{markRead(o);setEditingOrder(o);}}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
         <td data-label="Customer"><strong className="admin-order-name">{o.name}</strong><small>{o.phone}</small></td>
