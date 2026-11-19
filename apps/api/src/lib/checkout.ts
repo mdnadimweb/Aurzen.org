@@ -1,7 +1,7 @@
 import { randomInt,randomUUID,createHash } from 'node:crypto';
 import { catalog, database, transaction,type Database } from './database';
 import { assert, text } from './http';
-import { deliveryCharge, applyCoupon, type Coupon } from '@aurzen/shared/site';
+import { deliveryCharge, applyCoupon, giftEligible, type Coupon } from '@aurzen/shared/site';
 import { categoryFamily,validOption,validColor,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
 import { normalizePhone } from '@aurzen/shared/phone';
 export async function checkoutSettings() {
@@ -44,11 +44,18 @@ async function calculateQuote(d:Record<string,unknown>,db?:Database):Promise<Che
         if('error' in result)couponError=result.error;
         else{coupon=code;discount=result.discount;if(result.freeDelivery)delivery=0;}
     }
-    const total=subtotal-discount+delivery;
+    // Gift wrap and message card (Studio → Gift options), only for eligible items.
+    const giftInput=(d.gift&&typeof d.gift==='object'?d.gift:{}) as Record<string,unknown>;
+    const giftable=items.some(i=>giftEligible(site,categoryDetails,products.find(p=>p.id===i.id)!.category));
+    const wrap=giftable&&site.gifts.wrap&&giftInput.wrap===true;
+    const message=giftable&&site.gifts.card&&typeof giftInput.message==='string'?giftInput.message.replace(/\s+/g,' ').trim():'';
+    assert(message.length<=site.gifts.cardLimit,'Your gift message can be at most '+site.gifts.cardLimit+' characters.');
+    const giftWrap=wrap?site.gifts.wrapPrice:0;
+    const total=subtotal-discount+delivery+giftWrap;
     // Binds review to the exact charged units, options, quantities, discount and delivery.
     // A customer may supply a token, but all prices are still recomputed here.
-    const quote=createHash('sha256').update(JSON.stringify({items,delivery,total,discount,coupon})).digest('hex');
-    return {items,subtotal,delivery,total,quote,serverNow,...(coupon?{coupon,discount}:{}),...(couponError?{couponError}:{})};
+    const quote=createHash('sha256').update(JSON.stringify({items,delivery,total,discount,coupon,giftWrap})).digest('hex');
+    return {items,subtotal,delivery,total,quote,serverNow,giftable,...(wrap||message?{gift:{wrap,message,price:giftWrap}}:{}),...(coupon?{coupon,discount}:{}),...(couponError?{couponError}:{})};
 }
 export const quoteOrder=(d:Record<string,unknown>)=>calculateQuote(d);
 // Short, easy-to-read order references such as AZ-482193 (6 random digits).
@@ -92,8 +99,8 @@ export async function placeOrder(d: Record<string, unknown>) {
         }
         const current=await calculateQuote(d,db);
         assert(typeof d.quote==='string'&&d.quote===current.quote,'Prices or delivery charges changed. Review the updated total before placing your order.',409);
-        const {items,delivery,total,coupon,discount}=current;
-        const order: Order = { paymentMethod: paymentMethod as Order['paymentMethod'], ...(coupon ? { coupon, discount } : {}), ...(email ? { email } : {}), ...(note ? { note } : {}), id: await newOrderId(db), name, phone, address, area: d.area as 'dhaka' | 'outside', items, total, delivery, status: 'New', date: new Date().toISOString() };
+        const {items,delivery,total,coupon,discount,gift}=current;
+        const order: Order = { paymentMethod: paymentMethod as Order['paymentMethod'], ...(coupon ? { coupon, discount } : {}), ...(gift ? { gift } : {}), ...(email ? { email } : {}), ...(note ? { note } : {}), id: await newOrderId(db), name, phone, address, area: d.area as 'dhaka' | 'outside', items, total, delivery, status: 'New', date: new Date().toISOString() };
         order.history = [{status:'New',date:order.date}];
         for (const item of items)
             await db.prepare('UPDATE products SET stock=stock-? WHERE id=?').run(item.qty,item.id);

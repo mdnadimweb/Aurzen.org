@@ -3,8 +3,8 @@ import {mkdirSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 import {localClient} from './local-database';
 import {postgresClient} from './postgres-database';
-import {mergeSite,mergeContent,type SiteSettings,type Content} from '@aurzen/shared/site';
-import {seed,slugify,type Product,type Order,type HeroSlide,type Storefront,type Category,type Promotion} from '@aurzen/shared/catalog';
+import {mergeSite,mergeContent,saleOffer,type SiteSettings,type Content} from '@aurzen/shared/site';
+import {categoryFamily,seed,slugify,type Product,type Order,type HeroSlide,type Storefront,type Category,type Promotion} from '@aurzen/shared/catalog';
 
 export type Dialect='postgres'|'sqlite';
 // Each write transaction gets its own handle; concurrent requests never share it.
@@ -120,7 +120,7 @@ export function database(){
   if(!state.aurzenDatabase)state.aurzenDatabase=initialize().catch(error=>{delete state.aurzenDatabase;throw error;});
   return state.aurzenDatabase;
 }
-export async function catalog(connection?:Database){
+export async function catalog(connection?:Database,{raw=false}:{raw?:boolean}={}){
   const db=connection||await database();
   // Three independent reads sent together: one database round trip of waiting instead of five.
   const [products,categories,settingRows]=await Promise.all([
@@ -139,7 +139,11 @@ export async function catalog(connection?:Database){
   // Settings not saved yet use the built-in defaults; an older announcement keeps showing.
   const site:SiteSettings=mergeSite(setting('site'));
   if(!setting('site')?.announcement&&storefront?.announcement)site.announcement={...site.announcement,items:[{...site.announcement.items[0],text:storefront.announcement.message,detail:storefront.announcement.detail}]};
-  return {site,products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:JSON.parse(String(p.offer||'null')),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
+  // Scheduled sales (Studio → Sales) become each product's offer unless it has its own enabled offer.
+  // raw: the studio edits products' own offers, so it gets them unchanged.
+  const family=(name:string)=>categoryFamily(categoryDetails,name);
+  const offerFor=(p:Record<string,unknown>)=>{const own=JSON.parse(String(p.offer||'null'));return raw||own?.enabled?own:(saleOffer(site.sales.items,{id:Number(p.id),category:String(p.category)},family)||own);};
+  return {site,products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:offerFor(p),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){
   return (await (await database()).prepare('SELECT payload FROM orders ORDER BY created DESC').all()).map(o=>JSON.parse(String(o.payload)) as Order);

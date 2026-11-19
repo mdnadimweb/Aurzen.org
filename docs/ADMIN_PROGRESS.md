@@ -29,7 +29,9 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
 - [x] M8 Categories: per category/subcategory card button (Choose your size / Add to bag / Reveal your box / Available; Mystery Box never says “Choose your size”), description under the title, SEO title/description. Alt text fixed (“Men’s collection collection”). Not yet: size guide per category (needs M12).
 
 ## Phase 3 — products and catalog
-- [ ] M9 Product editor upgrades · [ ] M10 Mystery Box config · [ ] M11 Gift options · [ ] M12 Size guides
+- [ ] M9 Product editor upgrades · [ ] M10 Mystery Box config
+- [x] M11 Gift options: gift wrap (price) and message card (length limit) at checkout for chosen categories (default Mystery Box + Love & Care); charged and checked by the server; shown on the order and invoice. (Per category, not per product.)
+- [x] M12 Size guides: reusable tables (any columns/rows, note), attached to categories, subcategories or single products; “Size guide” pop-up on product pages. One clothing guide seeded but not attached.
 
 ## Phase 4 — content pages and social proof
 - [x] M13 Pages: About, Delivery, Returns, Size guide, Privacy, Terms seeded; add/edit/reorder/hide; `/pages/<address>/`; SEO fields; safe formatting.
@@ -43,12 +45,12 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
 
 ## Phase 6 — marketing
 - [x] M19 Coupons: percent / fixed / free delivery, minimum order, total and per-phone limits, dates, whole order / category / product, on/off; checked only by the server at quote and order; usage and discount totals per code; stored on orders and invoices.
-- [ ] M20 Scheduled sales (per-product offers with dates already exist)
+- [x] M20 Scheduled sales: % off everything / a category (with subcategories) / chosen products for a date range, auto start/end, product’s own offer wins; applied by the server so shop and checkout agree. Sale page title, eyebrow, intro and banner editable.
 - [x] M21 Popup: title/text/image/button/LinkPicker, once per N days, schedule, Esc/backdrop close. Subscribers list + CSV.
 
 ## Phase 7 — appearance, SEO, integrations
-- [ ] M22 Appearance
-- [~] M23 SEO: homepage title, title template, description, social image, indexing switch. Not yet: redirects manager, slug URLs, schema, canonical.
+- [x] M22 Appearance: 4 colours, heading/body font (from fonts already loaded or the phone’s own), button shape/style, product photo shape, labels and savings text on/off, animation normal/slow/off (reduced-motion always respected), maintenance mode, page-not-found text, Restore default. Nothing changes until saved.
+- [~] M23 SEO: homepage title, title template, description, social image, indexing switch, redirects manager (301, keeps utm/fbclid; seeded for the two old collection addresses), canonical tag and Product schema (price, stock, rating) on product pages. Not done: slug-style product addresses (would change every product link and existing shared links; kept numeric).
 - [x] M24 Integrations: Meta Pixel (PageView, ViewContent, AddToCart, InitiateCheckout, Purchase), Google Analytics, Search Console code, WhatsApp + Messenger buttons. Scripts load after page load, only when set. CSP allows their endpoints.
 
 ## Phase 8 — operations and safety

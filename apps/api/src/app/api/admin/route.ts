@@ -39,7 +39,7 @@ function activityDetail(d:Record<string,any>){
 }
 async function adminData(){
     const db=await database();
-    const [base,list,pages,subscribers,activity,customerRow,couponRow]=await Promise.all([catalog(db),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all(),db.prepare("SELECT value FROM settings WHERE key='customers'").get(),db.prepare("SELECT value FROM settings WHERE key='coupons'").get()]);
+    const [base,list,pages,subscribers,activity,customerRow,couponRow]=await Promise.all([catalog(db,{raw:true}),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all(),db.prepare("SELECT value FROM settings WHERE key='customers'").get(),db.prepare("SELECT value FROM settings WHERE key='coupons'").get()]);
     return {...base,coupons:couponRow?JSON.parse(String(couponRow.value)):[],customers:customerRow?JSON.parse(String(customerRow.value)):{},orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
 }
 export const runtime = 'nodejs';

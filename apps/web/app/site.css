@@ -95,3 +95,15 @@ body:has(.has-mobile-purchase) .chat-buttons{bottom:96px}
 .coupon-field>div{display:flex;gap:8px}
 .coupon-field input{flex:1;min-height:46px;text-transform:uppercase}
 .coupon-field button{min-height:46px;padding:0 18px}
+.gift-options{border:1px solid #eadfd8;border-radius:14px;padding:12px 14px;margin:12px 0;display:grid;gap:8px}
+.gift-options legend{font-weight:600;padding:0 6px}
+.sale-banner{width:100%;height:auto;max-height:420px;object-fit:cover;border-radius:var(--radius);margin-bottom:24px}
+.size-guide-link{justify-self:start;margin:4px 0}
+.size-guide{background:#fffdfa;border-radius:18px;padding:22px;max-width:560px;width:calc(100vw - 32px)}
+.size-guide__head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.size-guide__head h2{margin:0;font-size:26px}
+.size-guide__head button{width:44px;height:44px;border-radius:50%;border:0;background:var(--blush);font-size:22px;cursor:pointer}
+.size-guide__table{overflow-x:auto;margin:16px 0}
+.size-guide table{width:100%;border-collapse:collapse;font-size:var(--text-label)}
+.size-guide th,.size-guide td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+.size-guide thead th{color:var(--muted);font-weight:600}

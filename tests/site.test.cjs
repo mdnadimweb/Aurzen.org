@@ -56,3 +56,33 @@ test('mystery box cards never ask for a size; duplicate orders are flagged',()=>
   const a={id:'A',phone:'01711111111',date:'2026-01-01T10:00:00Z',status:'New'},b={...a,id:'B',date:'2026-01-01T12:00:00Z'};
   assert.equal(orderFlags(a,[a,b]).length,1);assert.equal(orderFlags(a,[a]).length,0);
 });
+const {saleOffer,appearanceCss,defaultAppearance,sizeGuideFor,giftEligible}=require('@aurzen/shared/site');
+test('scheduled sales become offers; biggest running sale wins; future sales wait',()=>{
+  const fam=n=>n==='Ladies Fashion'?['Ladies Fashion','Abayas']:[n];
+  const now=Date.parse('2026-06-01T00:00:00Z');
+  const sales=[{id:'a',name:'A',percent:10,target:'all',category:'',products:[],startsAt:null,endsAt:null,active:true},{id:'b',name:'B',percent:25,target:'category',category:'Ladies Fashion',products:[],startsAt:null,endsAt:'2026-07-01T00:00:00Z',active:true},{id:'c',name:'C',percent:50,target:'products',category:'',products:[9],startsAt:'2026-06-10T00:00:00Z',endsAt:null,active:true}];
+  assert.equal(saleOffer(sales,{id:1,category:'Abayas'},fam,now).percent,25);
+  assert.equal(saleOffer(sales,{id:2,category:'Mystery Box'},fam,now).percent,10);
+  assert.equal(saleOffer(sales.slice(2),{id:9,category:'X'},fam,now).startsAt,'2026-06-10T00:00:00Z');
+  assert.equal(saleOffer(sales.map(s=>({...s,active:false})),{id:1,category:'Abayas'},fam,now),null);
+});
+test('appearance CSS is empty by default and only uses validated values',()=>{
+  assert.equal(appearanceCss(defaultAppearance),'');
+  const css=appearanceCss(normalizeSiteSection('appearance',{...defaultAppearance,primary:'#112233',buttons:'square',showBadge:false,motion:'off'}));
+  assert(css.includes('--plum:#112233'));assert(css.includes('border-radius:0'));assert(css.includes('.product .tag{display:none'));
+  assert.throws(()=>normalizeSiteSection('appearance',{...defaultAppearance,primary:'red;}body{display:none'}),/colour/);
+});
+test('redirects are normalised and cannot hijack the studio',()=>{
+  const r=normalizeSiteSection('redirects',{items:[{from:'https://x.com/old-page',to:'/shop/'}]});
+  assert.deepEqual(r.items,[{from:'/old-page/',to:'/shop/'}]);
+  assert.throws(()=>normalizeSiteSection('redirects',{items:[{from:'/admin/',to:'/shop/'}]}),/cannot be redirected/);
+  assert.throws(()=>normalizeSiteSection('redirects',{items:[{from:'/a/',to:'javascript:alert(1)'}]}),/must start/);
+});
+test('size guides and gift options follow product, subcategory, then main category',()=>{
+  const tree=[{name:'Ladies Fashion',slug:'ladies-fashion',parent:null,cover:null},{name:'Abayas',slug:'abayas',parent:'Ladies Fashion',cover:null},{name:'Love & Care',slug:'love-and-care',parent:null,cover:null}];
+  const site=mergeSite({sizeGuides:{items:[{id:'a',name:'Main',columns:['S','C'],rows:[],note:'',categories:['ladies-fashion'],products:[]},{id:'b',name:'Product',columns:['S','C'],rows:[],note:'',categories:[],products:[7]}]}});
+  assert.equal(sizeGuideFor(site,tree,{id:1,category:'Abayas'}).name,'Main');
+  assert.equal(sizeGuideFor(site,tree,{id:7,category:'Abayas'}).name,'Product');
+  assert.equal(sizeGuideFor(site,tree,{id:1,category:'Love & Care'}),null);
+  assert.equal(giftEligible(site,tree,'Love & Care'),true);assert.equal(giftEligible(site,tree,'Abayas'),false);
+});

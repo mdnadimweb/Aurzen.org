@@ -15,6 +15,7 @@ import BrandIntro from './components/brand-intro';
 import { StoreProvider } from './providers';
 import { catalog, site } from '@/server/backend';
 import type { Metadata } from 'next';
+import { appearanceCss } from '@aurzen/shared/site';
 // Self-hosted brand fonts, loaded once for the whole site and exposed as CSS variables.
 const headingFont = localFont({
     src: [
@@ -36,4 +37,4 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export default async function RootLayout({ children }: {
     children: React.ReactNode;
-}) { return <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`}><body suppressHydrationWarning><noscript><style>{'[data-fade],[data-fade-media]{opacity:1!important;transform:none!important;clip-path:none!important}'}</style></noscript><StoreProvider initialCatalog={await catalog()}><BrandIntro>{children}</BrandIntro></StoreProvider></body></html>; }
+}) { return <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`}><body suppressHydrationWarning><noscript><style>{'[data-fade],[data-fade-media]{opacity:1!important;transform:none!important;clip-path:none!important}'}</style></noscript>{((css:string)=>css?<style id="appearance" dangerouslySetInnerHTML={{__html:css}}/>:null)(appearanceCss((await site()).appearance))}<StoreProvider initialCatalog={await catalog()}><BrandIntro>{children}</BrandIntro></StoreProvider></body></html>; }

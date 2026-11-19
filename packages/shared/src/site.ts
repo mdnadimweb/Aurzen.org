@@ -28,6 +28,9 @@ export type Announcement={id:string;text:string;detail:string;link:SiteLink|null
 export const cardLabels=['auto','size','bag','reveal','available'] as const;
 export const cardLabelText:Record<typeof cardLabels[number],string>={auto:'Automatic',size:'Choose your size',bag:'Add to bag',reveal:'Reveal your box',available:'Available'};
 export type CategorySettings={label:typeof cardLabels[number];description:string;seoTitle:string;seoDescription:string};
+export type Sale={id:string;name:string;percent:number;target:'all'|'category'|'products';category:string;products:number[];startsAt:string|null;endsAt:string|null;active:boolean};
+export type Appearance={primary:string;accent:string;background:string;text:string;headingFont:'cormorant'|'georgia'|'system';bodyFont:'dm-sans'|'system';buttons:'pill'|'rounded'|'square';buttonFill:'filled'|'outline';imageRatio:'default'|'4/5'|'1/1';showBadge:boolean;showSaved:boolean;motion:'off'|'slow'|'normal';maintenance:boolean;maintenanceMessage:string;notFoundTitle:string;notFoundText:string};
+export type SizeGuide={id:string;name:string;columns:string[];rows:string[][];note:string;categories:string[];products:number[]};
 export type TrustItem={id:string;icon:string;text:string;hidden:boolean};
 
 export type SiteSettings={
@@ -44,9 +47,15 @@ export type SiteSettings={
   categories:Record<string,CategorySettings>;
   /** WhatsApp/SMS message templates per order status. Placeholders: {order_id} {name} {total} {status} {courier} {tracking}. */
   messages:Record<string,string>;
+  sales:{items:Sale[];page:{eyebrow:string;title:string;intro:string;banner:string}};
+  appearance:Appearance;
+  redirects:{items:{from:string;to:string}[]};
+  sizeGuides:{items:SizeGuide[]};
+  gifts:{wrap:boolean;wrapPrice:number;card:boolean;cardLimit:number;categories:string[]};
 };
 
 const nav=(id:string,label:string,type:SiteLink['type'],value=''):NavItem=>({id,label,link:{type,value},hidden:false});
+export const defaultAppearance:Appearance={primary:'#432b3b',accent:'#b8925a',background:'#fbf9f5',text:'#302b2b',headingFont:'cormorant',bodyFont:'dm-sans',buttons:'pill',buttonFill:'filled',imageRatio:'default',showBadge:true,showSaved:true,motion:'normal',maintenance:false,maintenanceMessage:'We’re making a few little changes. Please visit again soon.',notFoundTitle:'This page is out of reach.',notFoundText:'The page or product may have moved.'};
 export const defaultSite:SiteSettings={
   general:{brand:'AURZÉN',tagline:'A little elegance. A little unexpected.',about:'A little elegance for every day.\nThoughtfully selected in Bangladesh.',logo:'',logoDark:'',favicon:'',whatsapp:'',phone:'',email:'',messenger:'',address:'',hours:'',facebook:'',instagram:'',tiktok:'',youtube:'',businessInfo:''},
   announcement:{enabled:true,interval:5,items:[{id:'welcome',text:'A little joy, delivered.',detail:'Thoughtfully selected in Bangladesh',link:null,active:true,startsAt:null,endsAt:null}]},
@@ -75,6 +84,11 @@ export const defaultSite:SiteSettings={
   integrations:{pixel:'',analytics:'',searchConsole:'',whatsapp:{enabled:false,number:'',message:'Hi AURZÉN, I have a question.',position:'right'},messenger:{enabled:false,link:''}},
   popup:{enabled:false,title:'',text:'',image:'',cta:'',link:null,days:7,startsAt:null,endsAt:null},
   categories:{},
+  sales:{items:[],page:{eyebrow:'LIMITED-TIME OFFERS',title:'Sale',intro:'Current offers on AURZÉN pieces. Prices update automatically when an offer ends.',banner:''}},
+  appearance:defaultAppearance,
+  redirects:{items:[{from:'/collections/bridal-and-party/',to:'/collections/ladies-fashion/bridal-and-party/'},{from:'/collections/abayas/',to:'/collections/ladies-fashion/abayas/'}]},
+  sizeGuides:{items:[{id:'clothing',name:'Clothing (inches)',columns:['Size','Chest','Waist','Length'],rows:[['S','36','30','27'],['M','38','32','28'],['L','40','34','29'],['XL','42','36','30'],['XXL','44','38','31']],note:'Measurements are in inches. Between sizes? Choose the larger one.',categories:[],products:[]}]},
+  gifts:{wrap:false,wrapPrice:50,card:false,cardLimit:150,categories:[]},
   messages:{Confirmed:'Hi {name}, your AURZÉN order {order_id} is confirmed. Total {total}. We will let you know when it ships.',Shipped:'Hi {name}, your AURZÉN order {order_id} is on its way with {courier} (tracking {tracking}).',Delivered:'Hi {name}, your AURZÉN order {order_id} has been delivered. Thank you for choosing us!',Cancelled:'Hi {name}, your AURZÉN order {order_id} has been cancelled. Reply if you have any questions.'},
 };
 
@@ -240,6 +254,69 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
       out[slug]={label:s.label as CategorySettings['label'],description:str(s.description,400,'Description'+at,{multiline:true}),seoTitle:str(s.seoTitle,90,'SEO title'+at),seoDescription:str(s.seoDescription,170,'SEO description'+at)};
     }
     return out;
+  },
+  sales(v){
+    const s=obj(v,'sales'),p=obj(s.page,'sale page');
+    if(!Array.isArray(s.items)||s.items.length>30)fail('Use at most 30 scheduled sales.');
+    const ids=new Set<string>();
+    const items=(s.items as unknown[]).map((input,i)=>{
+      const x=obj(input,'sale'),at=` on sale ${i+1}`;const saleId=id(x.id);if(ids.has(saleId))fail('Duplicate sale'+at+'.');ids.add(saleId);
+      if(!['all','category','products'].includes(x.target as string))fail('Choose what the sale covers'+at+'.');
+      const target=x.target as Sale['target'];
+      if(!Array.isArray(x.products)||x.products.length>500)fail('Choose at most 500 products'+at+'.');
+      const products=(x.products as unknown[]).map(n=>int(n,1,1e9,'Product'+at));
+      const category=target==='category'?str(x.category,100,'Category'+at,{required:true}):'';
+      if(target==='products'&&!products.length)fail('Choose at least one product'+at+'.');
+      return {id:saleId,name:str(x.name,60,'Name'+at,{required:true}),percent:int(x.percent,1,90,'Discount'+at),target,category,products:target==='products'?products:[],...range(x.startsAt,x.endsAt,at),active:x.active!==false};
+    });
+    return {items,page:{eyebrow:str(p.eyebrow,60,'Sale page eyebrow'),title:str(p.title,80,'Sale page title',{required:true}),intro:str(p.intro,300,'Sale page text',{multiline:true}),banner:safeImage(p.banner,'Sale banner')}};
+  },
+  appearance(v){
+    const a=obj(v,'appearance');
+    const color=(k:string,label:string)=>{const c=str(a[k],7,label,{required:true}).toLowerCase();if(!/^#[0-9a-f]{6}$/.test(c))fail(label+' must be a colour like #432b3b.');return c;};
+    const pick=<T extends string>(k:string,options:readonly T[],label:string)=>options.includes(a[k] as T)?a[k] as T:fail('Choose '+label+'.');
+    return {primary:color('primary','Main colour'),accent:color('accent','Accent colour'),background:color('background','Background colour'),text:color('text','Text colour'),
+      headingFont:pick('headingFont',['cormorant','georgia','system'] as const,'a heading font'),bodyFont:pick('bodyFont',['dm-sans','system'] as const,'a body font'),
+      buttons:pick('buttons',['pill','rounded','square'] as const,'a button shape'),buttonFill:pick('buttonFill',['filled','outline'] as const,'a button style'),
+      imageRatio:pick('imageRatio',['default','4/5','1/1'] as const,'a photo shape'),showBadge:bool(a.showBadge,'Product badges'),showSaved:bool(a.showSaved,'Savings text'),
+      motion:pick('motion',['off','slow','normal'] as const,'an animation speed'),maintenance:bool(a.maintenance,'Maintenance mode'),
+      maintenanceMessage:str(a.maintenanceMessage,300,'Maintenance message',{multiline:true}),notFoundTitle:str(a.notFoundTitle,80,'Page-not-found title',{required:true}),notFoundText:str(a.notFoundText,300,'Page-not-found text',{multiline:true})};
+  },
+  redirects(v){
+    const r=obj(v,'redirects');
+    if(!Array.isArray(r.items)||r.items.length>300)fail('Use at most 300 redirects.');
+    const seen=new Set<string>();
+    return {items:(r.items as unknown[]).map((input,i)=>{
+      const x=obj(input,'redirect'),at=` on redirect ${i+1}`;
+      let from=str(x.from,300,'Old address'+at,{required:true});
+      try{if(/^https?:/.test(from))from=new URL(from).pathname;}catch{}
+      if(!/^\/[^\s?#]*$/.test(from))fail('Old address must be a path like /old-page/'+at+'.');
+      if(/^\/(admin|api|_next|media)(\/|$)/.test(from)||from==='/')fail('That old address cannot be redirected'+at+'.');
+      from=from.endsWith('/')?from:from+'/';
+      if(seen.has(from))fail(`Two redirects start from ${from}.`);seen.add(from);
+      const to=safeUrl(x.to,'New address'+at,300);if(!to)fail('New address is required'+at+'.');
+      if(to===from)fail('A redirect cannot point to itself'+at+'.');
+      return {from,to};
+    })};
+  },
+  sizeGuides(v){
+    const s=obj(v,'size guides');
+    if(!Array.isArray(s.items)||s.items.length>20)fail('Use at most 20 size guides.');
+    return {items:(s.items as unknown[]).map((input,i)=>{
+      const g=obj(input,'size guide'),at=` in guide ${i+1}`;
+      if(!Array.isArray(g.columns)||g.columns.length<2||g.columns.length>8)fail('Use 2–8 columns'+at+'.');
+      const columns=(g.columns as unknown[]).map((c,j)=>str(c,30,`Column ${j+1}`+at,{required:true}));
+      if(!Array.isArray(g.rows)||g.rows.length>30)fail('Use at most 30 rows'+at+'.');
+      const rows=(g.rows as unknown[]).map((r,j)=>{if(!Array.isArray(r))fail('Invalid row'+at+'.');return columns.map((_,k)=>str((r as unknown[])[k],30,`Row ${j+1}`+at));});
+      const list=(x:unknown,label:string)=>{if(!Array.isArray(x)||x.length>500)fail('Invalid '+label+at+'.');return x as unknown[];};
+      return {id:id(g.id),name:str(g.name,60,'Guide name'+at,{required:true}),columns,rows,note:str(g.note,300,'Note'+at,{multiline:true}),
+        categories:list(g.categories,'categories').map(c=>str(c,60,'Category'+at,{required:true})),products:list(g.products,'products').map(n=>int(n,1,1e9,'Product'+at))};
+    })};
+  },
+  gifts(v){
+    const g=obj(v,'gift options');
+    if(!Array.isArray(g.categories)||g.categories.length>100)fail('Invalid gift categories.');
+    return {wrap:bool(g.wrap,'Gift wrap'),wrapPrice:int(g.wrapPrice,0,5000,'Gift wrap price'),card:bool(g.card,'Message card'),cardLimit:int(g.cardLimit,20,500,'Message length'),categories:(g.categories as unknown[]).map(c=>str(c,60,'Category',{required:true}))};
   },
   messages(v){
     const m=obj(v,'message templates'),out:Record<string,string>={};
@@ -425,4 +502,46 @@ export function applyCoupon(coupon:Coupon|undefined,{items,subtotal,delivery,fam
   if(coupon.type==='free')return {discount:0,freeDelivery:delivery>0};
   const discount=coupon.type==='percent'?Math.round(base*coupon.value/100):Math.min(base,coupon.value);
   return {discount,freeDelivery:false};
+}
+
+/** Scheduled sales as product offers: a product's own enabled offer wins, else the biggest running sale. */
+export function saleOffer(sales:Sale[],product:{id:number;category:string},family:(name:string)=>string[],now=Date.now()){
+  const covering=sales.filter(s=>s.active&&(!s.endsAt||now<Date.parse(s.endsAt))&&(s.target==='all'||(s.target==='products'?s.products.includes(product.id):family(s.category).includes(product.category))));
+  // A sale that has not started yet is still sent, so the storefront switches on time without a reload.
+  const running=covering.filter(s=>!s.startsAt||Date.parse(s.startsAt)<=now).sort((a,b)=>b.percent-a.percent);
+  const best=running[0]||covering.sort((a,b)=>Date.parse(a.startsAt||'')-Date.parse(b.startsAt||''))[0];
+  return best?{enabled:true,percent:best.percent,startsAt:best.startsAt,endsAt:best.endsAt}:null;
+}
+/** The size guide for a product: product-specific, else its subcategory, else its main category (slugs). */
+export function sizeGuideFor(site:SiteSettings,categories:Category[],product:{id:number;category:string}){
+  const c=categories.find(x=>x.name===product.category),main=c?.parent?categories.find(x=>x.name===c.parent):undefined;
+  const g=site.sizeGuides.items;
+  return g.find(x=>x.products.includes(product.id))||(c&&g.find(x=>x.categories.includes(c.slug)))||(main&&g.find(x=>x.categories.includes(main.slug)))||null;
+}
+/** Gift options apply to the chosen categories, or by default to Mystery Box and Love & Care. */
+export function giftEligible(site:SiteSettings,categories:Category[],category:string){
+  const c=categories.find(x=>x.name===category),main=c?.parent?categories.find(x=>x.name===c.parent):c;
+  const slugs=[c?.slug,main?.slug].filter(Boolean) as string[];
+  return site.gifts.categories.length?slugs.some(s=>site.gifts.categories.includes(s)):/mystery|love/i.test(main?.name||category);
+}
+/** CSS overrides for Studio → Appearance. Empty when everything is the default look. */
+export function appearanceCss(a:Appearance){
+  const d=defaultAppearance,css:string[]=[],root:string[]=[];
+  if(a.primary!==d.primary)root.push('--plum:'+a.primary);
+  if(a.accent!==d.accent)root.push('--gold:'+a.accent);
+  if(a.background!==d.background)root.push('--ivory:'+a.background);
+  if(a.text!==d.text)root.push('--ink:'+a.text);
+  if(a.headingFont==='georgia')root.push("--font-heading:Georgia,'Times New Roman',serif");
+  if(a.headingFont==='system')root.push('--font-heading:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
+  if(a.bodyFont==='system')root.push('--font-body:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
+  if(root.length)css.push(':root{'+root.join(';')+'}');
+  if(a.background!==d.background)css.push('body{background:var(--ivory)}');
+  if(a.buttons!=='pill')css.push(`.primary,.secondary-link,.checkout-submit{border-radius:${a.buttons==='rounded'?'10px':'0'}!important}`);
+  if(a.buttonFill==='outline')css.push('.primary{background:transparent!important;color:var(--plum)!important;box-shadow:inset 0 0 0 1.5px var(--plum)}.primary:hover{background:var(--plum)!important;color:#fff!important}');
+  if(a.imageRatio!=='default')css.push(`.product-image{aspect-ratio:${a.imageRatio}!important;height:auto!important}`);
+  if(!a.showBadge)css.push('.product .tag{display:none!important}');
+  if(!a.showSaved)css.push('.product .product-price .block{display:none!important}');
+  if(a.motion==='off')css.push('[data-fade],[data-fade-media]{opacity:1!important;transform:none!important;clip-path:none!important;transition:none!important}');
+  if(a.motion==='slow')css.push('[data-fade].is-visible,[data-fade].is-visible [data-fade-media]{transition-duration:1.4s!important}');
+  return css.join('\n');
 }

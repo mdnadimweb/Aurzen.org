@@ -123,3 +123,17 @@ test('coupon codes are applied by the server, stored on the order and limited pe
   assert.match((await quoteOrder(input({phone,coupon:'TEST10'}))).couponError,/already used/);
   await db.prepare("DELETE FROM settings WHERE key='coupons'").run();
 });
+test('scheduled sales price checkout; gift wrap is charged and stored', async()=>{
+  const db=await database();
+  const site={sales:{items:[{id:'all',name:'All',percent:20,target:'all',category:'',products:[],startsAt:null,endsAt:null,active:true}],page:{eyebrow:'',title:'Sale',intro:'',banner:''}},gifts:{wrap:true,wrapPrice:60,card:true,cardLimit:50,categories:[]}};
+  await db.prepare("INSERT INTO settings(key,value) VALUES('site',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(site));
+  const product=(await catalog()).products.find(p=>p.id===2);
+  const quote=await quoteOrder(input({items:[{id:2,qty:1,size:product.sizes?.[0]||'Everyday elegance'}],gift:{wrap:true,message:'Happy Eid!'}}));
+  assert.equal(quote.items[0].price,Math.round(product.price*0.8));
+  assert.equal(quote.giftable,true);assert.equal(quote.gift.price,60);assert.equal(quote.total,quote.subtotal+quote.delivery+60);
+  const placed=await placeOrder(input({items:[{id:2,qty:1,size:product.sizes?.[0]||'Everyday elegance'}],gift:{wrap:true,message:'Happy Eid!'}}));
+  const saved=(await orders()).find(o=>o.id===placed.id);
+  assert.deepEqual(saved.gift,{wrap:true,message:'Happy Eid!',price:60});
+  await assert.rejects(()=>quoteOrder(input({items:[{id:2,qty:1,size:product.sizes?.[0]||'Everyday elegance'}],gift:{message:'x'.repeat(51)}})),/at most 50/);
+  await db.prepare("DELETE FROM settings WHERE key='site'").run();
+});

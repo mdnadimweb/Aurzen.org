@@ -60,3 +60,7 @@
 .ec-tags legend{font-weight:600;margin-bottom:4px}
 .customer-orders{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
 @media (max-width:760px){.admin-table .order-select{width:auto;text-align:left}}
+.color-field{display:flex;gap:8px;align-items:center}
+.color-field input[type=color]{width:52px;height:44px;padding:2px;border-radius:8px}
+.sale-products{max-height:260px;overflow:auto}
+.ec .size-guide__table input{min-width:70px}

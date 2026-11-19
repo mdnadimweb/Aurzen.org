@@ -92,11 +92,11 @@ export function CollectionView({main,sub}:{main:Category;sub:Category|null}){
 
 /** Products with an active offer, using the same pricing rules as product pages and checkout. */
 export function SaleView(){
-  const {products,now,loaded}=useStore();
+  const {products,now,loaded,site}=useStore(),page=site.sales.page;
   const items=saleProducts(products,now);
   return <main className="section shop sale-page">
-    <div className="eyebrow">LIMITED-TIME OFFERS</div><h1>Sale</h1>
-    <p>Current offers on AURZÉN pieces. Prices update automatically when an offer ends.</p>
+    {page.banner&&<img className="sale-banner" src={page.banner} alt="" width={1600} height={500}/>}{page.eyebrow&&<div className="eyebrow">{page.eyebrow}</div>}<h1>{page.title}</h1>
+    {page.intro&&<p>{page.intro}</p>}
     {!loaded?<p role="status">Loading offers…</p>:<ProductBrowser items={items} label="sale products" emptyText="No offers are running right now."/>}
   </main>;
 }

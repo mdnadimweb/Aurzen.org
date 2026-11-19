@@ -21,6 +21,7 @@ import { defaultContent, type Content, type CustomerInfo, type Coupon } from '@a
 import { OrderTools, OrderBulkBar, paymentName } from './admin/order-tools';
 import CustomersPanel from './admin/customers-panel';
 import CouponsEditor from './admin/coupons-editor';
+import { SalesEditor, AppearanceEditor, RedirectsEditor, SizeGuidesEditor, GiftsEditor } from './admin/more-settings';
 import { MessageTemplates, CategorySettingsEditor, StorefrontSettings, GeneralSettings, SeoSettings, PopupSettings, PagesEditor, FaqEditor, ReviewsEditor, Subscribers, ActivityLog, type SiteProps } from './admin/site-settings';
 import Backup from './admin/backup';
 import './admin/editable-card.css';
@@ -30,8 +31,8 @@ import { api, useStore } from '../providers';
 
 const tabs:{name:string;icon:IconName;group?:string}[]=[{name:'Overview',icon:'overview'},{name:'Orders',icon:'orders'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Customers',icon:'customers'},
     {name:'Homepage',icon:'slides',group:'Storefront'},{name:'Menus & text',icon:'storefront',group:'Storefront'},{name:'Pages',icon:'edit',group:'Storefront'},{name:'FAQ',icon:'info',group:'Storefront'},{name:'Reviews',icon:'check',group:'Storefront'},
-    {name:'Coupons',icon:'plus',group:'Marketing'},{name:'Popup',icon:'plus',group:'Marketing'},{name:'Subscribers',icon:'customers',group:'Marketing'},
-    {name:'Settings',icon:'lock',group:'Settings'},{name:'SEO & integrations',icon:'external',group:'Settings'},{name:'Activity log',icon:'overview',group:'Settings'},{name:'Backup',icon:'truck',group:'Settings'}];
+    {name:'Coupons',icon:'plus',group:'Marketing'},{name:'Sales',icon:'plus',group:'Marketing'},{name:'Gift options',icon:'check',group:'Marketing'},{name:'Popup',icon:'plus',group:'Marketing'},{name:'Subscribers',icon:'customers',group:'Marketing'},
+    {name:'Settings',icon:'lock',group:'Settings'},{name:'Appearance',icon:'storefront',group:'Settings'},{name:'Size guides',icon:'products',group:'Settings'},{name:'SEO & integrations',icon:'external',group:'Settings'},{name:'Activity log',icon:'overview',group:'Settings'},{name:'Backup',icon:'truck',group:'Settings'}];
 const statusKey=(status:string)=>status.toLowerCase().replace(/[^a-z]/g,'');
 const stockLevel=(stock:number)=>stock===0?'out':stock<=5?'low':'in';
 const stockText=(stock:number)=>stock===0?'Out of stock':stock<=5?'Low stock':'In stock';
@@ -173,7 +174,11 @@ export default function AdminWorkspace() {
     {adminLoaded && tab === 'Popup' && <PopupSettings {...siteProps}/>}
     {adminLoaded && tab === 'Subscribers' && <Subscribers list={subscribers} onDelete={contact=>void change({action:'deleteSubscriber',contact})}/>}
     {adminLoaded && tab === 'Settings' && <><GeneralSettings {...siteProps}/><div className="mt-6"><MessageTemplates {...siteProps}/></div></>}
-    {adminLoaded && tab === 'SEO & integrations' && <SeoSettings {...siteProps}/>}
+    {adminLoaded && tab === 'SEO & integrations' && <><SeoSettings {...siteProps}/><div className="mt-6"><RedirectsEditor {...siteProps}/></div></>}
+    {adminLoaded && tab === 'Sales' && <SalesEditor {...siteProps}/>}
+    {adminLoaded && tab === 'Gift options' && <GiftsEditor {...siteProps}/>}
+    {adminLoaded && tab === 'Appearance' && <AppearanceEditor {...siteProps}/>}
+    {adminLoaded && tab === 'Size guides' && <SizeGuidesEditor {...siteProps}/>}
     {adminLoaded && tab === 'Activity log' && <ActivityLog list={activity}/>}
     {adminLoaded && tab === 'Backup' && <Backup products={products} categories={categoryTree} orders={orders} site={site} content={content} onImport={async value=>{for(const [section,data] of Object.entries(value))await mutate({action:'saveSite',section,value:data});setNotice('Settings imported');}}/>}
     {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <><OrderFilters state={orderFilter}/><OrderBulkBar selected={orderFilter.filtered.filter(o=>selectedIds.includes(o.id))} filtered={orderFilter.filtered} site={site} onClear={()=>setSelectedIds([])} onBulk={async(status,reason)=>{await mutate({action:'bulkStatus',ids:orderFilter.filtered.filter(o=>selectedIds.includes(o.id)).map(o=>o.id),status,reason});setNotice('Orders updated');}}/>{!orderFilter.filtered.length ? <div className="admin-empty" role="status"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders found</h3><p>Try another search, status or date range.</p><button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={orderFilter.reset}>Reset filters</button></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col" className="order-select"><input type="checkbox" aria-label="Select all shown orders" checked={orderFilter.filtered.length>0&&orderFilter.filtered.every(o=>selectedIds.includes(o.id))} onChange={e=>setSelectedIds(e.target.checked?orderFilter.filtered.map(o=>o.id):[])}/></th><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orderFilter.filtered.map(o => <tr key={o.id}>
