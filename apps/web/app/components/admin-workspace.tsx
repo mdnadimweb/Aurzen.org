@@ -22,6 +22,7 @@ import { OrderTools, OrderBulkBar, paymentName } from './admin/order-tools';
 import CustomersPanel from './admin/customers-panel';
 import CouponsEditor from './admin/coupons-editor';
 import OverviewExtras from './admin/overview-extras';
+import UsersPanel,{ChangePassword,type Me,type StaffAccount} from './admin/users-panel';
 import { SalesEditor, AppearanceEditor, RedirectsEditor, SizeGuidesEditor, GiftsEditor, MysteryEditor } from './admin/more-settings';
 import { MessageTemplates, CategorySettingsEditor, StorefrontSettings, GeneralSettings, SeoSettings, PopupSettings, PagesEditor, FaqEditor, ReviewsEditor, Subscribers, ActivityLog, type SiteProps } from './admin/site-settings';
 import Backup from './admin/backup';
@@ -33,7 +34,7 @@ import { api, useStore } from '../providers';
 const tabs:{name:string;icon:IconName;group?:string}[]=[{name:'Overview',icon:'overview'},{name:'Orders',icon:'orders'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Customers',icon:'customers'},
     {name:'Homepage',icon:'slides',group:'Storefront'},{name:'Menus & text',icon:'storefront',group:'Storefront'},{name:'Pages',icon:'edit',group:'Storefront'},{name:'FAQ',icon:'info',group:'Storefront'},{name:'Reviews',icon:'check',group:'Storefront'},
     {name:'Coupons',icon:'plus',group:'Marketing'},{name:'Sales',icon:'plus',group:'Marketing'},{name:'Gift options',icon:'check',group:'Marketing'},{name:'Popup',icon:'plus',group:'Marketing'},{name:'Subscribers',icon:'customers',group:'Marketing'},
-    {name:'Settings',icon:'lock',group:'Settings'},{name:'Appearance',icon:'storefront',group:'Settings'},{name:'Size guides',icon:'products',group:'Settings'},{name:'SEO & integrations',icon:'external',group:'Settings'},{name:'Activity log',icon:'overview',group:'Settings'},{name:'Backup',icon:'truck',group:'Settings'}];
+    {name:'Settings',icon:'lock',group:'Settings'},{name:'Appearance',icon:'storefront',group:'Settings'},{name:'Size guides',icon:'products',group:'Settings'},{name:'SEO & integrations',icon:'external',group:'Settings'},{name:'Users & roles',icon:'customers',group:'Settings'},{name:'Activity log',icon:'overview',group:'Settings'},{name:'Backup',icon:'truck',group:'Settings'}];
 const statusKey=(status:string)=>status.toLowerCase().replace(/[^a-z]/g,'');
 const stockLevel=(stock:number)=>stock===0?'out':stock<=5?'low':'in';
 const stockText=(stock:number)=>stock===0?'Out of stock':stock<=5?'Low stock':'In stock';
@@ -58,6 +59,11 @@ export default function AdminWorkspace() {
     const router = useRouter();
     const { site, setSite, products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront } = useStore();
     const [coupons,setCoupons]=useState<Coupon[]>([]);
+    const [me,setMe]=useState<Me|null>(null),[users,setUsers]=useState<StaffAccount[]>([]);
+    // Staff see orders, products and customers only (the API enforces the same rule).
+    const staffTabs=['Overview','Orders','Products','Customers'];
+    const visibleTabs=me?.role==='staff'?tabs.filter(t=>staffTabs.includes(t.name)):tabs;
+    const ownerName=me?.role==='staff'?me.name:'Nadim';
     const [selectedIds,setSelectedIds]=useState<string[]>([]),[customers,setCustomers]=useState<Record<string,CustomerInfo>>({});
     const [content,setContent]=useState<Content>(defaultContent),[subscribers,setSubscribers]=useState<{contact:string;created:string}[]>([]),[activity,setActivity]=useState<{at:string;actor:string;area:string;detail:string}[]>([]);
     const [categoryRequest,setCategoryRequest]=useState(false);
@@ -104,7 +110,7 @@ export default function AdminWorkspace() {
         document.addEventListener('keydown',onKey);desktop.addEventListener('change',onChange);
         return()=>{document.removeEventListener('keydown',onKey);desktop.removeEventListener('change',onChange);};
     },[navOpen]);
-    const applyExtras=(d:any)=>{if(d.coupons)setCoupons(d.coupons);if(d.customers)setCustomers(d.customers);if(d.site)setSite(d.site);if(d.content)setContent(d.content);if(d.subscribers)setSubscribers(d.subscribers);if(d.activity)setActivity(d.activity);};
+    const applyExtras=(d:any)=>{if(d.me)setMe(d.me);if(Array.isArray(d.users))setUsers(d.users);if(d.coupons)setCoupons(d.coupons);if(d.customers)setCustomers(d.customers);if(d.site)setSite(d.site);if(d.content)setContent(d.content);if(d.subscribers)setSubscribers(d.subscribers);if(d.activity)setActivity(d.activity);};
     const siteProps:SiteProps={site,content,categories:categoryTree,products,
         saveSite:async(section,value)=>{await mutate({action:'saveSite',section,value});setNotice('Saved to your store');},
         resetSite:async section=>{await mutate({action:'resetSite',section});setNotice('Original content restored');},
@@ -131,10 +137,10 @@ export default function AdminWorkspace() {
     <aside ref={sidebar} id="admin-sidebar" className={'admin-sidebar'+(navOpen?' is-open':'')} aria-label="Studio navigation">
         <div className="admin-sidebar__brand"><BrandLogo variant="light"/><button type="button" className="a-btn a-btn--icon admin-sidebar__close" aria-label="Close navigation" onClick={closeNav}><Icon name="close"/></button></div>
         <small className="admin-sidebar__label">Workspace</small>
-        <nav className="admin-nav">{tabs.map((t,i) => <Fragment key={t.name}>{t.group&&tabs[i-1]?.group!==t.group&&<small className="admin-sidebar__label admin-nav__group">{t.group}</small>}<button type="button" className={tab === t.name ? 'selected' : ''} aria-current={tab===t.name?'page':undefined} key={t.name} onClick={() => choose(t.name)}><Icon name={t.icon}/>{t.name}{t.name==='Orders'&&unread>0&&<span className="admin-nav__badge" aria-label={unread+' unread order'+(unread===1?'':'s')}>{unread>99?'99+':unread}</span>}</button></Fragment>)}</nav>
+        <nav className="admin-nav">{visibleTabs.map((t,i) => <Fragment key={t.name}>{t.group&&visibleTabs[i-1]?.group!==t.group&&<small className="admin-sidebar__label admin-nav__group">{t.group}</small>}<button type="button" className={tab === t.name ? 'selected' : ''} aria-current={tab===t.name?'page':undefined} key={t.name} onClick={() => choose(t.name)}><Icon name={t.icon}/>{t.name}{t.name==='Orders'&&unread>0&&<span className="admin-nav__badge" aria-label={unread+' unread order'+(unread===1?'':'s')}>{unread>99?'99+':unread}</span>}</button></Fragment>)}</nav>
         <div className="admin-sidebar__foot">
             <a href="/" className="admin-sidebar__link"><Icon name="storefront"/>View storefront<Icon name="external" className="a-icon admin-sidebar__ext"/></a>
-            <div className="admin-user"><span aria-hidden="true">N</span><div>Nadim<small>Store owner</small></div></div>
+            <div className="admin-user"><span aria-hidden="true">{ownerName.slice(0,1)}</span><div>{ownerName}<small>{me?.role==="staff"?"Staff":"Store owner"}</small></div></div>
         </div>
     </aside>
     {navOpen&&<div className="admin-scrim" aria-hidden="true" onClick={closeNav}/>}
@@ -157,9 +163,10 @@ export default function AdminWorkspace() {
         </div>
         <div className="admin-content">
         {!adminLoaded && <p className="admin-loading" role="status">Loading your workspace…</p>}
+        {me?.mustReset && <div className="admin-reset-gate" role="dialog" aria-modal="true" aria-label="Choose a new password"><ChangePassword me={me} onSave={async data=>{await mutate(data);setNotice('Password saved');}}/></div>}
         {bannerOpen&&<div className="admin-info" role="note"><Icon name="info"/><p><strong>Before you open orders</strong>Products and orders are stored on the server. Replace sample products and confirm delivery settings before opening orders.</p><button type="button" className="a-btn a-btn--icon a-btn--sm" aria-label="Dismiss this note" onClick={dismissBanner}><Icon name="close"/></button></div>}
         {productRoute ? (productRoute==='new'||editingProduct ? <ProductEditor key={productRoute} product={editingProduct} categories={categoryTree} onDirty={setDirty} onCancel={()=>{leave('/admin/?tab=Products');}} onSave={async data=>{await mutate(data);setDirty(false);router.push('/admin/?tab=Products&saved=1');}}/> : <div className="admin-empty" role="status"><h3>{adminLoaded?'Product not found':'Loading product…'}</h3>{adminLoaded&&<button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={()=>leave('/admin/?tab=Products')}>Back to products</button>}</div>) : <>
-        <div className="admin-title"><div><div className="admin-eyebrow">{tab==='Overview'?'Your business, at a glance':'Studio · '+tab}</div><h1>{tab === 'Overview' ? 'Welcome to your studio, Nadim.' : tab}</h1><p>{tab === 'Overview' ? 'A little clarity for your everyday business.' : 'Manage your AURZÉN ' + tab.toLowerCase() + '.'}</p></div>{tab === 'Products' && <button type="button" className="a-btn a-btn--primary" onClick={() => openProduct(null)}><Icon name="plus"/>Add product</button>}</div>
+        <div className="admin-title"><div><div className="admin-eyebrow">{tab==='Overview'?'Your business, at a glance':'Studio · '+tab}</div><h1>{tab === 'Overview' ? 'Welcome to your studio, '+ownerName+'.' : tab}</h1><p>{tab === 'Overview' ? 'A little clarity for your everyday business.' : 'Manage your AURZÉN ' + tab.toLowerCase() + '.'}</p></div>{tab === 'Products' && <button type="button" className="a-btn a-btn--primary" onClick={() => openProduct(null)}><Icon name="plus"/>Add product</button>}</div>
     {tab === 'Overview' && adminLoaded && <OverviewExtras orders={orders} products={products} subscribers={subscribers.length} onOrders={()=>setTab('Orders')} onProduct={openProduct}/>}
     {tab === 'Overview' && (adminLoaded?<Overview orders={orders} products={products} onEditProduct={openProduct} onViewOrders={()=>setTab('Orders')} onAddProduct={()=>{ setTab('Products'); openProduct(null); }} onAddCategory={()=>{ setTab('Categories'); setCategoryRequest(true); }} onStorefront={()=>go('home')}/>:<div className="ov-skeleton" aria-hidden="true">{[0,1,2,3].map(i=><div key={i} className="a-card"/>)}</div>)}
     {tab === 'Products' && <ProductsTable products={products} categories={categoryTree} onEdit={openProduct} onStockInput={(id, stock) => setProducts(products.map(x => x.id === id ? { ...x, stock } : x))} onStockSave={(id, stock) => void change({ action: 'stock', id, stock })} onRemove={p => { if (confirm('Remove ' + p.name + ' from the store?')) void change({ action: 'deleteProduct', id: p.id }); }}/>}
@@ -182,6 +189,7 @@ export default function AdminWorkspace() {
     {adminLoaded && tab === 'Appearance' && <AppearanceEditor {...siteProps}/>}
     {adminLoaded && tab === 'Size guides' && <SizeGuidesEditor {...siteProps}/>}
     {adminLoaded && tab === 'Activity log' && <ActivityLog list={activity}/>}
+    {adminLoaded && tab === 'Users & roles' && me?.role==='owner' && <UsersPanel users={users} onSave={async data=>{await mutate(data);setNotice('Account saved');}}/>}
     {adminLoaded && tab === 'Backup' && <Backup products={products} categories={categoryTree} orders={orders} site={site} content={content} onImport={async value=>{for(const [section,data] of Object.entries(value))await mutate({action:'saveSite',section,value:data});setNotice('Settings imported');}}/>}
     {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <><OrderFilters state={orderFilter}/><OrderBulkBar selected={orderFilter.filtered.filter(o=>selectedIds.includes(o.id))} filtered={orderFilter.filtered} site={site} onClear={()=>setSelectedIds([])} onBulk={async(status,reason)=>{await mutate({action:'bulkStatus',ids:orderFilter.filtered.filter(o=>selectedIds.includes(o.id)).map(o=>o.id),status,reason});setNotice('Orders updated');}}/>{!orderFilter.filtered.length ? <div className="admin-empty" role="status"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders found</h3><p>Try another search, status or date range.</p><button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={orderFilter.reset}>Reset filters</button></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col" className="order-select"><input type="checkbox" aria-label="Select all shown orders" checked={orderFilter.filtered.length>0&&orderFilter.filtered.every(o=>selectedIds.includes(o.id))} onChange={e=>setSelectedIds(e.target.checked?orderFilter.filtered.map(o=>o.id):[])}/></th><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orderFilter.filtered.map(o => <tr key={o.id}>
         <td className="order-select"><input type="checkbox" aria-label={'Select order '+o.id} checked={selectedIds.includes(o.id)} onChange={e=>setSelectedIds(list=>e.target.checked?[...list,o.id]:list.filter(id=>id!==o.id))}/></td><td data-label="Order"><span className="admin-mono">{o.id}</span>{!o.readAt&&<span className="admin-new-marker">New<span className="sr-only"> unread order</span></span>}<small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>{markRead(o);setEditingOrder(o);}}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>

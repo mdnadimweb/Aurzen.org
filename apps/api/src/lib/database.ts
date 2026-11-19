@@ -36,9 +36,11 @@ const postgresSchema=`
   CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,idempotency TEXT NOT NULL UNIQUE,payload TEXT NOT NULL,created TEXT NOT NULL);
   CREATE INDEX IF NOT EXISTS orders_created ON orders(created);
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires BIGINT NOT NULL);
+  ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id TEXT;
   CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires BIGINT NOT NULL);
   CREATE TABLE IF NOT EXISTS activity(id BIGSERIAL PRIMARY KEY,at TEXT NOT NULL,actor TEXT NOT NULL,area TEXT NOT NULL,detail TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);`;
+  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,name TEXT NOT NULL,role TEXT NOT NULL,hash TEXT NOT NULL,disabled INTEGER NOT NULL DEFAULT 0,must_reset INTEGER NOT NULL DEFAULT 1,created TEXT NOT NULL);`;
 const sqliteSchema=`
   CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS categories(name TEXT PRIMARY KEY);
@@ -48,7 +50,8 @@ const sqliteSchema=`
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS activity(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,actor TEXT NOT NULL,area TEXT NOT NULL,detail TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);`;
+  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,name TEXT NOT NULL,role TEXT NOT NULL,hash TEXT NOT NULL,disabled INTEGER NOT NULL DEFAULT 0,must_reset INTEGER NOT NULL DEFAULT 1,created TEXT NOT NULL);`;
 
 /** Gives every category a unique URL slug once; later renames keep it, so shared links stay valid. */
 export async function uniqueCategorySlug(db:Database,name:string,parent:string|null,except?:string){
@@ -100,6 +103,7 @@ async function initialize(){
         if(!columns.some(column=>column.name==='colors'))await db.exec("ALTER TABLE products ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
         const categoryColumns=await db.prepare('PRAGMA table_info(categories)').all();
         for(const column of ['parent','slug','cover'])if(!categoryColumns.some(c=>c.name===column))await db.exec(`ALTER TABLE categories ADD COLUMN ${column} TEXT`);
+        if(!(await db.prepare('PRAGMA table_info(sessions)').all()).some(c=>c.name==='user_id'))await db.exec('ALTER TABLE sessions ADD COLUMN user_id TEXT');
       }
       if(!await db.prepare("SELECT value FROM settings WHERE key='initialized'").get()){
         // A hosted database starts empty: transfer the real catalog with the import script.
