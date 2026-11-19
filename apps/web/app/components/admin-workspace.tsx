@@ -17,9 +17,10 @@ import {defaultHeroSlides} from './FashionHero';
 import BrandLogo from './brand-logo';
 
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { defaultContent, type Content, type CustomerInfo } from '@aurzen/shared/site';
+import { defaultContent, type Content, type CustomerInfo, type Coupon } from '@aurzen/shared/site';
 import { OrderTools, OrderBulkBar, paymentName } from './admin/order-tools';
 import CustomersPanel from './admin/customers-panel';
+import CouponsEditor from './admin/coupons-editor';
 import { MessageTemplates, CategorySettingsEditor, StorefrontSettings, GeneralSettings, SeoSettings, PopupSettings, PagesEditor, FaqEditor, ReviewsEditor, Subscribers, ActivityLog, type SiteProps } from './admin/site-settings';
 import Backup from './admin/backup';
 import './admin/editable-card.css';
@@ -29,7 +30,7 @@ import { api, useStore } from '../providers';
 
 const tabs:{name:string;icon:IconName;group?:string}[]=[{name:'Overview',icon:'overview'},{name:'Orders',icon:'orders'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Customers',icon:'customers'},
     {name:'Homepage',icon:'slides',group:'Storefront'},{name:'Menus & text',icon:'storefront',group:'Storefront'},{name:'Pages',icon:'edit',group:'Storefront'},{name:'FAQ',icon:'info',group:'Storefront'},{name:'Reviews',icon:'check',group:'Storefront'},
-    {name:'Popup',icon:'plus',group:'Marketing'},{name:'Subscribers',icon:'customers',group:'Marketing'},
+    {name:'Coupons',icon:'plus',group:'Marketing'},{name:'Popup',icon:'plus',group:'Marketing'},{name:'Subscribers',icon:'customers',group:'Marketing'},
     {name:'Settings',icon:'lock',group:'Settings'},{name:'SEO & integrations',icon:'external',group:'Settings'},{name:'Activity log',icon:'overview',group:'Settings'},{name:'Backup',icon:'truck',group:'Settings'}];
 const statusKey=(status:string)=>status.toLowerCase().replace(/[^a-z]/g,'');
 const stockLevel=(stock:number)=>stock===0?'out':stock<=5?'low':'in';
@@ -54,6 +55,7 @@ function DeliveryEditor({order,onSave,onOpen}:{order:Order;onSave:(data:Record<s
 export default function AdminWorkspace() {
     const router = useRouter();
     const { site, setSite, products, setProducts, categories, setCategories, categoryTree, setCategoryDetails, promotions, setPromotions, hero, setHero, storefront, setStorefront } = useStore();
+    const [coupons,setCoupons]=useState<Coupon[]>([]);
     const [selectedIds,setSelectedIds]=useState<string[]>([]),[customers,setCustomers]=useState<Record<string,CustomerInfo>>({});
     const [content,setContent]=useState<Content>(defaultContent),[subscribers,setSubscribers]=useState<{contact:string;created:string}[]>([]),[activity,setActivity]=useState<{at:string;actor:string;area:string;detail:string}[]>([]);
     const [categoryRequest,setCategoryRequest]=useState(false);
@@ -100,7 +102,7 @@ export default function AdminWorkspace() {
         document.addEventListener('keydown',onKey);desktop.addEventListener('change',onChange);
         return()=>{document.removeEventListener('keydown',onKey);desktop.removeEventListener('change',onChange);};
     },[navOpen]);
-    const applyExtras=(d:any)=>{if(d.customers)setCustomers(d.customers);if(d.site)setSite(d.site);if(d.content)setContent(d.content);if(d.subscribers)setSubscribers(d.subscribers);if(d.activity)setActivity(d.activity);};
+    const applyExtras=(d:any)=>{if(d.coupons)setCoupons(d.coupons);if(d.customers)setCustomers(d.customers);if(d.site)setSite(d.site);if(d.content)setContent(d.content);if(d.subscribers)setSubscribers(d.subscribers);if(d.activity)setActivity(d.activity);};
     const siteProps:SiteProps={site,content,categories:categoryTree,products,
         saveSite:async(section,value)=>{await mutate({action:'saveSite',section,value});setNotice('Saved to your store');},
         resetSite:async section=>{await mutate({action:'resetSite',section});setNotice('Original content restored');},
@@ -167,6 +169,7 @@ export default function AdminWorkspace() {
     {adminLoaded && tab === 'Pages' && <PagesEditor {...siteProps}/>}
     {adminLoaded && tab === 'FAQ' && <FaqEditor {...siteProps}/>}
     {adminLoaded && tab === 'Reviews' && <ReviewsEditor {...siteProps}/>}
+    {adminLoaded && tab === 'Coupons' && <CouponsEditor coupons={coupons} orders={orders} categories={categoryTree} products={products} onSave={async list=>{await mutate({action:'saveCoupons',coupons:list});setNotice('Coupons saved');}}/>}
     {adminLoaded && tab === 'Popup' && <PopupSettings {...siteProps}/>}
     {adminLoaded && tab === 'Subscribers' && <Subscribers list={subscribers} onDelete={contact=>void change({action:'deleteSubscriber',contact})}/>}
     {adminLoaded && tab === 'Settings' && <><GeneralSettings {...siteProps}/><div className="mt-6"><MessageTemplates {...siteProps}/></div></>}

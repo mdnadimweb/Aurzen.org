@@ -53,7 +53,8 @@ export default function Checkout({directCheckout}:{directCheckout?:DirectCheckou
     if(!directCheckout||!directReady)return;
     try{sessionStorage.setItem('aurzen-buy-draft:'+directCheckout.attempt,JSON.stringify({...directItems[0],area}));}catch{}
   },[directCheckout,directReady,directItems,area]);
-  const selection=JSON.stringify({items:cart,area});
+  const [couponInput,setCouponInput]=useState(''),[appliedCoupon,setAppliedCoupon]=useState('');
+  const selection=JSON.stringify({items:cart,area,...(appliedCoupon?{coupon:appliedCoupon}:{})});
   const prices=JSON.stringify(cart.map(item=>{const p=products.find(p=>p.id===item.id);return p?{id:p.id,price:productPricing(p,now).unitPrice,stock:p.stock}:null;}));
   const requestKey=selection+prices;
   const loadQuote=useCallback(async(forceReview=false)=>{
@@ -124,15 +125,16 @@ export default function Checkout({directCheckout}:{directCheckout?:DirectCheckou
     submitting.current=true;setBusy(true);setError('');
     if(!key.current)key.current=crypto.randomUUID();
     try{
-      const result=await api('/api/orders/',{method:'POST',body:JSON.stringify({paymentMethod:method,key:key.current,quote:quote!.quote,...(co.email!=='hidden'?{email:String(data.get('email')||'')}:{}),...(co.note?{note:String(data.get('note')||'')}:{}),name:data.get('name'),phone:normalizePhone(String(data.get('phone')||'')),address:data.get('address'),area,items:cart})});
+      const result=await api('/api/orders/',{method:'POST',body:JSON.stringify({paymentMethod:method,key:key.current,quote:quote!.quote,...(co.email!=='hidden'?{email:String(data.get('email')||'')}:{}),...(co.note?{note:String(data.get('note')||'')}:{}),name:data.get('name'),phone:normalizePhone(String(data.get('phone')||'')),address:data.get('address'),area,items:cart,...(appliedCoupon?{coupon:appliedCoupon}:{})})});
       setReceipt(result);trackEvent('Purchase',{value:result.total,currency:'BDT'});
       if(directCheckout){try{sessionStorage.setItem('aurzen-buy-receipt:'+directCheckout.attempt,JSON.stringify({id:result.id,total:result.total}));}catch{}}
       else setBag([]);
       void refresh();
     }catch(error){setError((error as Error).message);if((error as Error&{status?:number}).status===409){setNeedsReview(true);setQuote(null);setQuoteRefresh(value=>value+1);}void refresh();requestAnimationFrame(()=>feedback.current?.focus());}
     finally{submitting.current=false;setBusy(false);}
-  }}><h2>Order summary</h2><div className="summary"><span>Subtotal</span><b>{quoteReady?money(total):'Checking…'}</b></div><div className="summary"><span>Delivery</span><b>{quoteReady?delivery?money(delivery):'Free':'Checking…'}</b></div><div className="summary"><strong>Total</strong><strong>{quoteReady?money(quote!.total):'—'}</strong></div>
+  }}><h2>Order summary</h2><div className="summary"><span>Subtotal</span><b>{quoteReady?money(total):'Checking…'}</b></div>{quoteReady&&quote!.discount?<div className="summary"><span>Discount ({quote!.coupon})</span><b>−{money(quote!.discount)}</b></div>:null}<div className="summary"><span>Delivery</span><b>{quoteReady?delivery?money(delivery):'Free':'Checking…'}</b></div><div className="summary"><strong>Total</strong><strong>{quoteReady?money(quote!.total):'—'}</strong></div>
     {needsReview&&<div className="price-review my-4 rounded-[10px] border border-plum bg-blush p-3.5" role="alert"><p className="m-0">Prices or delivery charges changed. Review the updated items and total before placing your order.</p><button type="button" className="text-link font-semibold! underline" disabled={!quoteReady} onClick={()=>{setNeedsReview(false);setError('');}}>I’ve reviewed the updated total</button></div>}
+    <section className="coupon-field"><label htmlFor="checkout-coupon">Discount code</label><div><input id="checkout-coupon" value={couponInput} maxLength={30} autoComplete="off" placeholder="Enter code" disabled={busy} onChange={e=>setCouponInput(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();setAppliedCoupon(couponInput.trim());}}}/>{appliedCoupon&&quote?.coupon===appliedCoupon?<button type="button" className="secondary-link" disabled={busy} onClick={()=>{setAppliedCoupon("");setCouponInput("");}}>Remove</button>:<button type="button" className="secondary-link" disabled={busy||!couponInput.trim()} onClick={()=>setAppliedCoupon(couponInput.trim())}>Apply</button>}</div>{quoteReady&&quote!.couponError&&appliedCoupon?<p className="field-error" role="alert">{quote!.couponError}</p>:quoteReady&&quote!.coupon?<p className="field-hint" role="status">Code {quote!.coupon} applied.</p>:null}</section>
     {invalid&&<p className="form-error" role="alert">Review the marked items in your bag before checkout.</p>}
     <label>Delivery area<select value={area} disabled={busy} onChange={e=>setArea(e.currentTarget.value as 'dhaka'|'outside')}><option value="dhaka">Dhaka city — {money(co.dhaka)}</option><option value="outside">Outside Dhaka — {money(co.outside)}</option></select></label>
     {!settings?.enabled&&<p className="availability-note">We’re preparing our collection. Ordering will open soon.</p>}

@@ -91,3 +91,7 @@ body:has(.has-mobile-purchase) .chat-buttons{bottom:96px}
 .review figcaption{font-size:var(--text-label);color:#6b5f5b}
 .review-stars{color:#b48a3c;letter-spacing:2px}.review-stars span{color:#e3d8cc}
 .product-reviews h2 small{font-size:16px;color:#6b5f5b;font-family:var(--font-dm-sans),Arial,sans-serif}
+.coupon-field{display:grid;gap:6px;margin:12px 0}
+.coupon-field>div{display:flex;gap:8px}
+.coupon-field input{flex:1;min-height:46px;text-transform:uppercase}
+.coupon-field button{min-height:46px;padding:0 18px}

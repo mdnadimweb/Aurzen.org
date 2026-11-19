@@ -107,3 +107,19 @@ test('an exception after a database write rolls back the transaction', async()=>
  }),/rollback probe/);
  assert.equal((await catalog()).products.find(p=>p.id===1).stock,before);
 });
+test('coupon codes are applied by the server, stored on the order and limited per phone', async()=>{
+  const db=await database();
+  await db.prepare("INSERT INTO settings(key,value) VALUES('coupons',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify([{code:'TEST10',type:'percent',value:10,minOrder:0,usageLimit:0,perCustomer:1,startsAt:null,endsAt:null,applies:{type:'all',value:''},active:true},{code:'SHIPFREE',type:'free',value:0,minOrder:0,usageLimit:0,perCustomer:0,startsAt:null,endsAt:null,applies:{type:'all',value:''},active:true}]));
+  const phone='01799999999';
+  const plain=await quoteOrder(input({phone}));
+  const discounted=await quoteOrder(input({phone,coupon:'test10'}));
+  assert.equal(discounted.coupon,'TEST10');assert.equal(discounted.discount,Math.round(plain.subtotal*0.1));
+  assert.equal(discounted.total,plain.total-discounted.discount);
+  assert.match((await quoteOrder(input({coupon:'NOPE'}))).couponError,/not valid/);
+  const free=await quoteOrder(input({coupon:'SHIPFREE'}));assert.equal(free.delivery,0);
+  const placed=await placeOrder(input({phone,coupon:'TEST10'}));
+  const saved=(await orders()).find(o=>o.id===placed.id);
+  assert.equal(saved.coupon,'TEST10');assert.equal(saved.discount,discounted.discount);assert.equal(saved.total,discounted.total);
+  assert.match((await quoteOrder(input({phone,coupon:'TEST10'}))).couponError,/already used/);
+  await db.prepare("DELETE FROM settings WHERE key='coupons'").run();
+});

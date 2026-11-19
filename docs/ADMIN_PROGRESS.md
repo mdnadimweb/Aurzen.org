@@ -26,7 +26,7 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
 - [ ] M5 Hero slides: already editable (Homepage tab). Not yet: per-slide LinkPicker, mobile image, schedule.
 - [ ] M6 Promo banners: already editable (Homepage tab, own links, schedule, hidden). Not yet: global interval/transition/section switch.
 - [~] M7 Homepage sections: trust strip, favourites row (title/button/4 or 8), mystery section, brand note are editable and can be hidden. Not yet: section reorder, product-row sources, testimonials row.
-- [ ] M8 Collection cards + categories: covers/featured exist. Not yet: descriptions, SEO, card button label, size guide per category.
+- [x] M8 Categories: per category/subcategory card button (Choose your size / Add to bag / Reveal your box / Available; Mystery Box never says “Choose your size”), description under the title, SEO title/description. Alt text fixed (“Men’s collection collection”). Not yet: size guide per category (needs M12).
 
 ## Phase 3 — products and catalog
 - [ ] M9 Product editor upgrades · [ ] M10 Mystery Box config · [ ] M11 Gift options · [ ] M12 Size guides
@@ -34,13 +34,16 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
 ## Phase 4 — content pages and social proof
 - [x] M13 Pages: About, Delivery, Returns, Size guide, Privacy, Terms seeded; add/edit/reorder/hide; `/pages/<address>/`; SEO fields; safe formatting.
 - [x] M14 FAQ: groups + questions, reorder, show/hide, `/faq/`. (Product-page snippet not yet.)
-- [~] M15 Reviews: admin add/edit/approve/hide/delete with photo, rating, product link. Storefront display not yet.
+- [x] M15 Reviews: admin add/edit/approve/hide/delete with photo, rating, product link; approved reviews show as homepage testimonials and on the linked product page with the average rating. (Customer submission not yet.)
 
 ## Phase 5 — orders and customers
-- [ ] M16 (status map already shared by UI + API; courier fields exist) · [ ] M17 · [ ] M18
+- [x] M16 Orders: filters by payment/courier (plus existing search/status/dates), select + bulk status (allowed moves only), internal notes, status timeline, cancel reason, restock on cancel/return, courier suggestions (Pathao/Steadfast/RedX…), print invoices and shipping labels, CSV of the filtered list, duplicate / many-cancellations flag, payment method, customer note and coupon shown. Not yet: editing items is the existing editor (unchanged).
+- [x] M17 Customers: search, tag filter, tags (VIP, Risky, Wholesale, Repeat), private notes, order history, total spent, CSV, block a phone from ordering (enforced by the API).
+- [~] M18 Messages: editable WhatsApp/SMS templates per status with placeholders; buttons on each order open WhatsApp or SMS ready to send. Courier API parcel creation not built (needs your Pathao/Steadfast API keys; fields + links only for now).
 
 ## Phase 6 — marketing
-- [ ] M19 Coupons · [ ] M20 Scheduled sales
+- [x] M19 Coupons: percent / fixed / free delivery, minimum order, total and per-phone limits, dates, whole order / category / product, on/off; checked only by the server at quote and order; usage and discount totals per code; stored on orders and invoices.
+- [ ] M20 Scheduled sales (per-product offers with dates already exist)
 - [x] M21 Popup: title/text/image/button/LinkPicker, once per N days, schedule, Esc/backdrop close. Subscribers list + CSV.
 
 ## Phase 7 — appearance, SEO, integrations

@@ -389,3 +389,40 @@ export function orderFlags(order:{id:string;phone:string;date:string;status:stri
   if(cancelled>=2)flags.push(`${cancelled} cancelled or returned orders from this phone`);
   return flags;
 }
+
+// ---- Coupons (private: `coupons` settings row, checked only by the server) ----
+export type Coupon={code:string;type:'percent'|'fixed'|'free';value:number;minOrder:number;usageLimit:number;perCustomer:number;startsAt:string|null;endsAt:string|null;applies:{type:'all'|'category'|'product';value:string};active:boolean};
+export function normalizeCoupons(value:unknown):Coupon[]{
+  try{
+    if(!Array.isArray(value)||value.length>200)fail('Use at most 200 coupons.');
+    const codes=new Set<string>();
+    return (value as unknown[]).map((input,i)=>{
+      const c=obj(input,'coupon'),at=` on coupon ${i+1}`;
+      const code=str(c.code,30,'Code'+at,{required:true}).toUpperCase();
+      if(!/^[A-Z0-9_-]{3,30}$/.test(code))fail('Codes use 3–30 letters, numbers, - or _'+at+'.');
+      if(codes.has(code))fail(`Two coupons use the code ${code}.`);codes.add(code);
+      if(!['percent','fixed','free'].includes(c.type as string))fail('Choose the discount type'+at+'.');
+      const type=c.type as Coupon['type'];
+      const v=type==='free'?0:type==='percent'?int(c.value,1,90,'Percent'+at):int(c.value,1,100000,'Amount'+at);
+      const a=obj(c.applies,'coupon target');
+      if(!['all','category','product'].includes(a.type as string))fail('Choose what the coupon applies to'+at+'.');
+      const applies={type:a.type as Coupon['applies']['type'],value:a.type==='all'?'':str(a.value,100,'Target'+at,{required:true})};
+      return {code,type,value:v,minOrder:int(c.minOrder,0,1000000,'Minimum order'+at),usageLimit:int(c.usageLimit,0,1000000,'Usage limit'+at),perCustomer:int(c.perCustomer,0,1000,'Per-customer limit'+at),...range(c.startsAt,c.endsAt,at),applies,active:c.active!==false};
+    });
+  }catch(error){if(error instanceof Invalid)throw new Error(error.message);throw error;}
+}
+/** Discount for a coupon on these items. Returns an error message instead when it cannot be used. */
+export function applyCoupon(coupon:Coupon|undefined,{items,subtotal,delivery,family,used,usedByPhone,now=Date.now()}:{items:{id:number;price:number;qty:number;category:string}[];subtotal:number;delivery:number;family:(category:string)=>string[];used:number;usedByPhone:number;now?:number}):{discount:number;freeDelivery:boolean}|{error:string}{
+  if(!coupon||!coupon.active)return {error:'This code is not valid.'};
+  if(coupon.startsAt&&Date.parse(coupon.startsAt)>now)return {error:'This code is not active yet.'};
+  if(coupon.endsAt&&now>=Date.parse(coupon.endsAt))return {error:'This code has expired.'};
+  if(coupon.usageLimit&&used>=coupon.usageLimit)return {error:'This code has been fully used.'};
+  if(coupon.perCustomer&&usedByPhone>=coupon.perCustomer)return {error:'You have already used this code.'};
+  if(subtotal<coupon.minOrder)return {error:`This code needs an order of at least ৳${coupon.minOrder.toLocaleString('en-BD')}.`};
+  const eligible=items.filter(i=>coupon.applies.type==='all'||(coupon.applies.type==='product'?String(i.id)===coupon.applies.value:family(coupon.applies.value).includes(i.category)));
+  if(!eligible.length)return {error:'This code does not apply to the items in your bag.'};
+  const base=eligible.reduce((s,i)=>s+i.price*i.qty,0);
+  if(coupon.type==='free')return {discount:0,freeDelivery:delivery>0};
+  const discount=coupon.type==='percent'?Math.round(base*coupon.value/100):Math.min(base,coupon.value);
+  return {discount,freeDelivery:false};
+}

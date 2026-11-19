@@ -1,6 +1,6 @@
 import { requireAdmin } from '../../../lib/auth';
 import { catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
-import { normalizeSiteSection, normalizeContentSection, normalizeCustomer, siteSections } from '@aurzen/shared/site';
+import { normalizeSiteSection, normalizeContentSection, normalizeCustomer, normalizeCoupons, siteSections } from '@aurzen/shared/site';
 import type { Database } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
 import { statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
@@ -15,7 +15,7 @@ function productVariants(value:unknown,label:'size'|'colour'){
     try{return normalizeVariants(value,label);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid '+label+' list.');}
 }
-const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers'};
+const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers',saveCoupons:'Marketing'};
 const activityArea=(d:Record<string,any>)=>areas[d.action]||'Other';
 function activityDetail(d:Record<string,any>){
     const what=(x:unknown)=>typeof x==='string'||typeof x==='number'?String(x).slice(0,80):'';
@@ -27,6 +27,7 @@ function activityDetail(d:Record<string,any>){
         case 'bulkStatus':return (Array.isArray(d.ids)?d.ids.length:0)+' orders → '+what(d.status);
         case 'orderNotes':return 'Notes on order '+what(d.id);
         case 'saveCustomer':return 'Customer '+what(d.phone);
+        case 'saveCoupons':return 'Saved coupons ('+(Array.isArray(d.coupons)?d.coupons.length:0)+')';
         case 'editOrder':return 'Edited order '+what(d.id);
         case 'delivery':return 'Courier details for order '+what(d.id);
         case 'markRead':return 'Opened order '+what(d.id);
@@ -38,8 +39,8 @@ function activityDetail(d:Record<string,any>){
 }
 async function adminData(){
     const db=await database();
-    const [base,list,pages,subscribers,activity,customerRow]=await Promise.all([catalog(db),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all(),db.prepare("SELECT value FROM settings WHERE key='customers'").get()]);
-    return {...base,customers:customerRow?JSON.parse(String(customerRow.value)):{},orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
+    const [base,list,pages,subscribers,activity,customerRow,couponRow]=await Promise.all([catalog(db),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all(),db.prepare("SELECT value FROM settings WHERE key='customers'").get(),db.prepare("SELECT value FROM settings WHERE key='coupons'").get()]);
+    return {...base,coupons:couponRow?JSON.parse(String(couponRow.value)):[],customers:customerRow?JSON.parse(String(customerRow.value)):{},orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
 }
 export const runtime = 'nodejs';
 export async function GET() { try {
@@ -133,6 +134,11 @@ export async function POST(request: Request) {
                 assert(notes.length <= 2000, 'Notes must be at most 2,000 characters.');
                 order.notes = notes;
                 await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order), order.id);
+            }
+            else if (d.action === 'saveCoupons') {
+                let coupons;
+                try { coupons = normalizeCoupons(d.coupons); } catch (error) { throw new HttpError(400, error instanceof Error ? error.message : 'Invalid coupons.'); }
+                await saveSetting(db, 'coupons', coupons);
             }
             else if (d.action === 'saveCustomer') {
                 const phone = text(d.phone, 6, 20, 'Phone');

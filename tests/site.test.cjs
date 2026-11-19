@@ -34,3 +34,25 @@ test('scheduled announcements show only inside their window',()=>{
   const site=mergeSite({announcement:{enabled:true,interval:5,items:[{id:'a',text:'Now',detail:'',link:null,active:true,startsAt:null,endsAt:null},{id:'b',text:'Later',detail:'',link:null,active:true,startsAt:'2999-01-01T00:00:00.000Z',endsAt:null},{id:'c',text:'Paused',detail:'',link:null,active:false,startsAt:null,endsAt:null}]}});
   assert.deepEqual(activeAnnouncements(site).map(a=>a.id),['a']);
 });
+const {normalizeCoupons,applyCoupon,cardLabel,orderFlags}=require('@aurzen/shared/site');
+test('coupons validate and discount only eligible items',()=>{
+  const [c]=normalizeCoupons([{code:'eid10',type:'percent',value:10,minOrder:1000,usageLimit:2,perCustomer:1,startsAt:null,endsAt:null,applies:{type:'category',value:'Ladies Fashion'},active:true}]);
+  assert.equal(c.code,'EID10');
+  const family=n=>n==='Ladies Fashion'?['Ladies Fashion','Abayas']:[n];
+  const items=[{id:1,price:1000,qty:1,category:'Abayas'},{id:2,price:500,qty:1,category:'Mystery Box'}];
+  assert.deepEqual(applyCoupon(c,{items,subtotal:1500,delivery:80,family,used:0,usedByPhone:0}),{discount:100,freeDelivery:false});
+  assert.match(applyCoupon(c,{items,subtotal:900,delivery:80,family,used:0,usedByPhone:0}).error,/at least/);
+  assert.match(applyCoupon(c,{items,subtotal:1500,delivery:80,family,used:2,usedByPhone:0}).error,/fully used/);
+  assert.match(applyCoupon(c,{items,subtotal:1500,delivery:80,family,used:0,usedByPhone:1}).error,/already used/);
+  assert.match(applyCoupon(undefined,{items,subtotal:1500,delivery:80,family,used:0,usedByPhone:0}).error,/not valid/);
+  assert.throws(()=>normalizeCoupons([c,c]),/Two coupons/);
+});
+test('mystery box cards never ask for a size; duplicate orders are flagged',()=>{
+  const tree=[{name:'Mystery Box',slug:'mystery-box',parent:null,cover:null},{name:"Men's collection",slug:'mens-collection',parent:null,cover:null}];
+  const site=mergeSite({categories:{'mystery-box':{label:'size',description:'',seoTitle:'',seoDescription:''}}});
+  assert.equal(cardLabel(site,tree,{category:'Mystery Box',stock:3},true),'Reveal your box');
+  assert.equal(cardLabel(site,tree,{category:"Men's collection",stock:3},true),'Choose your size');
+  assert.equal(cardLabel(site,tree,{category:"Men's collection",stock:0},true),'Currently unavailable');
+  const a={id:'A',phone:'01711111111',date:'2026-01-01T10:00:00Z',status:'New'},b={...a,id:'B',date:'2026-01-01T12:00:00Z'};
+  assert.equal(orderFlags(a,[a,b]).length,1);assert.equal(orderFlags(a,[a]).length,0);
+});

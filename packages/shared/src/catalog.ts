@@ -5,7 +5,7 @@ export type Product = {id:number;name:string;category:string;price:number;stock:
 // color is omitted (or '') for products without colour choices.
 export type CartItem = {id:number;qty:number;size:string;color?:string};
 export type OrderItem = CartItem & {name:string;price:number};
-export type CheckoutQuote={items:OrderItem[];subtotal:number;delivery:number;total:number;quote:string;serverNow:number};
+export type CheckoutQuote={items:OrderItem[];subtotal:number;delivery:number;total:number;quote:string;serverNow:number;discount?:number;coupon?:string;couponError?:string};
 
 // Whole taka throughout the store: round the discounted unit once, then multiply
 // by quantity. Keep a positive minimum charge even for a very low base price.
@@ -122,7 +122,7 @@ export function statusChangeError(from:string,to:string){
 }
 /** Cash-on-delivery charge per delivery area, in taka. */
 export const deliveryFees = {dhaka:80,outside:150} as const;
-export type Order = {paymentMethod?:'cod'|'bkash'|'nagad'|'advance';email?:string;note?:string;/** Studio-only notes, never shown to the customer. */notes?:string;cancelReason?:string;id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};
+export type Order = {paymentMethod?:'cod'|'bkash'|'nagad'|'advance';email?:string;note?:string;/** Studio-only notes, never shown to the customer. */notes?:string;cancelReason?:string;coupon?:string;discount?:number;id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};
 export const photo=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=85`;
 export const money=(n:number)=>'৳'+n.toLocaleString('en-BD');
 export const seed:Product[]=[

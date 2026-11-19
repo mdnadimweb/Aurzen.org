@@ -1,8 +1,8 @@
 import { randomInt,randomUUID,createHash } from 'node:crypto';
 import { catalog, database, transaction,type Database } from './database';
 import { assert, text } from './http';
-import { deliveryCharge } from '@aurzen/shared/site';
-import { validOption,validColor,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
+import { deliveryCharge, applyCoupon, type Coupon } from '@aurzen/shared/site';
+import { categoryFamily,validOption,validColor,productPricing,deliveryFees,type CheckoutQuote,type Order,type OrderItem } from '@aurzen/shared/catalog';
 import { normalizePhone } from '@aurzen/shared/phone';
 export async function checkoutSettings() {
     const {site} = await catalog();
@@ -17,7 +17,7 @@ async function calculateQuote(d:Record<string,unknown>,db?:Database):Promise<Che
     assert(settings.enabled,'Ordering will open soon. Please check back later.',503);
     assert(d.area==='dhaka'||d.area==='outside','Choose your delivery area.');
     assert(Array.isArray(d.items)&&d.items.length>0&&d.items.length<=50,'Your bag must contain 1–50 items.');
-    const {products,site}=await catalog(db),quantities=new Map<number,number>(),items:OrderItem[]=[],serverNow=Date.now();
+    const {products,site,categoryDetails}=await catalog(db),quantities=new Map<number,number>(),items:OrderItem[]=[],serverNow=Date.now();
     for(const item of d.items as Record<string,unknown>[]){
         assert(item&&typeof item==='object'&&Number.isSafeInteger(item.id)&&Number.isSafeInteger(item.qty)&&Number(item.qty)>0&&Number(item.qty)<=100,'Invalid bag item.');
         const product=products.find(p=>p.id===item.id);
@@ -31,11 +31,24 @@ async function calculateQuote(d:Record<string,unknown>,db?:Database):Promise<Che
     for(const [id,qty]of quantities){const p=products.find(p=>p.id===id)!;assert(qty<=p.stock,`${p.name}: only ${p.stock} available.`,409);}
     const subtotal=items.reduce((sum,item)=>sum+item.price*item.qty,0);
     assert(subtotal>=site.checkout.minOrder,'The minimum order is ৳'+site.checkout.minOrder.toLocaleString('en-BD')+'. Add a little more to your bag.');
-    const delivery=deliveryCharge(site.checkout,d.area as 'dhaka'|'outside',subtotal),total=subtotal+delivery;
-    // Binds review to the exact charged units, options, quantities and delivery.
+    let delivery=deliveryCharge(site.checkout,d.area as 'dhaka'|'outside',subtotal),discount=0,coupon='',couponError='';
+    // Coupon codes are checked here only; the list never leaves the server.
+    if(typeof d.coupon==='string'&&d.coupon.trim()){
+        const code=d.coupon.trim().toUpperCase().slice(0,30);
+        const conn=db||await database();
+        const [couponRow,orderRows]=await Promise.all([conn.prepare("SELECT value FROM settings WHERE key='coupons'").get(),conn.prepare('SELECT payload FROM orders').all()]);
+        const found=(couponRow?JSON.parse(String(couponRow.value)) as Coupon[]:[]).find(c=>c.code===code);
+        const usedOrders=orderRows.map(r=>JSON.parse(String(r.payload)) as Order).filter(o=>o.coupon===code&&o.status!=='Cancelled');
+        const phone=typeof d.phone==='string'?normalizePhone(d.phone):'';
+        const result=applyCoupon(found,{items:items.map(i=>({...i,category:products.find(p=>p.id===i.id)!.category})),subtotal,delivery,family:name=>categoryFamily(categoryDetails,name),used:usedOrders.length,usedByPhone:phone?usedOrders.filter(o=>o.phone===phone).length:0,now:serverNow});
+        if('error' in result)couponError=result.error;
+        else{coupon=code;discount=result.discount;if(result.freeDelivery)delivery=0;}
+    }
+    const total=subtotal-discount+delivery;
+    // Binds review to the exact charged units, options, quantities, discount and delivery.
     // A customer may supply a token, but all prices are still recomputed here.
-    const quote=createHash('sha256').update(JSON.stringify({items,delivery,total})).digest('hex');
-    return {items,subtotal,delivery,total,quote,serverNow};
+    const quote=createHash('sha256').update(JSON.stringify({items,delivery,total,discount,coupon})).digest('hex');
+    return {items,subtotal,delivery,total,quote,serverNow,...(coupon?{coupon,discount}:{}),...(couponError?{couponError}:{})};
 }
 export const quoteOrder=(d:Record<string,unknown>)=>calculateQuote(d);
 // Short, easy-to-read order references such as AZ-482193 (6 random digits).
@@ -79,8 +92,8 @@ export async function placeOrder(d: Record<string, unknown>) {
         }
         const current=await calculateQuote(d,db);
         assert(typeof d.quote==='string'&&d.quote===current.quote,'Prices or delivery charges changed. Review the updated total before placing your order.',409);
-        const {items,delivery,total}=current;
-        const order: Order = { paymentMethod: paymentMethod as Order['paymentMethod'], ...(email ? { email } : {}), ...(note ? { note } : {}), id: await newOrderId(db), name, phone, address, area: d.area as 'dhaka' | 'outside', items, total, delivery, status: 'New', date: new Date().toISOString() };
+        const {items,delivery,total,coupon,discount}=current;
+        const order: Order = { paymentMethod: paymentMethod as Order['paymentMethod'], ...(coupon ? { coupon, discount } : {}), ...(email ? { email } : {}), ...(note ? { note } : {}), id: await newOrderId(db), name, phone, address, area: d.area as 'dhaka' | 'outside', items, total, delivery, status: 'New', date: new Date().toISOString() };
         order.history = [{status:'New',date:order.date}];
         for (const item of items)
             await db.prepare('UPDATE products SET stock=stock-? WHERE id=?').run(item.qty,item.id);
