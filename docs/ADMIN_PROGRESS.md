@@ -23,13 +23,13 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
   - Note: editing an existing order’s delivery area in the order editor still uses the default ৳80/৳150.
 
 ## Phase 2 — homepage and banners
-- [ ] M5 Hero slides: already editable (Homepage tab). Not yet: per-slide LinkPicker, mobile image, schedule.
-- [ ] M6 Promo banners: already editable (Homepage tab, own links, schedule, hidden). Not yet: global interval/transition/section switch.
+- [x] M5 Hero slides: existing editor plus per-slide link (LinkPicker; default = its category page, no more /shop/?category= links), start/end dates and show/hide. Not done: a separate mobile image per slide.
+- [x] M6 Promo banners: own links, schedule, hidden (existing) plus section on/off, seconds per banner and slide/fade.
 - [x] M7 Homepage sections: reorder and show/hide every block below the hero (trust strip, collections, banners, favourites, category rows, mystery, reviews, brand note); favourites row source = first / newest / best sellers (90 days) / on sale / a category / hand-picked, 4 or 8; never repeated in the category rows.
 - [x] M8 Categories: per category/subcategory card button (Choose your size / Add to bag / Reveal your box / Available; Mystery Box never says “Choose your size”), description under the title, SEO title/description. Alt text fixed (“Men’s collection collection”). Not yet: size guide per category (needs M12).
 
 ## Phase 3 — products and catalog
-- [ ] M9 Product editor upgrades (existing editor: name, category, price, stock, photos, sizes/colours, label, offer)
+- [x] M9 Product editor: status Active/Draft/Hidden (draft and hidden never reach the shop or checkout), SKU, fabric/material, care, featured, low-stock level, stock per size (checked at checkout, reduced by orders, restored on cancel/return; sold-out sizes greyed out), SEO title/description, related products, one badge with presets. List: select + bulk status / price % / move category, duplicate (as Draft), CSV export, CSV import with preview (new rows become Drafts, nothing deleted, all-or-nothing). Not done: slug-style product addresses, rich text, related products shown on the product page.
 - [x] M10 Mystery Box details: what’s guaranteed, “worth at least ৳X”, how-it-works steps, no-spoiler note on Mystery Box pages (Categories tab). Style choices stay the built-in list.
 - [x] M11 Gift options: gift wrap (price) and message card (length limit) at checkout for chosen categories (default Mystery Box + Love & Care); charged and checked by the server; shown on the order and invoice. (Per category, not per product.)
 - [x] M12 Size guides: reusable tables (any columns/rows, note), attached to categories, subcategories or single products; “Size guide” pop-up on product pages. One clothing guide seeded but not attached.
@@ -56,7 +56,7 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
 
 ## Phase 8 — operations and safety
 - [x] M25 Overview: today / 7 / 30-day orders and revenue, pending orders, top products (30 days), low stock, subscribers — above the existing charts.
-- [ ] M26 Users & roles (today: one owner password, no user accounts)
+- [x] M26 Users & roles: owner keeps the ADMIN_PASSWORD sign-in; owners add staff or other owners with a username + temporary password (scrypt-hashed), forced password change at first sign-in, disable/remove ends sessions immediately. Staff: orders, products (no price/offer changes), customers only — enforced on the server; staff never receive coupons, subscribers, activity log or accounts. Activity log shows who. Per-username login limits.
 - [x] M27 Activity log (filter by area/date) and Backup page (products, categories, orders, customers CSV; settings JSON export/import).
 - [x] M28 Security pass — findings:
   - OK: every admin read/write calls requireAdmin on the API (admin, images); public routes expose only published content, approved reviews and redirects; coupons, customers, orders stay private; no secrets in browser code; all owner input validated on the server; page text is escaped (safe formatting only).

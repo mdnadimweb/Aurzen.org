@@ -132,3 +132,14 @@ export function MysteryEditor(p:SiteProps){
       <label>No-spoiler note<textarea rows={2} maxLength={300} value={d.noSpoiler} onChange={e=>set({...d,noSpoiler:e.target.value})}/></label>
     </>} validate={v=>v.steps.some(s=>!s.trim())?'Fill in or remove empty steps.':''}/></EditableGroup>;
 }
+
+export function BannersEditor(p:SiteProps){
+  const b=p.site.banners;
+  return <EditableGroup><EditableCard title="Promotion banner settings" summary={(b.enabled?'Shown':'Hidden')+' · '+b.interval+' s per banner · '+(b.transition==='fade'?'fade':'slide')} badge={b.enabled?{text:'On',tone:'on'}:{text:'Off',tone:'off'}} initial={b} onSave={v=>p.saveSite('banners',v)}
+    render={(d,set)=><>
+      <label className="ec-toggle"><input type="checkbox" checked={d.enabled} onChange={e=>set({...d,enabled:e.target.checked})}/><span>Show the promotion banners on the homepage</span></label>
+      <div className="form-pair"><label>Seconds per banner<input type="number" min={2} max={20} step={0.5} value={d.interval} onChange={e=>set({...d,interval:Number(e.target.value)})}/></label>
+        <label>Change style<select value={d.transition} onChange={e=>set({...d,transition:e.target.value as 'slide'|'fade'})}><option value="slide">Slide</option><option value="fade">Fade</option></select></label></div>
+      <p className="hero-slide__hint">Each banner’s own link, images and dates are edited in the list below.</p>
+    </>}/></EditableGroup>;
+}

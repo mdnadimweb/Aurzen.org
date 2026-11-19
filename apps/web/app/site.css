@@ -112,3 +112,4 @@ body:has(.has-mobile-purchase) .chat-buttons{bottom:96px}
 .mystery-details p,.mystery-details li{line-height:1.7;white-space:pre-line}
 .mystery-details ol{margin:0;padding-left:20px}
 .mystery-details__worth{font-weight:600;color:var(--plum);margin:0}
+.promo-banner[data-transition=fade] .promo-slide{transform:none!important;animation:none!important;transition:opacity .9s ease!important}.promo-banner[data-transition=fade] .promo-slide[data-active=false]{opacity:0}

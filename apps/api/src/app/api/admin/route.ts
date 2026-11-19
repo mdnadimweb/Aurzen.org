@@ -1,12 +1,13 @@
 import { requireAdmin, currentUser, hashPassword, checkNewPassword, verifyPassword, endSessionsOf, newUserId, type Staff } from '../../../lib/auth';
-import { catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
+import { adjustSizeStock, catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
 import { normalizeSiteSection, normalizeContentSection, normalizeCustomer, normalizeCoupons, siteSections } from '@aurzen/shared/site';
 import type { Database } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
-import { statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
+import { defaultProductExtra, normalizeProductExtra, statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
 import { addCategory, editCategory, deleteCategory, moveProducts } from '../../../lib/categories';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
+import { bulkProducts, duplicateProduct, importProducts } from '../../../lib/product-bulk';
 function productOffer(value:unknown){
     try{return normalizeOffer(value);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid offer.');}
@@ -16,8 +17,8 @@ function productVariants(value:unknown,label:'size'|'colour'){
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid '+label+' list.');}
 }
 /** What staff accounts may do: orders, products (not prices) and customers. Everything else is owner-only. */
-const staffActions=new Set(['saveProduct','stock','markRead','status','bulkStatus','editOrder','delivery','orderNotes','saveCustomer','changePassword']);
-const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers',saveCoupons:'Marketing',saveUser:'Users',resetUserPassword:'Users',deleteUser:'Users',changePassword:'Users'};
+const staffActions=new Set(['duplicateProduct','saveProduct','stock','markRead','status','bulkStatus','editOrder','delivery','orderNotes','saveCustomer','changePassword']);
+const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers',saveCoupons:'Marketing',bulkProducts:'Products',duplicateProduct:'Products',importProducts:'Products',saveUser:'Users',resetUserPassword:'Users',deleteUser:'Users',changePassword:'Users'};
 const activityArea=(d:Record<string,any>)=>areas[d.action]||'Other';
 function activityDetail(d:Record<string,any>){
     const what=(x:unknown)=>typeof x==='string'||typeof x==='number'?String(x).slice(0,80):'';
@@ -29,6 +30,9 @@ function activityDetail(d:Record<string,any>){
         case 'bulkStatus':return (Array.isArray(d.ids)?d.ids.length:0)+' orders → '+what(d.status);
         case 'orderNotes':return 'Notes on order '+what(d.id);
         case 'saveCustomer':return 'Customer '+what(d.phone);
+        case 'bulkProducts':return 'Bulk '+what(d.op)+' on '+(Array.isArray(d.ids)?d.ids.length:0)+' products'+(d.value!==undefined?' ('+what(d.value)+')':'');
+        case 'duplicateProduct':return 'Duplicated product #'+what(d.id);
+        case 'importProducts':return 'Imported '+(Array.isArray(d.rows)?d.rows.length:0)+' product rows';
         case 'saveUser':return (d.id?'Edited account ':'Added account ')+what(d.username)+(d.role?' ('+what(d.role)+')':'')+(d.disabled===true?' — disabled':'');
         case 'resetUserPassword':return 'Reset a password';
         case 'deleteUser':return 'Removed an account';
@@ -76,13 +80,18 @@ export async function POST(request: Request) {
                 assert(Number.isSafeInteger(d.price) && d.price > 0 && d.price <= 1000000, 'Enter a whole taka price between 1 and 1,000,000.');
                 assert(Number.isSafeInteger(d.stock) && d.stock >= 0 && d.stock <= 1000000, 'Stock must be a whole number from 0 to 1,000,000.');
                 if(d.id!==undefined)assert(Number.isSafeInteger(d.id)&&d.id>0,'Invalid product.');
-                const previous=d.id?await db.prepare('SELECT image,images,offer,sizes,colors,price FROM products WHERE id=?').get(d.id):null;
+                const previous=d.id?await db.prepare('SELECT image,images,offer,sizes,colors,price,extra FROM products WHERE id=?').get(d.id):null;
                 // Staff may edit products but not prices or offers.
-                if(user.role!=='owner')assert(previous?Number(previous.price)===d.price&&(d.offer===undefined||JSON.stringify(d.offer)===String(previous.offer)):true,'Only an owner can change prices or offers.',403);
+                if(user.role!=='owner')assert(previous?Number(previous.price)===d.price&&(d.offer===undefined||JSON.stringify(productOffer(d.offer))===JSON.stringify(JSON.parse(String(previous.offer||'null')))):true,'Only an owner can change prices or offers.',403);
                 const offer=d.offer===undefined?(previous?JSON.parse(String(previous.offer||'null')):null):productOffer(d.offer);
                 // Leaving sizes/colors out keeps what the product already has; [] turns the choice off.
                 const sizes=d.sizes===undefined?(previous?JSON.parse(String(previous.sizes||'[]')):[]):productVariants(d.sizes,'size');
                 const colors=d.colors===undefined?(previous?JSON.parse(String(previous.colors||'[]')):[]):productVariants(d.colors,'colour');
+                // Studio-only details; leaving them out keeps what the product has. Per-size stock sets the total.
+                let extra;
+                try{extra=d.extra===undefined?{...defaultProductExtra,...(previous?JSON.parse(String(previous.extra||'{}')):{})}:normalizeProductExtra(d.extra,sizes);}
+                catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid product details.');}
+                if(Object.keys(extra.sizeStock).length)d.stock=Object.values(extra.sizeStock).reduce((s:number,n)=>s+(n as number),0);
                 const images:unknown=d.images===undefined?(previous?JSON.parse(String(previous.images||'[]')):[]):d.images;
                 assert(Array.isArray(images)&&images.length<=8&&images.every(x=>typeof x==='string'&&x.length<=2000),'Use at most 8 product photos.');
                 assert(new Set(images).size===images.length,'Remove duplicate photos.');
@@ -101,13 +110,15 @@ export async function POST(request: Request) {
                 if (d.id) {
                     assert(Number.isSafeInteger(d.id), 'Invalid product.');
                     assert(await db.prepare('SELECT id FROM products WHERE id=?').get(d.id), 'Product not found.', 404);
-                    await db.prepare('UPDATE products SET name=?,category=?,price=?,stock=?,image=?,tag=?,description=?,images=?,offer=?,sizes=?,colors=? WHERE id=?').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors), d.id);
+                    await db.prepare('UPDATE products SET name=?,category=?,price=?,stock=?,image=?,tag=?,description=?,images=?,offer=?,sizes=?,colors=?,extra=? WHERE id=?').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors), JSON.stringify(extra), d.id);
                 }
                 else
-                    await db.prepare('INSERT INTO products(name,category,price,stock,image,tag,description,images,offer,sizes,colors) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors));
+                    await db.prepare('INSERT INTO products(name,category,price,stock,image,tag,description,images,offer,sizes,colors,extra) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors), JSON.stringify(extra));
             }
             else if (d.action === 'stock') {
                 assert(Number.isSafeInteger(d.id) && Number.isSafeInteger(d.stock) && d.stock >= 0 && d.stock <= 1000000, 'Invalid stock.');
+                const sized = await db.prepare('SELECT extra FROM products WHERE id=?').get(d.id);
+                assert(!sized || !Object.keys(JSON.parse(String(sized.extra || '{}')).sizeStock || {}).length, 'This product has stock per size. Open the product to change it.');
                 assert((await db.prepare('UPDATE products SET stock=? WHERE id=?').run(d.stock, d.id)).changes, 'Product not found.', 404);
             }
             else if (d.action === 'deleteProduct') {
@@ -183,6 +194,9 @@ export async function POST(request: Request) {
                 assert(next !== d.current, 'Choose a different password.');
                 await db.prepare('UPDATE users SET hash=?,must_reset=0 WHERE id=?').run(hashPassword(next), user.id);
             }
+            else if (d.action === 'bulkProducts') await bulkProducts(db, d);
+            else if (d.action === 'duplicateProduct') await duplicateProduct(db, d.id);
+            else if (d.action === 'importProducts') await importProducts(db, d.rows);
             else if (d.action === 'saveCoupons') {
                 let coupons;
                 try { coupons = normalizeCoupons(d.coupons); } catch (error) { throw new HttpError(400, error instanceof Error ? error.message : 'Invalid coupons.'); }
@@ -288,7 +302,7 @@ async function changeStatus(db:Database,id:string,status:unknown,reason:unknown,
     if (order.status === next) return;
     if (restock && (next === 'Cancelled' || next === 'Returned'))
         for (const item of order.items)
-            await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(item.qty, item.id);
+            { await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(item.qty, item.id); await adjustSizeStock(db, item.id, item.size, item.qty); }
     if (next === 'Cancelled' && typeof reason === 'string' && reason.trim()) order.cancelReason = reason.trim().slice(0, 300);
     order.history = [...(order.history || []), { status: next, date: new Date().toISOString() }];
     order.status = next;

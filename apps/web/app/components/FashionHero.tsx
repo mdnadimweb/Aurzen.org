@@ -2,8 +2,9 @@
 
 import { useEffect, useState, type CSSProperties, type FocusEvent } from "react";
 import Link from "next/link";
-import type { HeroSlide, Product } from "@aurzen/shared/catalog";
+import { categoryPath, type HeroSlide, type Product } from "@aurzen/shared/catalog";
 import { useStore } from "../providers";
+import { linkHref, type SiteLink } from "@aurzen/shared/site";
 import BoxArt from "./box-art";
 import ProductImage from "./product-image";
 import { usePageLoaded } from "./use-page-loaded";
@@ -74,13 +75,16 @@ export function defaultHeroSlides(products: Product[], categories: string[]): He
 }
 
 export default function FashionHero() {
-  const { products, categories, hero } = useStore();
+  const { products, categories, hero, categoryTree, now } = useStore();
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [interacting, setInteracting] = useState(false);
   const pageLoaded = usePageLoaded();
 
-  const slides = hero?.length ? hero : defaultHeroSlides(products, categories);
+  // Owner slides that are hidden or outside their dates are skipped; if none are left, the automatic slides show.
+  const at = now || Date.now();
+  const scheduled = (hero || []).filter((s) => !s.hidden && (!s.startsAt || Date.parse(s.startsAt) <= at) && (!s.endsAt || at < Date.parse(s.endsAt)));
+  const slides = scheduled.length ? scheduled : defaultHeroSlides(products, categories);
   // Slides can be removed in the studio while this page is open.
   useEffect(() => { if (activeIndex >= slides.length) setActiveIndex(0); }, [activeIndex, slides.length]);
   const current = slides[activeIndex] || slides[0];
@@ -146,7 +150,7 @@ export default function FashionHero() {
                       {slide.emphasis && <>{" "}<em>{words(slide.emphasis, slide.title.split(" ").length)}</em></>}
                     </h1>
                     {slide.description && <p>{slide.description}</p>}
-                    <Link className="lux-hero__button" href={`/shop/?category=${encodeURIComponent(slide.category)}`}>
+                    <Link className="lux-hero__button" href={slide.link ? linkHref(slide.link as SiteLink, categoryTree) : categoryPath(categoryTree, slide.category)}>
                       {slide.cta} <span aria-hidden="true">↗</span>
                     </Link>
                   </div>

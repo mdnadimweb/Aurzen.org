@@ -94,3 +94,14 @@ test('homepage sections keep every block once; older saved settings get new defa
   assert.equal(old.home.favourites.source,'first');assert.equal(old.home.favourites.count,8);assert.deepEqual(old.home.order,defaultSite.home.order);
   assert.throws(()=>normalizeSiteSection('mysteryBox',{guaranteed:'',worth:-1,noSpoiler:'',steps:[]}),/Worth/);
 });
+const {normalizeHeroSlides}=require('@aurzen/shared/catalog');
+test('hero slides accept a safe link and a schedule; banner settings are bounded',()=>{
+  const slide={eyebrow:'',title:'Eid edit',emphasis:'',description:'',image:'box',alt:'Box',caption:'',note:'',category:'Ladies Fashion',cta:'Shop',tone:'rose'};
+  const [s]=normalizeHeroSlides([{...slide,link:{type:'url',value:'/sale/'},startsAt:'2026-01-01T00:00:00Z',endsAt:'2026-02-01T00:00:00Z',hidden:true}]);
+  assert.deepEqual(s.link,{type:'url',value:'/sale/'});assert.equal(s.hidden,true);assert.equal(s.endsAt,'2026-02-01T00:00:00.000Z');
+  assert.throws(()=>normalizeHeroSlides([{...slide,link:{type:'url',value:'javascript:alert(1)'}}]),/must start with/);
+  assert.throws(()=>normalizeHeroSlides([{...slide,startsAt:'2026-02-01T00:00:00Z',endsAt:'2026-01-01T00:00:00Z'}]),/after start/);
+  assert.equal(normalizeHeroSlides([slide])[0].link,undefined);
+  assert.deepEqual(normalizeSiteSection('banners',{enabled:false,interval:6,transition:'fade'}),{enabled:false,interval:6,transition:'fade'});
+  assert.throws(()=>normalizeSiteSection('banners',{enabled:true,interval:1,transition:'fade'}),/2 to 20/);
+});

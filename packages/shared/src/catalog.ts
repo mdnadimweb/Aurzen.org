@@ -1,7 +1,29 @@
 export type Offer = {enabled:boolean;percent:number;startsAt:string|null;endsAt:string|null};
 // sizes/colors: what the owner offers for this product. Empty or missing means the
 // product has no such choice and the product page does not show a picker for it.
-export type Product = {id:number;name:string;category:string;price:number;stock:number;image:string;images?:string[];tag:string;description?:string;offer?:Offer|null;sizes?:string[];colors?:string[]};
+export type Product = {id:number;name:string;category:string;price:number;stock:number;image:string;images?:string[];tag:string;description?:string;offer?:Offer|null;sizes?:string[];colors?:string[];extra?:ProductExtra};
+/** Studio-only product details. status: draft/hidden products never reach the shop. sizeStock: optional stock per size (then stock = their sum). */
+export type ProductExtra={sku:string;material:string;care:string;status:'active'|'draft'|'hidden';featured:boolean;lowStock:number;sizeStock:Record<string,number>;seoTitle:string;seoDescription:string;related:number[]};
+export const defaultProductExtra:ProductExtra={sku:'',material:'',care:'',status:'active',featured:false,lowStock:5,sizeStock:{},seoTitle:'',seoDescription:'',related:[]};
+export function normalizeProductExtra(value:unknown,sizes:string[]):ProductExtra{
+  if(value===undefined||value===null)return {...defaultProductExtra};
+  if(typeof value!=='object'||Array.isArray(value))throw new Error('Invalid product details.');
+  const v=value as Record<string,unknown>;
+const text=(x:unknown,max:number,label:string,multi=false)=>{const s=typeof x==='string'?(multi?x.trim():x.split(/\s+/).join(' ').trim()):'';if(s.length>max)throw new Error(label+' must be at most '+max+' characters.');return s;};
+  if(!['active','draft','hidden'].includes(v.status as string))throw new Error('Choose Active, Draft or Hidden.');
+  const lowStock=v.lowStock===undefined?5:Number(v.lowStock);if(!Number.isSafeInteger(lowStock)||lowStock<0||lowStock>10000)throw new Error('Low-stock level must be a whole number.');
+  const sizeStock:Record<string,number>={};
+  for(const [size,n] of Object.entries((v.sizeStock&&typeof v.sizeStock==='object'?v.sizeStock:{}) as Record<string,unknown>)){
+    if(n===''||n===null||n===undefined)continue;
+    if(!sizes.includes(size))continue;
+    if(!Number.isSafeInteger(n)||(n as number)<0||(n as number)>1000000)throw new Error('Stock for size '+size+' must be a whole number.');
+    sizeStock[size]=n as number;
+  }
+  const related=Array.isArray(v.related)?Array.from(new Set(v.related.filter(n=>Number.isSafeInteger(n)&&(n as number)>0) as number[])).slice(0,8):[];
+  return {sku:text(v.sku,60,'SKU'),material:text(v.material,200,'Fabric / material'),care:text(v.care,600,'Care instructions',true),status:v.status as ProductExtra['status'],featured:v.featured===true,lowStock,sizeStock,seoTitle:text(v.seoTitle,90,'SEO title'),seoDescription:text(v.seoDescription,170,'SEO description'),related};
+}
+/** Units available in one size: its own count when per-size stock is set, else the product total. */
+export const sizeAvailable=(p:Pick<Product,'stock'|'extra'>,size:string)=>p.extra&&Object.keys(p.extra.sizeStock).length?(p.extra.sizeStock[size]??0):p.stock;
 // color is omitted (or '') for products without colour choices.
 export type CartItem = {id:number;qty:number;size:string;color?:string};
 export type OrderItem = CartItem & {name:string;price:number};
@@ -45,7 +67,10 @@ export function normalizeOffer(value:unknown):Offer|null{
 // gift box illustration, an uploaded /media/ photo, or an HTTPS image URL.
 export const heroTones=['rose','sand','plum'] as const;
 export const maxHeroSlides=6;
-export type HeroSlide={eyebrow:string;title:string;emphasis:string;description:string;image:string;alt:string;caption:string;note:string;category:string;cta:string;tone:typeof heroTones[number]};
+export type HeroSlide={eyebrow:string;title:string;emphasis:string;description:string;image:string;alt:string;caption:string;note:string;category:string;cta:string;tone:typeof heroTones[number];
+  /** Optional: where the button goes (else the category), and when the slide shows. */
+  link?:{type:string;value:string}|null;startsAt?:string|null;endsAt?:string|null;hidden?:boolean};
+const heroLinkTypes=['home','shop','collections','sale','tracking','category','product','page','faq','url'];
 export const heroFieldLimits={eyebrow:40,title:60,emphasis:60,description:240,alt:160,caption:40,note:40,category:100,cta:40} as const;
 const heroLabels:Record<keyof typeof heroFieldLimits,string>={eyebrow:'Eyebrow',title:'Heading',emphasis:'Heading highlight',description:'Description',alt:'Photo description',caption:'Photo caption',note:'Photo note',category:'Button category',cta:'Button text'};
 const heroRequired=new Set(['title','category','cta','alt']);
@@ -67,7 +92,19 @@ export function normalizeHeroSlides(value:unknown):HeroSlide[]{
     if(!valid&&image.length<=2000)try{valid=new URL(image).protocol==='https:';}catch{}
     if(!valid)throw new Error(`Upload a photo, use an HTTPS image URL or choose the gift box${at}.`);
     if(!heroTones.includes(s.tone as HeroSlide['tone']))throw new Error(`Choose a colour mood${at}.`);
-    return {...slide,image,tone:s.tone} as HeroSlide;
+    const l=s.link as Record<string,unknown>|null|undefined;
+    let link:HeroSlide['link']=null;
+    if(l&&typeof l==='object'){
+      if(!heroLinkTypes.includes(l.type as string)||typeof l.value!=='string'||l.value.length>500)throw new Error('Choose where the button goes'+at+'.');
+      const v=l.value.trim();
+      if(l.type==='url'&&!((v.startsWith('/')&&!v.startsWith('//'))||v.startsWith('https://')))throw new Error('Button address must start with / or https://'+at+'.');
+      link={type:l.type as string,value:v};
+    }
+    const when=(x:unknown,label:string)=>{if(x===null||x===undefined||x==='')return null;if(typeof x!=='string'||!Number.isFinite(Date.parse(x)))throw new Error(label+at+' must be a valid date.');return new Date(x).toISOString();};
+    const startsAt=when(s.startsAt,'Start'),endsAt=when(s.endsAt,'End');
+    if(startsAt&&endsAt&&startsAt>=endsAt)throw new Error('End must be after start'+at+'.');
+    // Optional fields are stored only when used, so older slides keep exactly their shape.
+    return {...slide,image,tone:s.tone,...(link?{link}:{}),...(startsAt?{startsAt}:{}),...(endsAt?{endsAt}:{}),...(s.hidden===true?{hidden:true}:{})} as HeroSlide;
   });
 }
 // Owner-edited storefront text and category cover photos. Stored as one settings row;

@@ -56,6 +56,7 @@ export type SiteSettings={
   sizeGuides:{items:SizeGuide[]};
   gifts:{wrap:boolean;wrapPrice:number;card:boolean;cardLimit:number;categories:string[]};
   mysteryBox:{guaranteed:string;worth:number;noSpoiler:string;steps:string[]};
+  banners:{enabled:boolean;interval:number;transition:'slide'|'fade'};
 };
 
 const nav=(id:string,label:string,type:SiteLink['type'],value=''):NavItem=>({id,label,link:{type,value},hidden:false});
@@ -95,6 +96,7 @@ export const defaultSite:SiteSettings={
   sizeGuides:{items:[{id:'clothing',name:'Clothing (inches)',columns:['Size','Chest','Waist','Length'],rows:[['S','36','30','27'],['M','38','32','28'],['L','40','34','29'],['XL','42','36','30'],['XXL','44','38','31']],note:'Measurements are in inches. Between sizes? Choose the larger one.',categories:[],products:[]}]},
   gifts:{wrap:false,wrapPrice:50,card:false,cardLimit:150,categories:[]},
   mysteryBox:{guaranteed:'',worth:0,noSpoiler:'',steps:[]},
+  banners:{enabled:true,interval:4.5,transition:'slide'},
   messages:{Confirmed:'Hi {name}, your AURZÉN order {order_id} is confirmed. Total {total}. We will let you know when it ships.',Shipped:'Hi {name}, your AURZÉN order {order_id} is on its way with {courier} (tracking {tracking}).',Delivered:'Hi {name}, your AURZÉN order {order_id} has been delivered. Thank you for choosing us!',Cancelled:'Hi {name}, your AURZÉN order {order_id} has been cancelled. Reply if you have any questions.'},
 };
 
@@ -331,6 +333,7 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
     return {wrap:bool(g.wrap,'Gift wrap'),wrapPrice:int(g.wrapPrice,0,5000,'Gift wrap price'),card:bool(g.card,'Message card'),cardLimit:int(g.cardLimit,20,500,'Message length'),categories:(g.categories as unknown[]).map(c=>str(c,60,'Category',{required:true}))};
   },
 mysteryBox(v){    const m=obj(v,'mystery box details');    if(!Array.isArray(m.steps)||m.steps.length>6)fail('Use at most 6 steps.');    return {guaranteed:str(m.guaranteed,600,'What is guaranteed',{multiline:true}),worth:int(m.worth,0,1000000,'Worth at least'),noSpoiler:str(m.noSpoiler,300,'No-spoiler note',{multiline:true}),steps:(m.steps as unknown[]).map((s,i)=>str(s,160,'Step '+(i+1),{required:true}))};  },
+banners(v){    const b=obj(v,'banner settings');    const interval=Number(b.interval);if(!Number.isFinite(interval)||interval<2||interval>20)fail('Seconds per banner must be from 2 to 20.');    if(b.transition!=='slide'&&b.transition!=='fade')fail('Choose slide or fade.');    return {enabled:bool(b.enabled,'Promotion banners'),interval:Math.round(interval*2)/2,transition:b.transition as 'slide'|'fade'};  },
   messages(v){
     const m=obj(v,'message templates'),out:Record<string,string>={};
     for(const [status,text] of Object.entries(m)){
