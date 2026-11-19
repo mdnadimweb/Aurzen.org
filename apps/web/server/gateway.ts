@@ -5,7 +5,7 @@ import {maxImageBytes} from '@aurzen/shared/upload-limits';
 
 export async function forward(request:Request){
   const path=new URL(request.url).pathname;
-  if(!/^\/(?:api\/(?:catalog|orders|tracking|admin(?:\/session|\/images)?)\/?|media\/[a-f0-9-]{36}\.webp\/?)$/.test(path))return Response.json({error:'Not found.'},{status:404});
+  if(!/^\/(?:api\/(?:catalog|content|subscribe|orders|tracking|admin(?:\/session|\/images)?)\/?|media\/[a-f0-9-]{36}\.webp\/?)$/.test(path))return Response.json({error:'Not found.'},{status:404});
   const mutation=!['GET','HEAD'].includes(request.method);
   if(mutation&&!validMutationOrigin(request))return Response.json({error:'Request origin is not allowed.'},{status:403});
   // The storefront's catalog refresh is served from the shared cached copy (see catalog()).
@@ -13,7 +13,7 @@ export async function forward(request:Request){
     try{return Response.json(await catalog(),{headers:{'Cache-Control':'no-store'}});}
     catch{return Response.json({error:'Store service is temporarily unavailable.'},{status:502,headers:{'Cache-Control':'no-store'}});}
   }
-  const limit=path.includes('/images')?maxImageBytes+65536:32000;
+  const limit=path.includes('/images')?maxImageBytes+65536:/^\/api\/admin\/?$/.test(path)?1000000:32000;
   try{
     let body:Uint8Array|undefined;
     if(mutation){

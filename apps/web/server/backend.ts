@@ -4,6 +4,7 @@ import {revalidateTag,unstable_cache} from 'next/cache';
 import {cache} from 'react';
 import {randomUUID} from 'node:crypto';
 import type {Product,HeroSlide,Storefront,Category,Promotion} from '@aurzen/shared/catalog';
+import {mergeSite,defaultContent,type SiteSettings,type Content} from '@aurzen/shared/site';
 
 export function backendConfig(){
   const url=process.env.INTERNAL_API_URL||'http://127.0.0.1:4000';
@@ -19,7 +20,7 @@ async function read<T>(path:string,authenticated=false):Promise<T>{
   if(!response.ok)throw new Error('Store service is unavailable.');
   return response.json();
 }
-type CatalogData={products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;serverNow:number};
+type CatalogData={products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;site?:SiteSettings;serverNow:number};
 // The public catalog is the same for every visitor, so pages read a shared cached copy instead of
 // waiting on the store service each time. A copy older than a minute is refreshed in the background
 // (visitors still get an instant page, even while the free-plan API wakes up). Admin changes and new
@@ -33,3 +34,8 @@ const sharedCatalog=unstable_cache(()=>read<CatalogData>('/api/catalog/'),['aurz
 export const catalog=cache(async():Promise<CatalogData>=>({...(await sharedCatalog()),serverNow:Date.now()}));
 export const catalogChanged=()=>revalidateTag('catalog',{expire:0});
 export const isAdmin=async()=>(await read<{authenticated:boolean}>('/api/admin/session/',true)).authenticated;
+/** Site settings for metadata and server-rendered pages (defaults when the API is older). */
+export const site=cache(async():Promise<SiteSettings>=>{try{return (await catalog()).site||mergeSite(null);}catch{return mergeSite(null);}});
+// Pages, FAQ and approved reviews: the same shared cache and expiry as the catalog.
+const sharedContent=unstable_cache(()=>read<Content>('/api/content/'),['aurzen-content',cacheGeneration],{revalidate:300,tags:['catalog']});
+export const content=cache(async():Promise<Content>=>{try{return await sharedContent();}catch{return defaultContent;}});

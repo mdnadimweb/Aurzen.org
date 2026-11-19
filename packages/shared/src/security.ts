@@ -7,7 +7,8 @@ export function contentSecurityPolicy(nonce:string,development=false){
     "img-src 'self' data: blob: https:",
     // Brand fonts are self-hosted through next/font.
     "font-src 'self'",
-    `connect-src 'self'${development?' ws: wss:':''}`,
+    // Meta Pixel and Google Analytics (loaded only when the owner sets an ID) report to these.
+    `connect-src 'self' https://www.facebook.com https://connect.facebook.net https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com${development?' ws: wss:':''}`,
     "object-src 'none'", "base-uri 'none'", "form-action 'self'",
     "frame-ancestors 'none'", "frame-src 'none'",
   ].join('; ');

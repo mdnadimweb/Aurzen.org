@@ -1,5 +1,6 @@
 import { requireAdmin } from '../../../lib/auth';
-import { catalog, database, orders, transaction } from '../../../lib/database';
+import { catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
+import { normalizeSiteSection, normalizeContentSection, siteSections } from '@aurzen/shared/site';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
 import { statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
 import { addCategory, editCategory, deleteCategory, moveProducts } from '../../../lib/categories';
@@ -13,10 +14,33 @@ function productVariants(value:unknown,label:'size'|'colour'){
     try{return normalizeVariants(value,label);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid '+label+' list.');}
 }
+const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing'};
+const activityArea=(d:Record<string,any>)=>areas[d.action]||'Other';
+function activityDetail(d:Record<string,any>){
+    const what=(x:unknown)=>typeof x==='string'||typeof x==='number'?String(x).slice(0,80):'';
+    switch(d.action){
+        case 'saveProduct':return (d.id?'Edited product ':'Added product ')+what(d.name);
+        case 'stock':return 'Stock of product #'+what(d.id)+' set to '+what(d.stock);
+        case 'deleteProduct':return 'Removed product #'+what(d.id);
+        case 'status':return 'Order '+what(d.id)+' → '+what(d.status);
+        case 'editOrder':return 'Edited order '+what(d.id);
+        case 'delivery':return 'Courier details for order '+what(d.id);
+        case 'markRead':return 'Opened order '+what(d.id);
+        case 'saveSite':return 'Saved settings: '+what(d.section);
+        case 'resetSite':return 'Reset settings to default: '+what(d.section);
+        case 'saveContent':return 'Saved '+what(d.section);
+        default:return String(d.action||'Change')+(d.name?' '+what(d.name):'');
+    }
+}
+async function adminData(){
+    const db=await database();
+    const [base,list,pages,subscribers,activity]=await Promise.all([catalog(db),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all()]);
+    return {...base,orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
+}
 export const runtime = 'nodejs';
 export async function GET() { try {
     await requireAdmin();
-    return json({ ...await catalog(), orders: await orders() });
+    return json(await adminData());
 }
 catch (e) {
     return failure(e);
@@ -130,6 +154,10 @@ export async function POST(request: Request) {
                     assert(await db.prepare('SELECT id FROM products WHERE id=? AND (category=? OR category IN (SELECT name FROM categories WHERE parent=?))').get(id,category,category),`Choose a cover product from ${category} or its subcategories.`);
                 }
                 await db.prepare("INSERT INTO settings(key,value) VALUES('storefront',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(storefront));
+                // The older homepage editor and Menus & text share the first announcement message.
+                const siteRow=await db.prepare("SELECT value FROM settings WHERE key='site'").get();
+                const savedSite=siteRow?JSON.parse(String(siteRow.value)):null;
+                if(savedSite?.announcement?.items?.length){savedSite.announcement.items[0]={...savedSite.announcement.items[0],text:storefront.announcement.message,detail:storefront.announcement.detail};await saveSetting(db,'site',savedSite);}
             }
             else if(d.action==='editOrder')
                 await editOrder(db,d);
@@ -144,10 +172,37 @@ export async function POST(request: Request) {
                 order.courier=courier;order.trackingReference=trackingReference;
                 await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order),order.id);
             }
+            else if(d.action==='saveSite'){
+                assert(siteSections.includes(d.section),'Unknown settings section.');
+                let value;
+                try{value=normalizeSiteSection(d.section,d.value);}
+                catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid settings.');}
+                const row=await db.prepare("SELECT value FROM settings WHERE key='site'").get();
+                const saved=row?JSON.parse(String(row.value)):{};
+                await saveSetting(db,'site',{...saved,[d.section]:value});
+                if(d.section==='announcement'){const first=(value as {items:{text:string;detail:string}[]}).items[0];const row=await db.prepare("SELECT value FROM settings WHERE key='storefront'").get();if(first&&row){const sf=JSON.parse(String(row.value));sf.announcement={message:first.text,detail:first.detail};await saveSetting(db,'storefront',sf);}}
+            }
+            else if(d.action==='resetSite'){
+                assert(siteSections.includes(d.section),'Unknown settings section.');
+                const row=await db.prepare("SELECT value FROM settings WHERE key='site'").get();
+                const saved=row?JSON.parse(String(row.value)):{};delete saved[d.section];
+                await saveSetting(db,'site',saved);
+            }
+            else if(d.action==='saveContent'){
+                assert(['pages','faq','reviews'].includes(d.section),'Unknown content section.');
+                let value;
+                try{value=normalizeContentSection(d.section,d.value);}
+                catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid content.');}
+                const current=await content(db);
+                await saveSetting(db,'content',{...current,[d.section]:value});
+            }
+            else if(d.action==='deleteSubscriber')
+                await db.prepare('DELETE FROM subscribers WHERE contact=?').run(text(d.contact,1,200,'Subscriber'));
             else
                 assert(false, 'Unknown operation.');
+            if(d.action!=='markRead')await logActivity(db,activityArea(d),activityDetail(d));
         });
-        return json({ ...await catalog(), orders: await orders() });
+        return json(await adminData());
     }
     catch (e) {
         return failure(e);

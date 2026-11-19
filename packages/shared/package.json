@@ -19,6 +19,10 @@
       "types": "./dist/upload-limits.d.ts",
       "default": "./dist/upload-limits.js"
     },
+    "./site": {
+      "types": "./dist/site.d.ts",
+      "default": "./dist/site.js"
+    },
     "./tracking": {
       "types": "./dist/tracking.d.ts",
       "default": "./dist/tracking.js"
