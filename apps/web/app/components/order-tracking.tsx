@@ -1,6 +1,6 @@
 ﻿'use client';
 import {useEffect,useRef,useState,type FocusEvent,type InvalidEvent,type FormEvent} from 'react';
-import {api} from '../providers';
+import {api,useStore} from '../providers';
 import {normalizePhone} from '@aurzen/shared/phone';
 import type {PublicOrder} from '@aurzen/shared/tracking';
 import {optionLabel} from '@aurzen/shared/catalog';
@@ -26,7 +26,8 @@ export default function OrderTracking(){
     onInput:(event:FormEvent<HTMLInputElement>)=>{setOrder(null);setError('');if(fieldErrors[field])checkField(field,event.currentTarget.value);},
   });
   const message=(field:Field)=>fieldErrors[field]&&<span className="field-error" id={'tracking-'+field+'-error'}>{fieldErrors[field]}</span>;
-  return <main className="section tracking-page"><div className="eyebrow">FROM OUR STORE TO YOUR DOOR</div><h1>Track your little finds.</h1><p>Enter your order reference and the mobile number used at checkout.</p><form className="panel tracking-form" method="post" action="/api/tracking/" aria-busy={busy} onSubmit={async event=>{
+  const trackingIntro=useStore().site.checkout.trackingIntro;
+  return <main className="section tracking-page"><div className="eyebrow">FROM OUR STORE TO YOUR DOOR</div><h1>Track your little finds.</h1><p>{trackingIntro||"Enter your order reference and the mobile number used at checkout."}</p><form className="panel tracking-form" method="post" action="/api/tracking/" aria-busy={busy} onSubmit={async event=>{
     event.preventDefault();if(submitting.current)return;
     const form=event.currentTarget,data=new FormData(form),errors:FieldErrors={};
     setOrder(null);setError('');
