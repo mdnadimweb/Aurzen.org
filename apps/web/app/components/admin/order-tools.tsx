@@ -1,24 +1,55 @@
 'use client';
 // Extra order tools: internal notes, status timeline, review flags, WhatsApp/SMS messages from
-// templates, printable invoices/labels, bulk status changes and CSV export of the filtered list.
-import {useMemo,useState} from 'react';
-import {money,optionLabel,statusOptions,statuses,type Order} from '@aurzen/shared/catalog';
+// templates, printable invoices/labels and CSV export of the filtered list.
+import {useMemo,useState,type ReactNode} from 'react';
+import Icon from '../admin-icons';
+import {money,optionLabel,type Order} from '@aurzen/shared/catalog';
 import {fillTemplate,orderFlags,whatsappLink,type CustomerInfo,type SiteSettings} from '@aurzen/shared/site';
-import {csv,download} from './site-settings';
 
 const paymentNames:Record<string,string>={cod:'Cash on delivery',bkash:'bKash',nagad:'Nagad',advance:'Advance payment'};
 export const paymentName=(o:Order)=>paymentNames[o.paymentMethod||'cod'];
 const intlPhone=(phone:string)=>'88'+phone.replace(/\D/g,'').replace(/^88/,'');
 const esc=(s:string)=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]!));
 
-export function OrderTools({order,orders,site,customer,onSave}:{order:Order;orders:Order[];site:SiteSettings;customer?:CustomerInfo;onSave:(data:Record<string,unknown>)=>Promise<void>}){
-  const [notes,setNotes]=useState(order.notes||''),[busy,setBusy]=useState(false);
+type Save=(data:Record<string,unknown>)=>Promise<void>;
+
+/** Status dropdown (passed as children) with two icon buttons beside it: delivery details and notes/history.
+ *  The chosen panel opens underneath, full width of the cell. */
+export function OrderActions({order,orders,site,customer,onSave,onOpen,children}:{order:Order;orders:Order[];site:SiteSettings;customer?:CustomerInfo;onSave:Save;onOpen:()=>void;children:ReactNode}){
+  const [open,setOpen]=useState<''|'delivery'|'notes'>('');
   const flags=useMemo(()=>orderFlags(order,orders),[order,orders]);
+  const check=flags.length>0||Boolean(customer?.blocked)||Boolean(customer?.tags.includes('Risky'));
+  const filled=Boolean(order.courier&&order.trackingReference);
+  const toggle=(panel:'delivery'|'notes')=>{setOpen(o=>o===panel?'':panel);if(open!==panel)onOpen();};
+  const deliveryLabel='Delivery details: '+(filled?order.courier:'not added');
+  const notesLabel='Notes, history & messages'+(check?' (needs a check)':'')+(order.notes?' (has a note)':'');
+  return <div className="order-actions">
+    <div className="order-actions__row">
+      {children}
+      <button type="button" className={'order-icon'+(open==='delivery'?' is-open':'')} aria-expanded={open==='delivery'} aria-label={deliveryLabel} title={deliveryLabel} onClick={()=>toggle('delivery')}><Icon name="truck"/>{filled&&<span className="order-icon__dot order-icon__dot--ok" aria-hidden="true"/>}</button>
+      <button type="button" className={'order-icon'+(open==='notes'?' is-open':'')} aria-expanded={open==='notes'} aria-label={notesLabel} title={check?flags.join('\n')||notesLabel:notesLabel} onClick={()=>toggle('notes')}><Icon name="notes"/>{check?<span className="order-icon__dot order-icon__dot--alert" aria-hidden="true"/>:order.notes?<span className="order-icon__dot" aria-hidden="true"/>:null}</button>
+    </div>
+    {open==='delivery'&&<DeliveryForm key={(order.courier||'')+'-'+(order.trackingReference||'')} order={order} onSave={onSave}/>}
+    {open==='notes'&&<OrderTools key={order.notes||''} order={order} flags={flags} site={site} customer={customer} onSave={onSave}/>}
+  </div>;
+}
+
+function DeliveryForm({order,onSave}:{order:Order;onSave:Save}){
+  const [saving,setSaving]=useState(false);
+  return <form className="admin-delivery-form order-panel" onSubmit={async e=>{e.preventDefault();if(saving)return;const data=new FormData(e.currentTarget);setSaving(true);try{await onSave({action:'delivery',id:order.id,courier:data.get('courier'),trackingReference:data.get('trackingReference')});}finally{setSaving(false);}}}>
+    <label>Courier<input name="courier" list="courier-names" defaultValue={order.courier||''} maxLength={80} disabled={saving} placeholder="Pathao, Steadfast, RedX…"/><datalist id="courier-names"><option value="Pathao"/><option value="Steadfast"/><option value="RedX"/><option value="Paperfly"/><option value="eCourier"/></datalist></label>
+    <label>Tracking reference<input name="trackingReference" defaultValue={order.trackingReference||''} maxLength={120} disabled={saving} placeholder="Real courier reference"/></label>
+    <small>Enter both fields to show delivery details to the customer. Clear both to remove them.</small>
+    <button className="a-btn a-btn--primary a-btn--sm" disabled={saving}>{saving?'Saving delivery…':'Save delivery details'}</button>
+  </form>;
+}
+
+function OrderTools({order,flags,site,customer,onSave}:{order:Order;flags:string[];site:SiteSettings;customer?:CustomerInfo;onSave:Save}){
+  const [notes,setNotes]=useState(order.notes||''),[busy,setBusy]=useState(false);
   const values={order_id:order.id,name:order.name,total:money(order.total),status:order.status,courier:order.courier||'our courier',tracking:order.trackingReference||'—'};
   const template=site.messages[order.status];
   const message=template?fillTemplate(template,values):'';
-  return <details className="admin-delivery order-tools">
-    <summary><span>Notes, history & messages</span>{(flags.length>0||customer?.blocked||customer?.tags.includes('Risky'))&&<span className="order-flag" title={flags.join('\n')}>⚑ Check</span>}{order.notes&&<span className="admin-delivery__state">Note</span>}</summary>
+  return <div className="order-tools order-panel">
     <div className="order-tools__body">
       {flags.map(f=><p key={f} className="order-flag-text">⚑ {f}</p>)}
       {customer?.blocked&&<p className="order-flag-text">⚑ This phone number is blocked from ordering.</p>}
@@ -38,25 +69,6 @@ export function OrderTools({order,orders,site,customer,onSave}:{order:Order;orde
       </div>
       {!template&&<p className="hero-slide__hint">No message template for “{order.status}”. Add one in Settings → Order messages.</p>}
     </div>
-  </details>;
-}
-
-/** Bulk status change, print and CSV export for the selected / filtered orders. */
-export function OrderBulkBar({selected,filtered,site,onBulk,onClear}:{selected:Order[];filtered:Order[];site:SiteSettings;onBulk:(status:string,reason:string)=>Promise<void>;onClear:()=>void}){
-  const [status,setStatus]=useState(''),[busy,setBusy]=useState(false);
-  // Only statuses every selected order may move to.
-  const allowed=statuses.filter(s=>selected.length>0&&selected.every(o=>o.status!==s&&statusOptions(o.status).includes(s)));
-  return <div className="order-bulk" role="region" aria-label="Bulk actions">
-    <span>{selected.length?selected.length+' selected':'Select orders for bulk actions'}</span>
-    <label className="sr-only" htmlFor="bulk-status">New status</label>
-    <select id="bulk-status" value={status} disabled={!selected.length||busy} onChange={e=>setStatus(e.target.value)}><option value="">Change status to…</option>{allowed.map(s=><option key={s}>{s}</option>)}</select>
-    <button type="button" className="a-btn a-btn--primary a-btn--sm" disabled={!status||busy} onClick={async()=>{
-      const reason=status==='Cancelled'?prompt('Reason for cancelling (optional)'):'';if(reason===null)return;
-      if(!confirm(`Change ${selected.length} order${selected.length===1?'':'s'} to ${status}?`))return;
-      setBusy(true);try{await onBulk(status,reason);setStatus('');onClear();}finally{setBusy(false);}}}>{busy?'Updating…':'Apply'}</button>
-    <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={!selected.length} onClick={()=>printOrders(selected,site,'invoice')}>Print invoices</button>
-    <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={!selected.length} onClick={()=>printOrders(selected,site,'label')}>Print labels</button>
-    <button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={!filtered.length} onClick={()=>download(`aurzen-orders-${new Date().toISOString().slice(0,10)}.csv`,csv([['Order','Date','Status','Name','Phone','Address','Area','Items','Subtotal','Delivery','Total','Payment','Courier','Tracking','Customer note','Internal notes'],...filtered.map(o=>[o.id,o.date,o.status,o.name,o.phone,o.address,o.area,o.items.map(i=>`${i.name} (${optionLabel(i)}) ×${i.qty}`).join('; '),o.total-o.delivery,o.delivery,o.total,paymentName(o),o.courier||'',o.trackingReference||'',o.note||'',o.notes||''])]))}>Export {filtered.length} to CSV</button>
   </div>;
 }
 
