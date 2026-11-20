@@ -92,3 +92,14 @@
 .order-icon__dot--alert{background:#c0392b}
 .order-panel{border:1px solid #efe6ec;border-radius:12px;background:#fcfbfa;padding:10px 12px}
 .order-panel.admin-delivery-form label{margin:6px 0}
+/* Homepage tab: slides, promotions and storefront sections start minimised; Edit opens the full form. */
+.admin .hero-slide__body[hidden],.admin .fold-body[hidden]{display:none!important}
+.hero-slide:not([data-open]) .hero-slide__head{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.fold-summary{display:block;margin-top:4px;font-family:var(--font-body);font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;color:#6f6170;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46ch}
+.hero-slide__head h2,.hero-slide__head h3,.fold-head h3{min-width:0}
+.fold-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.fold-head h3{margin:0}
+.fold-section:not([data-open]){padding-bottom:14px}
+.fold-section .fold-body{margin-top:12px}
+.admin .fold-toggle{flex:none}
+@media (max-width:640px){.fold-summary{max-width:100%}}
