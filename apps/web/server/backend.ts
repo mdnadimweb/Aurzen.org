@@ -20,7 +20,7 @@ async function read<T>(path:string,authenticated=false):Promise<T>{
   if(!response.ok)throw new Error('Store service is unavailable.');
   return response.json();
 }
-type CatalogData={products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;site?:SiteSettings;serverNow:number};
+type CatalogData={products:Product[];categories:string[];categoryDetails?:Category[];promotions?:Promotion[];hero?:HeroSlide[]|null;storefront?:Storefront|null;site?:SiteSettings;bestsellers?:number[];serverNow:number};
 // The public catalog is the same for every visitor, so pages read a shared cached copy instead of
 // waiting on the store service each time. A copy older than a minute is refreshed in the background
 // (visitors still get an instant page, even while the free-plan API wakes up). Admin changes and new

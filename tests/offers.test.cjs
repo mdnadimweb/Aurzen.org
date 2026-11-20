@@ -59,7 +59,7 @@ test('admin offer updates require authentication, validate server-side and prese
  const request=data=>new Request('https://store.example/api/admin/',{method:'POST',headers:{Origin:'https://store.example','Content-Type':'application/json'},body:JSON.stringify(data)});
  try{
   assert.equal((await POST(request({...payload,offer:offer()}))).status,401);
-  auth.requireAdmin=async()=>{};
+  auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
   for(const value of [offer({percent:0}),offer({percent:100}),offer({percent:1.2}),offer({startsAt:'2030-01-01T12:00'}),offer({startsAt:'2030-01-02T00:00Z',endsAt:'2030-01-01T00:00Z'})])assert.equal((await POST(request({...payload,offer:value}))).status,400);
   assert.equal((await POST(request({...payload,offer:offer()}))).status,200);
   assert.equal((await POST(request({...payload,name:'Legacy edit without offer'}))).status,200);

@@ -18,7 +18,7 @@ export function promotionHref(p:Promotion,categories:Category[]){
 export const autoAdvanceMs=4500;
 
 export default function PromoCarousel(){
-  const {promotions,categoryTree,now}=useStore();
+  const {promotions,categoryTree,now,site}=useStore(),banner=site.banners;
   const slides=activePromotions(promotions,now);
   const [index,setIndex]=useState(0),[previous,setPrevious]=useState(-1),[direction,setDirection]=useState<'next'|'back'>('next'),[paused,setPaused]=useState(false),[focused,setFocused]=useState(false);
   const touch=useRef<number|null>(null),pageLoaded=usePageLoaded();
@@ -28,17 +28,17 @@ export default function PromoCarousel(){
   const go=(i:number,dir:'next'|'back'='next')=>{setDirection(dir);setPrevious(current);setIndex((i+count)%count);};
   useEffect(()=>{
     if(!pageLoaded||count<2||paused||focused||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    const timer=window.setTimeout(()=>{if(document.visibilityState==='visible')go(current+1);},autoAdvanceMs);
+    const timer=window.setTimeout(()=>{if(document.visibilityState==='visible')go(current+1);},banner.interval*1000);
     return()=>window.clearTimeout(timer);
-  },[current,count,paused,focused,pageLoaded]);
-  if(!count)return null;
+  },[current,count,paused,focused,pageLoaded,banner.interval]);
+  if(!count||!banner.enabled)return null;
   const onTouchEnd=(event:TouchEvent)=>{
     const start=touch.current;touch.current=null;
     if(start===null||count<2)return;
     const delta=event.changedTouches[0].clientX-start;
     if(Math.abs(delta)>40)go(current+(delta<0?1:-1),delta<0?'next':'back');
   };
-  return <section className="promo-banner" data-direction={direction} onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)} aria-label="New arrivals and offers" aria-roledescription={count>1?'carousel':undefined}
+  return <section className="promo-banner" data-direction={direction} data-transition={banner.transition} onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)} aria-label="New arrivals and offers" aria-roledescription={count>1?'carousel':undefined}
     onFocusCapture={e=>{if((e.target as Element).matches(':focus-visible'))setFocused(true);}} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node|null))setFocused(false);}}>
     <div className="promo-banner__viewport" onTouchStart={e=>{touch.current=e.touches[0].clientX;}} onTouchEnd={onTouchEnd}>
       {slides.map((slide,i)=>{const active=i===current;return <article key={slide.id} className="promo-slide" data-active={active} data-state={active?(previous<0?'shown':'active'):i===previous?'leaving':undefined} aria-hidden={!active} inert={!active||undefined} aria-roledescription={count>1?'slide':undefined} aria-label={count>1?`${i+1} of ${count}: ${slide.headline}`:undefined}>

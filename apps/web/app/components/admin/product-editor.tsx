@@ -7,12 +7,13 @@ import ProductPhoto from '../product-photo';
 import AdminOffer from '../admin-offer';
 import AdminVariants from '../admin-variants';
 import CategoryPicker from './category-picker';
+import {ProductExtraFields,readProductExtra} from './product-extra';
 import Icon from '../admin-icons';
 
-type Props={product:Product|null;categories:Category[];onSave:(data:Record<string,unknown>)=>Promise<void>;onCancel:()=>void;onDirty:(dirty:boolean)=>void};
+type Props={product:Product|null;products?:Product[];categories:Category[];onSave:(data:Record<string,unknown>)=>Promise<void>;onCancel:()=>void;onDirty:(dirty:boolean)=>void};
 const snapshot=(form:HTMLFormElement)=>JSON.stringify(Array.from(new FormData(form).entries()).map(([k,v])=>[k,typeof v==='string'?v:v.name]));
 
-export default function ProductEditor({product,categories,onSave,onCancel,onDirty}:Props){
+export default function ProductEditor({product,products=[],categories,onSave,onCancel,onDirty}:Props){
   const form=useRef<HTMLFormElement>(null),initial=useRef('');
   const [saving,setSaving]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[offerPrice,setOfferPrice]=useState(product?.price||0);
   // Changed = the form's current values differ from when it opened. Photo uploads, sizes and colours
@@ -31,7 +32,7 @@ export default function ProductEditor({product,categories,onSave,onCancel,onDirt
     setSaving(true);setError('');
     const f=new FormData(e.currentTarget);
     try{
-      await onSave({action:'saveProduct',id:product?.id,name:f.get('name'),category:f.get('category'),price:Number(f.get('price')),stock:Number(f.get('stock')),image:f.get('image')||'box',images:JSON.parse(String(f.get('images')||'[]')),description:f.get('description'),tag:f.get('tag'),offer:JSON.parse(String(f.get('offer')||'null')),sizes:JSON.parse(String(f.get('sizes')||'[]')),colors:JSON.parse(String(f.get('colors')||'[]'))});
+      await onSave({action:'saveProduct',id:product?.id,name:f.get('name'),category:f.get('category'),price:Number(f.get('price')),stock:Number(f.get('stock')),image:f.get('image')||'box',images:JSON.parse(String(f.get('images')||'[]')),description:f.get('description'),tag:f.get('tag'),extra:readProductExtra(f),offer:JSON.parse(String(f.get('offer')||'null')),sizes:JSON.parse(String(f.get('sizes')||'[]')),colors:JSON.parse(String(f.get('colors')||'[]'))});
     }catch(err){setError((err as Error).message);setSaving(false);}
   }}>
     <div className="form-modal__head"><div><button type="button" className="text-link form-page__back" disabled={busy} onClick={onCancel}>← Back to products</button><div className="admin-eyebrow">Grow your collection</div><h2>{product?'Edit product':'Add product'}</h2></div></div>
@@ -40,11 +41,12 @@ export default function ProductEditor({product,categories,onSave,onCancel,onDirt
         <section className="form-section"><h3>Product details</h3>
           <label>Name<input name="name" autoFocus defaultValue={product?.name||''} required minLength={2} maxLength={100}/></label>
           <CategoryPicker categories={categories} initial={product?.category}/>
-          <label>Product label<input name="tag" defaultValue={product?.tag||'NEW ARRIVAL'} maxLength={40}/></label>
+          <label>Badge (one per product)<input name="tag" list="badge-presets" defaultValue={product?.tag||'NEW ARRIVAL'} maxLength={40}/><datalist id="badge-presets"><option value=""/><option value="NEW"/><option value="BESTSELLER"/><option value="LIMITED"/><option value="SALE"/><option value="GIFT"/><option value="SELF-CARE"/></datalist><small className="hero-slide__hint">Leave empty for no badge. “% OFF” shows automatically during an offer.</small></label>
         </section>
         <section className="form-section"><h3>Pricing & stock</h3><div className="form-pair"><label>Price (৳)<input name="price" type="number" min="1" step="1" max="1000000" defaultValue={product?.price} onChange={event=>setOfferPrice(Number(event.target.value))} required/></label><label>Stock<input name="stock" type="number" min="0" step="1" max="1000000" defaultValue={product?.stock} required/></label></div></section>
         <section className="form-section"><h3>Description</h3><label>Description<textarea name="description" defaultValue={product?.description||''} maxLength={3000} rows={6} placeholder="Materials, fit, care instructions and what is included"/></label></section>
         <AdminVariants product={product} disabled={saving}/>
+        <ProductExtraFields product={product} products={products} disabled={saving}/>
       </div>
       <div className="form-modal__side">
         <section className="form-section"><h3>Photos</h3><ProductPhoto initialImage={product?.image||'box'} initialImages={product?.images||[]} disabled={saving} onBusy={setUploading}/></section>

@@ -43,7 +43,7 @@ test('saving storefront requires admin, checks categories and covers, and replac
   assert.equal((await catalog()).storefront,null,'Built-in text until the owner saves');
   assert.equal((await POST(request({action:'saveStorefront',storefront:settings()}))).status,401);
   try{
-    auth.requireAdmin=async()=>{};
+    auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
     const {products}=await catalog(),clothing=products.find(p=>p.category==='Clothing'),other=products.find(p=>p.category!=='Clothing');
     let response=await POST(request({action:'saveStorefront',storefront:settings({covers:{'Missing category':clothing.id}})}));
     assert.equal(response.status,400);assert.match((await response.json()).error,/no longer exists/);

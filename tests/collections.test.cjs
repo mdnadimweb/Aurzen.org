@@ -17,7 +17,7 @@ const auth=require('../apps/api/dist/lib/auth.js');
 const {POST}=require('../apps/api/dist/app/api/admin/route.js');
 const {quoteOrder,placeOrder}=require('../apps/api/dist/lib/checkout.js');
 const request=data=>new Request('https://aurzen.netlify.app/api/admin/',{method:'POST',headers:{Origin:'https://aurzen.netlify.app','Content-Type':'application/json'},body:JSON.stringify(data)});
-async function admin(data){const original=auth.requireAdmin;auth.requireAdmin=async()=>{};try{const r=await POST(request(data));return {status:r.status,body:await r.json()};}finally{auth.requireAdmin=original;}}
+async function admin(data){const original=auth.requireAdmin;auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});try{const r=await POST(request(data));return {status:r.status,body:await r.json()};}finally{auth.requireAdmin=original;}}
 const tree=async()=>(await catalog()).categoryDetails;
 test.after(async()=>{(await database()).close();const relative=path.relative(path.resolve(os.tmpdir()),path.resolve(directory));assert(relative&&!relative.startsWith('..')&&!path.isAbsolute(relative));fs.rmSync(directory,{recursive:true,force:true});});
 

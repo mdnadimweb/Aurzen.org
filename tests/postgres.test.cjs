@@ -110,7 +110,7 @@ test('homepage slides save, replace and reset on PostgreSQL',async()=>{
   const request=data=>new Request('https://aurzen.netlify.app/api/admin/',{method:'POST',headers:{Origin:'https://aurzen.netlify.app','Content-Type':'application/json'},body:JSON.stringify(data)});
   const slide=title=>({eyebrow:'',title,emphasis:'',description:'',image:'box',alt:'Gift box',caption:'',note:'',category:'Mystery Boxes',cta:'Shop now',tone:'plum'});
   try{
-    auth.requireAdmin=async()=>{};
+    auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
     assert.equal((await POST(request({action:'saveHero',slides:[slide('First')]}))).status,200);
     assert.equal((await POST(request({action:'saveHero',slides:[slide('Second')]}))).status,200);
     assert.deepEqual((await lib.catalog()).hero,[slide('Second')]);
@@ -123,7 +123,7 @@ test('storefront announcement and category covers save and replace on PostgreSQL
   const auth=require('../apps/api/dist/lib/auth.js'),{POST}=require('../apps/api/dist/app/api/admin/route.js'),original=auth.requireAdmin;
   const request=data=>new Request('https://aurzen.netlify.app/api/admin/',{method:'POST',headers:{Origin:'https://aurzen.netlify.app','Content-Type':'application/json'},body:JSON.stringify(data)});
   try{
-    auth.requireAdmin=async()=>{};
+    auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
     const box=(await lib.catalog()).products.find(p=>p.category==='Mystery Boxes');
     const first={announcement:{message:'First',detail:''},covers:{'Mystery Boxes':box.id},featured:['Mystery Boxes']},second={announcement:{message:'Second',detail:'Detail'},covers:{},featured:[]};
     assert.equal((await POST(request({action:'saveStorefront',storefront:first}))).status,200);

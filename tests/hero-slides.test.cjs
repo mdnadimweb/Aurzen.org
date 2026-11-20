@@ -38,7 +38,7 @@ test('saving slides requires admin, checks categories and photos, and reset rest
   assert.equal((await POST(request({action:'saveHero',slides:[slide()]}))).status,401);
   assert.equal((await catalog()).hero,null);
   try{
-    auth.requireAdmin=async()=>{};
+    auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
     let response=await POST(request({action:'saveHero',slides:[slide({category:'Missing category'})]}));
     assert.equal(response.status,400);assert.match((await response.json()).error,/existing category for slide 1/);
     response=await POST(request({action:'saveHero',slides:[slide({image:'/media/0f8fad5b-d9cb-469f-a165-70867728950e.webp'})]}));

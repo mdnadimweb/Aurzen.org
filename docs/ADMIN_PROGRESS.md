@@ -23,13 +23,14 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
   - Note: editing an existing order’s delivery area in the order editor still uses the default ৳80/৳150.
 
 ## Phase 2 — homepage and banners
-- [ ] M5 Hero slides: already editable (Homepage tab). Not yet: per-slide LinkPicker, mobile image, schedule.
-- [ ] M6 Promo banners: already editable (Homepage tab, own links, schedule, hidden). Not yet: global interval/transition/section switch.
-- [~] M7 Homepage sections: trust strip, favourites row (title/button/4 or 8), mystery section, brand note are editable and can be hidden. Not yet: section reorder, product-row sources, testimonials row.
+- [x] M5 Hero slides: existing editor plus per-slide link (LinkPicker; default = its category page, no more /shop/?category= links), start/end dates and show/hide. Not done: a separate mobile image per slide.
+- [x] M6 Promo banners: own links, schedule, hidden (existing) plus section on/off, seconds per banner and slide/fade.
+- [x] M7 Homepage sections: reorder and show/hide every block below the hero (trust strip, collections, banners, favourites, category rows, mystery, reviews, brand note); favourites row source = first / newest / best sellers (90 days) / on sale / a category / hand-picked, 4 or 8; never repeated in the category rows.
 - [x] M8 Categories: per category/subcategory card button (Choose your size / Add to bag / Reveal your box / Available; Mystery Box never says “Choose your size”), description under the title, SEO title/description. Alt text fixed (“Men’s collection collection”). Not yet: size guide per category (needs M12).
 
 ## Phase 3 — products and catalog
-- [ ] M9 Product editor upgrades · [ ] M10 Mystery Box config
+- [x] M9 Product editor: status Active/Draft/Hidden (draft and hidden never reach the shop or checkout), SKU, fabric/material, care, featured, low-stock level, stock per size (checked at checkout, reduced by orders, restored on cancel/return; sold-out sizes greyed out), SEO title/description, related products, one badge with presets. List: select + bulk status / price % / move category, duplicate (as Draft), CSV export, CSV import with preview (new rows become Drafts, nothing deleted, all-or-nothing). Not done: slug-style product addresses, rich text, related products shown on the product page.
+- [x] M10 Mystery Box details: what’s guaranteed, “worth at least ৳X”, how-it-works steps, no-spoiler note on Mystery Box pages (Categories tab). Style choices stay the built-in list.
 - [x] M11 Gift options: gift wrap (price) and message card (length limit) at checkout for chosen categories (default Mystery Box + Love & Care); charged and checked by the server; shown on the order and invoice. (Per category, not per product.)
 - [x] M12 Size guides: reusable tables (any columns/rows, note), attached to categories, subcategories or single products; “Size guide” pop-up on product pages. One clothing guide seeded but not attached.
 
@@ -54,9 +55,13 @@ integration/commerce/presentation/intro browser checks, manual check on a dispos
 - [x] M24 Integrations: Meta Pixel (PageView, ViewContent, AddToCart, InitiateCheckout, Purchase), Google Analytics, Search Console code, WhatsApp + Messenger buttons. Scripts load after page load, only when set. CSP allows their endpoints.
 
 ## Phase 8 — operations and safety
-- [ ] M25 Overview additions · [ ] M26 Users & roles (today: one owner password, no user accounts)
+- [x] M25 Overview: today / 7 / 30-day orders and revenue, pending orders, top products (30 days), low stock, subscribers — above the existing charts.
+- [x] M26 Users & roles: owner keeps the ADMIN_PASSWORD sign-in; owners add staff or other owners with a username + temporary password (scrypt-hashed), forced password change at first sign-in, disable/remove ends sessions immediately. Staff: orders, products (no price/offer changes), customers only — enforced on the server; staff never receive coupons, subscribers, activity log or accounts. Activity log shows who. Per-username login limits.
 - [x] M27 Activity log (filter by area/date) and Backup page (products, categories, orders, customers CSV; settings JSON export/import).
-- [ ] M28 Security pass
+- [x] M28 Security pass — findings:
+  - OK: every admin read/write calls requireAdmin on the API (admin, images); public routes expose only published content, approved reviews and redirects; coupons, customers, orders stay private; no secrets in browser code; all owner input validated on the server; page text is escaped (safe formatting only).
+  - Fixed: placing orders had no rate limit (now 300 per 15 min shop-wide and 10 per hour per phone; price checks 20,000 per 15 min); /admin and /api now send X-Robots-Tag noindex; robots.txt + sitemap.xml added (block everything unless ordering is open and indexing is on).
+  - Known: the login limit is shop-wide (20 tries / 15 min), so someone guessing passwords can briefly lock the owner out; per-person limits need user accounts (M26).
 
 ## Assumptions
 - Lists live in JSON settings rows (validated per section) instead of one table each; only append-heavy data (activity, subscribers) got tables.

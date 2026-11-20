@@ -3,7 +3,7 @@
 // Every section is an EditableCard: collapsed summary, Edit opens the form, Save goes to the server.
 import {useState,type ReactNode} from 'react';
 import {money,type Category,type Product} from '@aurzen/shared/catalog';
-import {cardLabels,cardLabelText,type CategorySettings,linkHref,linkTypeLabels,type Content,type ContentPage,type FaqGroup,type NavItem,type Review,type SiteLink,type SiteSettings} from '@aurzen/shared/site';
+import {homeSectionLabels,cardLabels,cardLabelText,type CategorySettings,linkHref,linkTypeLabels,type Content,type ContentPage,type FaqGroup,type NavItem,type Review,type SiteLink,type SiteSettings} from '@aurzen/shared/site';
 import EditableCard,{EditableGroup,RowTools,move,newId} from './editable-card';
 import LinkPicker from './link-picker';
 import ImageField from './image-field';
@@ -83,6 +83,9 @@ export function StorefrontSettings(p:SiteProps){
         <Pair><Text label="Title" draft={d.newsletter} set={newsletter=>set({...d,newsletter})} k="title" max={80}/><Text label="Text" draft={d.newsletter} set={newsletter=>set({...d,newsletter})} k="text" max={160}/></Pair>
       </>} validate={v=>v.payments.some(x=>!x.trim())?'Remove empty payment labels.':''}/>
     <h2 className="ec-heading">Homepage text</h2>
+    <EditableCard title="Homepage sections (order & visibility)" summary={site.home.order.filter(s=>!site.home.hidden.includes(s)).map(s=>homeSectionLabels[s]).join(' → ')} initial={site.home} onSave={v=>p.saveSite('home',v)}
+      render={(d,set)=><><p className="hero-slide__hint">The big slideshow always comes first. Arrange the sections below it.</p><div className="ec-list">{d.order.map((s,i)=><div key={s} className="ec-list__item"><div className="ec-list__head"><strong>{homeSectionLabels[s]}</strong><RowTools index={i} count={d.order.length} label={homeSectionLabels[s]} onMove={(a,b)=>set({...d,order:move(d.order,a,b)})}/></div>
+        <label className="ec-toggle"><input type="checkbox" checked={!d.hidden.includes(s)} onChange={e=>set({...d,hidden:e.target.checked?d.hidden.filter(x=>x!==s):[...d.hidden,s]})}/><span>Show</span></label></div>)}</div></>}/>
     <EditableCard title="Trust strip" summary={site.home.trust.filter(t=>!t.hidden).map(t=>t.text).join(' · ')} initial={site.home} onSave={v=>p.saveSite('home',v)}
       render={(d,set)=><div className="ec-list">{d.trust.map((t,i)=>{const up=(x:Partial<typeof t>)=>set({...d,trust:d.trust.map(m=>m.id===t.id?{...m,...x}:m)});return <div key={t.id} className="ec-list__item">
         <div className="ec-list__head"><strong>{t.text||'Item'}</strong><RowTools index={i} count={d.trust.length} label={t.text||'item'} onMove={(x,y)=>set({...d,trust:move(d.trust,x,y)})} onRemove={()=>set({...d,trust:d.trust.filter(m=>m.id!==t.id)})}/></div>
@@ -93,7 +96,12 @@ export function StorefrontSettings(p:SiteProps){
       render={(d,set)=>{const f=d.favourites,s=(favourites:typeof f)=>set({...d,favourites});return <>
         <label className="ec-toggle"><input type="checkbox" checked={!f.hidden} onChange={e=>s({...f,hidden:!e.target.checked})}/><span>Show this row</span></label>
         <Pair><Text label="Eyebrow" draft={f} set={s} k="eyebrow" max={60}/><Text label="Heading" draft={f} set={s} k="title" max={80} required/></Pair>
-        <Pair><Text label="Button text" draft={f} set={s} k="cta" max={40}/><label>Products shown<select value={f.count} onChange={e=>s({...f,count:Number(e.target.value)})}><option value={4}>4</option><option value={8}>8</option></select></label></Pair></>;}}/>
+        <Pair><Text label="Button text" draft={f} set={s} k="cta" max={40}/><label>Products shown<select value={f.count} onChange={e=>s({...f,count:Number(e.target.value)})}><option value={4}>4</option><option value={8}>8</option></select></label></Pair>
+        <Pair><label>Products come from<select value={f.source} onChange={e=>s({...f,source:e.target.value as typeof f.source,category:e.target.value==='category'?f.category||p.categories[0]?.name||'':f.category})}><option value="first">First products in the shop</option><option value="newest">Newest arrivals</option><option value="bestsellers">Best sellers (last 90 days)</option><option value="sale">On sale now</option><option value="category">A category</option><option value="manual">Hand-picked</option></select></label>
+          {f.source==='category'&&<label>Category<select value={f.category} onChange={e=>s({...f,category:e.target.value})}>{p.categories.map(c=><option key={c.name} value={c.name}>{c.parent?c.parent+' › ':''}{c.name}</option>)}</select></label>}</Pair>
+        {f.source==='manual'&&<><label>Add a product<select value="" onChange={e=>{const id=Number(e.target.value);if(id&&!f.ids.includes(id)&&f.ids.length<8)s({...f,ids:[...f.ids,id]});}}><option value="">Choose…</option>{p.products.filter(x=>!f.ids.includes(x.id)).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+          <div className="ec-list">{f.ids.map((id,i)=><div key={id} className="ec-list__head"><span>{p.products.find(x=>x.id===id)?.name||'Removed product'}</span><RowTools index={i} count={f.ids.length} label="product" onMove={(a,b)=>s({...f,ids:move(f.ids,a,b)})} onRemove={()=>s({...f,ids:f.ids.filter(x=>x!==id)})}/></div>)}</div></>}
+        <p className="hero-slide__hint">Products shown here are not repeated in the category rows below.</p></>;}}/>
     <EditableCard title="Mystery box section" summary={site.home.mystery.title.replace(/\n/g,' ')} badge={onOff(!site.home.mystery.hidden,'Shown','Hidden')} initial={site.home} onSave={v=>p.saveSite('home',v)}
       render={(d,set)=>{const m=d.mystery,s=(mystery:typeof m)=>set({...d,mystery});return <>
         <label className="ec-toggle"><input type="checkbox" checked={!m.hidden} onChange={e=>s({...m,hidden:!e.target.checked})}/><span>Show this section (needs a Mystery category)</span></label>

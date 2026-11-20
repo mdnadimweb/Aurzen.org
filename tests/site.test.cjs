@@ -86,3 +86,22 @@ test('size guides and gift options follow product, subcategory, then main catego
   assert.equal(sizeGuideFor(site,tree,{id:1,category:'Love & Care'}),null);
   assert.equal(giftEligible(site,tree,'Love & Care'),true);assert.equal(giftEligible(site,tree,'Abayas'),false);
 });
+test('homepage sections keep every block once; older saved settings get new defaults',()=>{
+  const home=normalizeSiteSection('home',{...defaultSite.home,order:['note','bogus','trust'],hidden:['mystery','mystery','x'],favourites:{...defaultSite.home.favourites,source:'manual',ids:[3,1]}});
+  assert.deepEqual(home.order.slice(0,2),['note','trust']);assert.equal(home.order.length,defaultSite.home.order.length);
+  assert.deepEqual(home.hidden,['mystery']);assert.deepEqual(home.favourites.ids,[3,1]);
+  const old=mergeSite({home:{favourites:{hidden:false,eyebrow:'E',title:'T',cta:'C',count:8}}});
+  assert.equal(old.home.favourites.source,'first');assert.equal(old.home.favourites.count,8);assert.deepEqual(old.home.order,defaultSite.home.order);
+  assert.throws(()=>normalizeSiteSection('mysteryBox',{guaranteed:'',worth:-1,noSpoiler:'',steps:[]}),/Worth/);
+});
+const {normalizeHeroSlides}=require('@aurzen/shared/catalog');
+test('hero slides accept a safe link and a schedule; banner settings are bounded',()=>{
+  const slide={eyebrow:'',title:'Eid edit',emphasis:'',description:'',image:'box',alt:'Box',caption:'',note:'',category:'Ladies Fashion',cta:'Shop',tone:'rose'};
+  const [s]=normalizeHeroSlides([{...slide,link:{type:'url',value:'/sale/'},startsAt:'2026-01-01T00:00:00Z',endsAt:'2026-02-01T00:00:00Z',hidden:true}]);
+  assert.deepEqual(s.link,{type:'url',value:'/sale/'});assert.equal(s.hidden,true);assert.equal(s.endsAt,'2026-02-01T00:00:00.000Z');
+  assert.throws(()=>normalizeHeroSlides([{...slide,link:{type:'url',value:'javascript:alert(1)'}}]),/must start with/);
+  assert.throws(()=>normalizeHeroSlides([{...slide,startsAt:'2026-02-01T00:00:00Z',endsAt:'2026-01-01T00:00:00Z'}]),/after start/);
+  assert.equal(normalizeHeroSlides([slide])[0].link,undefined);
+  assert.deepEqual(normalizeSiteSection('banners',{enabled:false,interval:6,transition:'fade'}),{enabled:false,interval:6,transition:'fade'});
+  assert.throws(()=>normalizeSiteSection('banners',{enabled:true,interval:1,transition:'fade'}),/2 to 20/);
+});

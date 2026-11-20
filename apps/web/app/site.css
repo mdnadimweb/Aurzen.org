@@ -107,3 +107,31 @@ body:has(.has-mobile-purchase) .chat-buttons{bottom:96px}
 .size-guide table{width:100%;border-collapse:collapse;font-size:var(--text-label)}
 .size-guide th,.size-guide td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
 .size-guide thead th{color:var(--muted);font-weight:600}
+.mystery-details{border:1px solid #eadfd8;border-radius:16px;padding:16px 18px;margin:8px 0 14px;background:#fffdfa}
+.mystery-details h2{font-size:20px;margin:10px 0 6px}
+.mystery-details p,.mystery-details li{line-height:1.7;white-space:pre-line}
+.mystery-details ol{margin:0;padding-left:20px}
+.mystery-details__worth{font-weight:600;color:var(--plum);margin:0}
+.promo-banner[data-transition=fade] .promo-slide{transform:none!important;animation:none!important;transition:opacity .9s ease!important}.promo-banner[data-transition=fade] .promo-slide[data-active=false]{opacity:0}
+
+/* Footer alignment: equal columns for however many there are, everything centred. */
+.site-footer{grid-template-columns:1.3fr repeat(var(--footer-cols,3),minmax(0,1fr));text-align:center;justify-items:center}
+.site-footer>*{width:100%}
+.site-footer ul{justify-items:center}
+.site-footer li>a,.site-footer li>span{justify-content:center}
+.site-footer .brand-logo{margin:0 auto;justify-content:center}
+.site-footer__brand{display:flex;flex-direction:column;align-items:center}
+.site-footer__social{justify-content:center}
+.site-footer h4 button{justify-content:center;gap:10px}
+.site-footer__newsletter{justify-content:center;text-align:center;flex-direction:column}
+.site-footer__signup{width:100%;margin:0 auto}
+.site-footer__bottom{justify-content:center;flex-direction:column;align-items:center;text-align:center}
+.site-footer__payments{justify-content:center}
+@media (max-width:900px){.site-footer{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){
+  .site-footer{grid-template-columns:1fr}
+  .site-footer__col h4 button{justify-content:center;position:relative}
+  .site-footer__col h4 button span{position:absolute;right:4px}
+  .site-footer__bottom{align-items:center}
+}
+.site-footer__bottom nav{justify-content:center;flex-wrap:wrap;width:100%}

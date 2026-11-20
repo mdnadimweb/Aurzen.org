@@ -5,13 +5,15 @@ import {useEffect,useMemo,useState} from 'react';
 import {categoryFamily,mainCategories,money,subcategoriesOf,type Category,type Product} from '@aurzen/shared/catalog';
 import Icon from '../admin-icons';
 import ProductImage from '../product-image';
+import ProductBulk from './product-bulk';
 
 export const productsPerPage=20;
 const stockLevel=(stock:number)=>stock===0?'out':stock<=5?'low':'in';
 const stockText=(stock:number)=>stock===0?'Out of stock':stock<=5?'Low stock':'In stock';
 const sorters:Record<string,(a:Product,b:Product)=>number>={newest:(a,b)=>b.id-a.id,oldest:(a,b)=>a.id-b.id,name:(a,b)=>a.name.localeCompare(b.name),'price-asc':(a,b)=>a.price-b.price,'price-desc':(a,b)=>b.price-a.price,'stock-asc':(a,b)=>a.stock-b.stock};
 
-export default function ProductsTable({products,categories,onEdit,onStockInput,onStockSave,onRemove}:{products:Product[];categories:Category[];onEdit:(p:Product)=>void;onStockInput:(id:number,stock:number)=>void;onStockSave:(id:number,stock:number)=>void;onRemove:(p:Product)=>void}){
+export default function ProductsTable({owner=true,onRun,products,categories,onEdit,onStockInput,onStockSave,onRemove}:{products:Product[];categories:Category[];onEdit:(p:Product)=>void;onStockInput:(id:number,stock:number)=>void;onStockSave:(id:number,stock:number)=>void;owner?:boolean;onRun?:(data:Record<string,unknown>)=>Promise<void>;onRemove:(p:Product)=>void}){
+  const [selected,setSelected]=useState<number[]>([]);
   const [category,setCategory]=useState(''),[query,setQuery]=useState(''),[sort,setSort]=useState('oldest'),[page,setPage]=useState(1);
   useEffect(()=>setPage(1),[category,query,sort]);
   const filtered=useMemo(()=>{
@@ -36,14 +38,15 @@ export default function ProductsTable({products,categories,onEdit,onStockInput,o
       <label>Sort<select value={sort} onChange={e=>setSort(e.target.value)}><option value="oldest">Oldest first</option><option value="newest">Newest first</option><option value="name">Name A–Z</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="stock-asc">Stock: lowest first</option></select></label>
       <p id="product-filter-count" className="admin-filters__count" aria-live="polite">{filtered.length} of {products.length} products</p>
     </div>
+    {onRun&&products.length>0&&<ProductBulk selected={products.filter(p=>selected.includes(p.id))} filtered={filtered} categories={categories} owner={owner} onRun={onRun} onClear={()=>setSelected([])}/>}
     {!products.length?<div className="admin-empty"><span className="admin-empty__icon"><Icon name="products"/></span><h3>No products yet.</h3><p>Add your first product to start selling.</p></div>
     :!filtered.length?<div className="admin-empty"><span className="admin-empty__icon"><Icon name="products"/></span><h3>No products match these filters.</h3><p>Try another category or search, or clear the filters.</p><button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={clear}>Clear filters</button></div>
-    :<div className="admin-table-wrap"><table className="admin-table admin-table--products"><thead><tr><th scope="col">Product</th><th scope="col">Category</th><th scope="col" className="admin-num">Price</th><th scope="col">Stock</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead><tbody>{shown.map(p=><tr key={p.id}>
-      <td data-label="Product"><div className="admin-product"><span className="admin-thumb" aria-hidden="true"><ProductImage src={p.image} alt={p.name} category={p.category}/></span><div><strong>{p.name}</strong>{p.tag&&<small>{p.tag}</small>}</div></div></td>
+    :<div className="admin-table-wrap"><table className="admin-table admin-table--products"><thead><tr><th scope="col" className="order-select"><input type="checkbox" aria-label="Select all shown products" checked={shown.length>0&&shown.every(p=>selected.includes(p.id))} onChange={e=>setSelected(e.target.checked?Array.from(new Set([...selected,...shown.map(p=>p.id)])):selected.filter(id=>!shown.some(p=>p.id===id)))}/></th><th scope="col">Product</th><th scope="col">Category</th><th scope="col" className="admin-num">Price</th><th scope="col">Stock</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead><tbody>{shown.map(p=><tr key={p.id}>
+      <td className="order-select"><input type="checkbox" aria-label={'Select '+p.name} checked={selected.includes(p.id)} onChange={e=>setSelected(list=>e.target.checked?[...list,p.id]:list.filter(id=>id!==p.id))}/></td><td data-label="Product"><div className="admin-product"><span className="admin-thumb" aria-hidden="true"><ProductImage src={p.image} alt={p.name} category={p.category}/></span><div><strong>{p.name}</strong>{p.tag&&<small>{p.tag}</small>}{p.extra&&p.extra.status!=="active"&&<small className="product-status">{p.extra.status==="draft"?"Draft":"Hidden"}</small>}{p.extra?.sku&&<small>SKU {p.extra.sku}</small>}</div></div></td>
       <td data-label="Category">{p.category}{parentOf(p.category)&&<small>in {parentOf(p.category)}</small>}</td>
       <td data-label="Price" className="admin-num">{money(p.price)}{p.offer?.enabled&&<small>Offer {p.offer.percent}%</small>}</td>
       <td data-label="Stock"><div className="a-stock" data-level={stockLevel(p.stock)}><span className="a-stock__dot" aria-hidden="true"/><input aria-label={'Stock for '+p.name} aria-describedby={'stock-state-'+p.id} className="stock-input" type="number" min="0" value={p.stock} onChange={e=>{const stock=Number(e.target.value);if(Number.isSafeInteger(stock)&&stock>=0)onStockInput(p.id,stock);}} onBlur={e=>onStockSave(p.id,Number(e.target.value))}/><small id={'stock-state-'+p.id}>{stockText(p.stock)}</small></div></td>
-      <td data-label="Actions" className="admin-actions"><button type="button" className="a-btn a-btn--secondary a-btn--sm" data-row-action="edit" aria-label={'Edit '+p.name} onClick={()=>onEdit(p)}><Icon name="edit"/>Edit</button><button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" data-row-action="remove" aria-label={'Remove '+p.name} onClick={()=>onRemove(p)}><Icon name="trash"/>Remove</button></td>
+      <td data-label="Actions" className="admin-actions"><button type="button" className="a-btn a-btn--secondary a-btn--sm" data-row-action="edit" aria-label={'Edit '+p.name} onClick={()=>onEdit(p)}><Icon name="edit"/>Edit</button>{onRun&&<button type="button" className="a-btn a-btn--ghost a-btn--sm" aria-label={'Duplicate '+p.name} onClick={()=>void onRun({action:'duplicateProduct',id:p.id})}>Duplicate</button>}<button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" data-row-action="remove" aria-label={'Remove '+p.name} onClick={()=>onRemove(p)}><Icon name="trash"/>Remove</button></td>
     </tr>)}</tbody></table></div>}
     {filtered.length>productsPerPage&&<nav className="admin-pagination" aria-label="Product pages">
       <button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={current<=1} onClick={()=>setPage(current-1)}>Previous</button>

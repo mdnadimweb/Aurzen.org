@@ -60,6 +60,8 @@ export async function proxy(request:NextRequest){
   const response=NextResponse.next({request:{headers}});
   response.headers.set('Content-Security-Policy',csp);
   response.headers.set('Cache-Control','private, no-store');
+  // The studio is never indexed, even if a link to it leaks.
+  if(request.nextUrl.pathname.startsWith('/admin'))response.headers.set('X-Robots-Tag','noindex, nofollow');
   // Coolify terminates HTTPS. Do not emit HSTS for local HTTP development.
   if(request.headers.get('x-forwarded-proto')==='https')response.headers.set('Strict-Transport-Security','max-age=31536000');
   return response;

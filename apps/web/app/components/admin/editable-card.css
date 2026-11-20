@@ -48,8 +48,6 @@
 .order-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid #efe6ec;background:#fbf8fa}
 .order-bulk>span{font-size:13px;color:#6f6170;margin-right:auto}
 .order-bulk select{min-height:40px}
-.admin-table .order-select{width:44px;text-align:center}
-.admin .admin-table .order-select input{width:20px;height:20px;min-height:0;padding:0;margin:0;accent-color:#5b2a63}
 .order-tools .order-tools__body{display:grid;gap:10px;padding:10px 0}
 .order-tools__body label{display:grid;gap:6px}
 .order-tools__actions{display:flex;flex-wrap:wrap;gap:6px}
@@ -59,8 +57,38 @@
 .ec-tags{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:4px 18px}
 .ec-tags legend{font-weight:600;margin-bottom:4px}
 .customer-orders{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px}
-@media (max-width:760px){.admin-table .order-select{width:auto;text-align:left}}
 .color-field{display:flex;gap:8px;align-items:center}
 .color-field input[type=color]{width:52px;height:44px;padding:2px;border-radius:8px}
 .sale-products{max-height:260px;overflow:auto}
 .ec .size-guide__table input{min-width:70px}
+/* Overview: at-a-glance strip. */
+.ov-extras{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.ov-extras__stat{display:grid;gap:2px;padding:14px 16px;text-align:left;font:inherit}
+.ov-extras__stat small{color:#7d6f7a;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.ov-extras__stat strong{font-size:22px}
+.ov-extras__stat span{font-size:13px;color:#6f6170}
+.ov-extras__pending{cursor:pointer;border:1px solid #e3cfa2}
+.ov-extras__list{grid-column:span 2;padding:14px 16px}
+.ov-extras__list h3{margin:0 0 8px;font-size:15px}
+.ov-extras__list ol,.ov-extras__list ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+.ov-extras__list li{display:flex;justify-content:space-between;gap:10px}
+.ov-extras__list b{font-weight:600;white-space:nowrap}.ov-extras__list b.is-out{color:#9b3b2b}
+.ov-extras__list p{margin:0;color:#6f6170;font-size:14px}
+@media (max-width:640px){.ov-extras__list{grid-column:1/-1}}
+.admin-reset-gate{position:fixed;inset:0;z-index:80;background:rgba(30,15,35,.55);display:grid;place-items:center;padding:16px;overflow:auto}
+.admin-reset-gate .change-password{max-width:460px;width:100%;background:#fff}
+.size-stock{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px}
+.product-status{color:#9b3b2b!important;font-weight:600}.product-bulk__import{cursor:pointer;position:relative}.product-import{flex-basis:100%;background:#fff;border:1px solid #e7dde4;border-radius:12px;padding:14px;margin-top:8px}
+/* Orders: status dropdown with compact icon buttons; the chosen panel opens underneath. */
+.order-actions{display:grid;gap:8px;min-width:220px}
+.order-actions__row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.admin .order-icon{position:relative;display:inline-grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;border:1px solid #e6dce3;border-radius:999px;background:#fcfbfa;color:#5b2a63;cursor:pointer;flex:none}
+.admin .order-icon:hover{border-color:#5b2a63;background:#f6eff4}
+.admin .order-icon.is-open{background:#5b2a63;border-color:#5b2a63;color:#fff}
+.admin .order-icon:focus-visible{outline:2px solid #5b2a63;outline-offset:2px}
+.order-icon .a-icon{width:17px;height:17px}
+.order-icon__dot{position:absolute;top:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:#5b2a63;border:2px solid #fff}
+.order-icon__dot--ok{background:#2e7d4f}
+.order-icon__dot--alert{background:#c0392b}
+.order-panel{border:1px solid #efe6ec;border-radius:12px;background:#fcfbfa;padding:10px 12px}
+.order-panel.admin-delivery-form label{margin:6px 0}

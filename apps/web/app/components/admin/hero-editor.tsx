@@ -1,6 +1,9 @@
 'use client';
 import {useId,useRef,useState} from 'react';
-import {heroFieldLimits,heroTones,maxHeroSlides,type HeroSlide} from '@aurzen/shared/catalog';
+import {heroFieldLimits,heroTones,maxHeroSlides,type Category,type HeroSlide,type Product} from '@aurzen/shared/catalog';
+import type {ContentPage,SiteLink} from '@aurzen/shared/site';
+import LinkPicker from './link-picker';
+const localTime=(v?:string|null)=>v?new Date(new Date(v).getTime()-new Date(v).getTimezoneOffset()*60000).toISOString().slice(0,16):'';
 import {maxImageBytes,maxImageMegabytes} from '@aurzen/shared/upload-limits';
 import ProductImage from '../product-image';
 import BoxArt from '../box-art';
@@ -44,7 +47,7 @@ function SlidePhoto({slide,index,disabled,onChange,onBusy}:{slide:HeroSlide;inde
   </div>;
 }
 
-export default function HeroEditor({initialSlides,custom,categories,onSave,onReset}:{initialSlides:HeroSlide[];custom:boolean;categories:string[];onSave:(slides:HeroSlide[])=>Promise<void>;onReset:()=>Promise<void>}){
+export default function HeroEditor({initialSlides,custom,categories,tree=[],products=[],pages=[],onSave,onReset}:{initialSlides:HeroSlide[];custom:boolean;categories:string[];tree?:Category[];products?:Product[];pages?:ContentPage[];onSave:(slides:HeroSlide[])=>Promise<void>;onReset:()=>Promise<void>}){
   const [slides,setSlides]=useState(initialSlides);
   const [saving,setSaving]=useState(false),[uploads,setUploads]=useState(0),[error,setError]=useState(''),[dirty,setDirty]=useState(false);
   const busy=saving||uploads>0;
@@ -93,6 +96,12 @@ export default function HeroEditor({initialSlides,custom,categories,onSave,onRes
               {categories.map(c=><option key={c} value={c}>{c}</option>)}
             </select></label>
           </div>
+          <LinkPicker label="Button goes to (optional — otherwise the category above)" optional value={(slide.link as SiteLink|null|undefined)||null} categories={tree} products={products} pages={pages} onChange={link=>update(index,{link})}/>
+          <div className="form-pair">
+            <label>Show from (optional)<input type="datetime-local" disabled={busy} value={localTime(slide.startsAt)} onChange={e=>update(index,{startsAt:e.target.value?new Date(e.target.value).toISOString():null})}/></label>
+            <label>Show until (optional)<input type="datetime-local" disabled={busy} value={localTime(slide.endsAt)} onChange={e=>update(index,{endsAt:e.target.value?new Date(e.target.value).toISOString():null})}/></label>
+          </div>
+          <label className="ec-toggle"><input type="checkbox" disabled={busy} checked={!slide.hidden} onChange={e=>update(index,{hidden:!e.target.checked})}/><span>Show this slide</span></label>
           <label>Colour mood<select value={slide.tone} disabled={busy} onChange={e=>update(index,{tone:e.target.value as HeroSlide['tone']})}>{heroTones.map(t=><option key={t} value={t}>{toneLabels[t]}</option>)}</select></label>
         </section>
         <section className="form-section"><h3>Photo</h3>

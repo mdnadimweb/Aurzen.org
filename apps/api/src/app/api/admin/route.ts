@@ -1,12 +1,13 @@
-import { requireAdmin } from '../../../lib/auth';
-import { catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
+import { requireAdmin, currentUser, hashPassword, checkNewPassword, verifyPassword, endSessionsOf, newUserId, type Staff } from '../../../lib/auth';
+import { adjustSizeStock, catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
 import { normalizeSiteSection, normalizeContentSection, normalizeCustomer, normalizeCoupons, siteSections } from '@aurzen/shared/site';
 import type { Database } from '../../../lib/database';
 import { assert, body, failure, json, sameOrigin, text, HttpError } from '../../../lib/http';
-import { statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
+import { defaultProductExtra, normalizeProductExtra, statuses, statusTransitions, statusChangeError, normalizeOffer, normalizeHeroSlides, normalizeStorefront, normalizeVariants, normalizePromotions, type Order } from '@aurzen/shared/catalog';
 import { addCategory, editCategory, deleteCategory, moveProducts } from '../../../lib/categories';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
+import { bulkProducts, duplicateProduct, importProducts } from '../../../lib/product-bulk';
 function productOffer(value:unknown){
     try{return normalizeOffer(value);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid offer.');}
@@ -15,7 +16,9 @@ function productVariants(value:unknown,label:'size'|'colour'){
     try{return normalizeVariants(value,label);}
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid '+label+' list.');}
 }
-const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers',saveCoupons:'Marketing'};
+/** What staff accounts may do: orders, products (not prices) and customers. Everything else is owner-only. */
+const staffActions=new Set(['duplicateProduct','saveProduct','stock','markRead','status','bulkStatus','editOrder','delivery','orderNotes','saveCustomer','changePassword']);
+const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers',saveCoupons:'Marketing',bulkProducts:'Products',duplicateProduct:'Products',importProducts:'Products',saveUser:'Users',resetUserPassword:'Users',deleteUser:'Users',changePassword:'Users'};
 const activityArea=(d:Record<string,any>)=>areas[d.action]||'Other';
 function activityDetail(d:Record<string,any>){
     const what=(x:unknown)=>typeof x==='string'||typeof x==='number'?String(x).slice(0,80):'';
@@ -27,6 +30,13 @@ function activityDetail(d:Record<string,any>){
         case 'bulkStatus':return (Array.isArray(d.ids)?d.ids.length:0)+' orders → '+what(d.status);
         case 'orderNotes':return 'Notes on order '+what(d.id);
         case 'saveCustomer':return 'Customer '+what(d.phone);
+        case 'bulkProducts':return 'Bulk '+what(d.op)+' on '+(Array.isArray(d.ids)?d.ids.length:0)+' products'+(d.value!==undefined?' ('+what(d.value)+')':'');
+        case 'duplicateProduct':return 'Duplicated product #'+what(d.id);
+        case 'importProducts':return 'Imported '+(Array.isArray(d.rows)?d.rows.length:0)+' product rows';
+        case 'saveUser':return (d.id?'Edited account ':'Added account ')+what(d.username)+(d.role?' ('+what(d.role)+')':'')+(d.disabled===true?' — disabled':'');
+        case 'resetUserPassword':return 'Reset a password';
+        case 'deleteUser':return 'Removed an account';
+        case 'changePassword':return 'Changed own password';
         case 'saveCoupons':return 'Saved coupons ('+(Array.isArray(d.coupons)?d.coupons.length:0)+')';
         case 'editOrder':return 'Edited order '+what(d.id);
         case 'delivery':return 'Courier details for order '+what(d.id);
@@ -37,15 +47,19 @@ function activityDetail(d:Record<string,any>){
         default:return String(d.action||'Change')+(d.name?' '+what(d.name):'');
     }
 }
-async function adminData(){
+async function adminData(user:Staff){
     const db=await database();
     const [base,list,pages,subscribers,activity,customerRow,couponRow]=await Promise.all([catalog(db,{raw:true}),orders(),content(db),db.prepare('SELECT contact,created FROM subscribers ORDER BY created DESC LIMIT 5000').all(),db.prepare('SELECT at,actor,area,detail FROM activity ORDER BY id DESC LIMIT 300').all(),db.prepare("SELECT value FROM settings WHERE key='customers'").get(),db.prepare("SELECT value FROM settings WHERE key='coupons'").get()]);
-    return {...base,coupons:couponRow?JSON.parse(String(couponRow.value)):[],customers:customerRow?JSON.parse(String(customerRow.value)):{},orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
+    const users=user.role==='owner'?(await db.prepare('SELECT id,username,name,role,disabled,must_reset,created FROM users ORDER BY created').all()).map(u=>({id:String(u.id),username:String(u.username),name:String(u.name),role:String(u.role),disabled:!!Number(u.disabled),mustReset:!!Number(u.must_reset),created:String(u.created)})):[];
+    const data={...base,me:user,users,coupons:couponRow?JSON.parse(String(couponRow.value)):[],customers:customerRow?JSON.parse(String(customerRow.value)):{},orders:list,content:pages,subscribers:subscribers.map(s=>({contact:String(s.contact),created:String(s.created)})),activity:activity.map(a=>({at:String(a.at),actor:String(a.actor),area:String(a.area),detail:String(a.detail)}))};
+    // Staff do not see marketing lists, coupons, the activity log or other accounts.
+    if(user.role!=='owner')return {...data,coupons:[],subscribers:[],activity:[]};
+    return data;
 }
 export const runtime = 'nodejs';
 export async function GET() { try {
-    await requireAdmin();
-    return json(await adminData());
+    const user=await requireAdmin();
+    return json(await adminData(user));
 }
 catch (e) {
     return failure(e);
@@ -53,8 +67,11 @@ catch (e) {
 export async function POST(request: Request) {
     try {
         sameOrigin(request);
-        await requireAdmin();
-        const d = await body(request);
+        const user=await requireAdmin();
+        const d0=await body(request);
+        assert(!user.mustReset||d0.action==='changePassword','Choose a new password before continuing.',403);
+        assert(user.role==='owner'||staffActions.has(d0.action),'Only an owner can do this.',403);
+        const d = d0;
         await transaction(async (db) => {
             if (d.action === 'saveProduct') {
                 const name = text(d.name, 2, 100, 'Product name'), category = text(d.category, 1, 100, 'Category');
@@ -63,11 +80,18 @@ export async function POST(request: Request) {
                 assert(Number.isSafeInteger(d.price) && d.price > 0 && d.price <= 1000000, 'Enter a whole taka price between 1 and 1,000,000.');
                 assert(Number.isSafeInteger(d.stock) && d.stock >= 0 && d.stock <= 1000000, 'Stock must be a whole number from 0 to 1,000,000.');
                 if(d.id!==undefined)assert(Number.isSafeInteger(d.id)&&d.id>0,'Invalid product.');
-                const previous=d.id?await db.prepare('SELECT image,images,offer,sizes,colors FROM products WHERE id=?').get(d.id):null;
+                const previous=d.id?await db.prepare('SELECT image,images,offer,sizes,colors,price,extra FROM products WHERE id=?').get(d.id):null;
+                // Staff may edit products but not prices or offers.
+                if(user.role!=='owner')assert(previous?Number(previous.price)===d.price&&(d.offer===undefined||JSON.stringify(productOffer(d.offer))===JSON.stringify(JSON.parse(String(previous.offer||'null')))):true,'Only an owner can change prices or offers.',403);
                 const offer=d.offer===undefined?(previous?JSON.parse(String(previous.offer||'null')):null):productOffer(d.offer);
                 // Leaving sizes/colors out keeps what the product already has; [] turns the choice off.
                 const sizes=d.sizes===undefined?(previous?JSON.parse(String(previous.sizes||'[]')):[]):productVariants(d.sizes,'size');
                 const colors=d.colors===undefined?(previous?JSON.parse(String(previous.colors||'[]')):[]):productVariants(d.colors,'colour');
+                // Studio-only details; leaving them out keeps what the product has. Per-size stock sets the total.
+                let extra;
+                try{extra=d.extra===undefined?{...defaultProductExtra,...(previous?JSON.parse(String(previous.extra||'{}')):{})}:normalizeProductExtra(d.extra,sizes);}
+                catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid product details.');}
+                if(Object.keys(extra.sizeStock).length)d.stock=Object.values(extra.sizeStock).reduce((s:number,n)=>s+(n as number),0);
                 const images:unknown=d.images===undefined?(previous?JSON.parse(String(previous.images||'[]')):[]):d.images;
                 assert(Array.isArray(images)&&images.length<=8&&images.every(x=>typeof x==='string'&&x.length<=2000),'Use at most 8 product photos.');
                 assert(new Set(images).size===images.length,'Remove duplicate photos.');
@@ -86,13 +110,15 @@ export async function POST(request: Request) {
                 if (d.id) {
                     assert(Number.isSafeInteger(d.id), 'Invalid product.');
                     assert(await db.prepare('SELECT id FROM products WHERE id=?').get(d.id), 'Product not found.', 404);
-                    await db.prepare('UPDATE products SET name=?,category=?,price=?,stock=?,image=?,tag=?,description=?,images=?,offer=?,sizes=?,colors=? WHERE id=?').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors), d.id);
+                    await db.prepare('UPDATE products SET name=?,category=?,price=?,stock=?,image=?,tag=?,description=?,images=?,offer=?,sizes=?,colors=?,extra=? WHERE id=?').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors), JSON.stringify(extra), d.id);
                 }
                 else
-                    await db.prepare('INSERT INTO products(name,category,price,stock,image,tag,description,images,offer,sizes,colors) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors));
+                    await db.prepare('INSERT INTO products(name,category,price,stock,image,tag,description,images,offer,sizes,colors,extra) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(name, category, d.price, d.stock, image, tag, description, JSON.stringify(images), JSON.stringify(offer), JSON.stringify(sizes), JSON.stringify(colors), JSON.stringify(extra));
             }
             else if (d.action === 'stock') {
                 assert(Number.isSafeInteger(d.id) && Number.isSafeInteger(d.stock) && d.stock >= 0 && d.stock <= 1000000, 'Invalid stock.');
+                const sized = await db.prepare('SELECT extra FROM products WHERE id=?').get(d.id);
+                assert(!sized || !Object.keys(JSON.parse(String(sized.extra || '{}')).sizeStock || {}).length, 'This product has stock per size. Open the product to change it.');
                 assert((await db.prepare('UPDATE products SET stock=? WHERE id=?').run(d.stock, d.id)).changes, 'Product not found.', 404);
             }
             else if (d.action === 'deleteProduct') {
@@ -135,6 +161,42 @@ export async function POST(request: Request) {
                 order.notes = notes;
                 await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(order), order.id);
             }
+            else if (d.action === 'saveUser') {
+                const name = text(d.name, 2, 60, 'Name'), username = text(d.username, 3, 40, 'Username').toLowerCase();
+                assert(/^[a-z0-9._-]+$/.test(username), 'Usernames use lowercase letters, numbers, dots, dashes or underscores.');
+                assert(d.role === 'owner' || d.role === 'staff', 'Choose a role.');
+                const taken = await db.prepare('SELECT id FROM users WHERE username=?').get(username);
+                if (d.id) {
+                    assert(await db.prepare('SELECT id FROM users WHERE id=?').get(String(d.id)), 'Account not found.', 404);
+                    assert(!taken || String(taken.id) === String(d.id), 'That username is already used.');
+                    await db.prepare('UPDATE users SET name=?,username=?,role=?,disabled=? WHERE id=?').run(name, username, d.role, d.disabled === true ? 1 : 0, String(d.id));
+                    if (d.disabled === true) await endSessionsOf(String(d.id), db);
+                } else {
+                    assert(!taken, 'That username is already used.');
+                    await db.prepare('INSERT INTO users(id,username,name,role,hash,disabled,must_reset,created) VALUES(?,?,?,?,?,0,1,?)').run(newUserId(), username, name, d.role, hashPassword(checkNewPassword(d.password)), new Date().toISOString());
+                }
+            }
+            else if (d.action === 'resetUserPassword') {
+                const id = text(d.id, 1, 100, 'Account');
+                assert((await db.prepare('UPDATE users SET hash=?,must_reset=1 WHERE id=?').run(hashPassword(checkNewPassword(d.password)), id)).changes, 'Account not found.', 404);
+                await endSessionsOf(id, db);
+            }
+            else if (d.action === 'deleteUser') {
+                const id = text(d.id, 1, 100, 'Account');
+                await endSessionsOf(id, db);
+                await db.prepare('DELETE FROM users WHERE id=?').run(id);
+            }
+            else if (d.action === 'changePassword') {
+                assert(user.id, 'The owner password is set in the hosting settings (ADMIN_PASSWORD).');
+                const row = await db.prepare('SELECT hash FROM users WHERE id=?').get(user.id);
+                assert(row && typeof d.current === 'string' && verifyPassword(d.current, String(row.hash)), 'Your current password is not correct.');
+                const next = checkNewPassword(d.password);
+                assert(next !== d.current, 'Choose a different password.');
+                await db.prepare('UPDATE users SET hash=?,must_reset=0 WHERE id=?').run(hashPassword(next), user.id);
+            }
+            else if (d.action === 'bulkProducts') await bulkProducts(db, d);
+            else if (d.action === 'duplicateProduct') await duplicateProduct(db, d.id);
+            else if (d.action === 'importProducts') await importProducts(db, d.rows);
             else if (d.action === 'saveCoupons') {
                 let coupons;
                 try { coupons = normalizeCoupons(d.coupons); } catch (error) { throw new HttpError(400, error instanceof Error ? error.message : 'Invalid coupons.'); }
@@ -220,9 +282,10 @@ export async function POST(request: Request) {
                 await db.prepare('DELETE FROM subscribers WHERE contact=?').run(text(d.contact,1,200,'Subscriber'));
             else
                 assert(false, 'Unknown operation.');
-            if(d.action!=='markRead')await logActivity(db,activityArea(d),activityDetail(d));
+            if(d.action!=='markRead')await logActivity(db,activityArea(d),activityDetail(d),user.name);
         });
-        return json(await adminData());
+        // Re-read: a password change or role edit in this request changes what the studio shows.
+        return json(await adminData(await currentUser()||user));
     }
     catch (e) {
         return failure(e);
@@ -239,7 +302,7 @@ async function changeStatus(db:Database,id:string,status:unknown,reason:unknown,
     if (order.status === next) return;
     if (restock && (next === 'Cancelled' || next === 'Returned'))
         for (const item of order.items)
-            await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(item.qty, item.id);
+            { await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(item.qty, item.id); await adjustSizeStock(db, item.id, item.size, item.qty); }
     if (next === 'Cancelled' && typeof reason === 'string' && reason.trim()) order.cancelReason = reason.trim().slice(0, 300);
     order.history = [...(order.history || []), { status: next, date: new Date().toISOString() }];
     order.status = next;

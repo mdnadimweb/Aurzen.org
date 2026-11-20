@@ -4,7 +4,7 @@ import {dirname,resolve} from 'node:path';
 import {localClient} from './local-database';
 import {postgresClient} from './postgres-database';
 import {mergeSite,mergeContent,saleOffer,type SiteSettings,type Content} from '@aurzen/shared/site';
-import {categoryFamily,seed,slugify,type Product,type Order,type HeroSlide,type Storefront,type Category,type Promotion} from '@aurzen/shared/catalog';
+import {categoryFamily,defaultProductExtra,seed,slugify,type Product,type Order,type HeroSlide,type Storefront,type Category,type Promotion} from '@aurzen/shared/catalog';
 
 export type Dialect='postgres'|'sqlite';
 // Each write transaction gets its own handle; concurrent requests never share it.
@@ -33,12 +33,15 @@ const postgresSchema=`
   CREATE TABLE IF NOT EXISTS products(id SERIAL PRIMARY KEY,name TEXT NOT NULL,category TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),stock INTEGER NOT NULL CHECK(stock>=0),image TEXT NOT NULL,tag TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',images TEXT NOT NULL DEFAULT '[]',offer TEXT NOT NULL DEFAULT 'null',sizes TEXT NOT NULL DEFAULT '[]',colors TEXT NOT NULL DEFAULT '[]');
   ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes TEXT NOT NULL DEFAULT '[]';
   ALTER TABLE products ADD COLUMN IF NOT EXISTS colors TEXT NOT NULL DEFAULT '[]';
+  ALTER TABLE products ADD COLUMN IF NOT EXISTS extra TEXT NOT NULL DEFAULT '{}';
   CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,idempotency TEXT NOT NULL UNIQUE,payload TEXT NOT NULL,created TEXT NOT NULL);
   CREATE INDEX IF NOT EXISTS orders_created ON orders(created);
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires BIGINT NOT NULL);
+  ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id TEXT;
   CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires BIGINT NOT NULL);
   CREATE TABLE IF NOT EXISTS activity(id BIGSERIAL PRIMARY KEY,at TEXT NOT NULL,actor TEXT NOT NULL,area TEXT NOT NULL,detail TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);`;
+  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,name TEXT NOT NULL,role TEXT NOT NULL,hash TEXT NOT NULL,disabled INTEGER NOT NULL DEFAULT 0,must_reset INTEGER NOT NULL DEFAULT 1,created TEXT NOT NULL);`;
 const sqliteSchema=`
   CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS categories(name TEXT PRIMARY KEY);
@@ -48,7 +51,8 @@ const sqliteSchema=`
   CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,expires INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS activity(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,actor TEXT NOT NULL,area TEXT NOT NULL,detail TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);`;
+  CREATE TABLE IF NOT EXISTS subscribers(contact TEXT PRIMARY KEY,created TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,name TEXT NOT NULL,role TEXT NOT NULL,hash TEXT NOT NULL,disabled INTEGER NOT NULL DEFAULT 0,must_reset INTEGER NOT NULL DEFAULT 1,created TEXT NOT NULL);`;
 
 /** Gives every category a unique URL slug once; later renames keep it, so shared links stay valid. */
 export async function uniqueCategorySlug(db:Database,name:string,parent:string|null,except?:string){
@@ -98,8 +102,10 @@ async function initialize(){
         if(!columns.some(column=>column.name==='offer'))await db.exec("ALTER TABLE products ADD COLUMN offer TEXT NOT NULL DEFAULT 'null'");
         if(!columns.some(column=>column.name==='sizes'))await db.exec("ALTER TABLE products ADD COLUMN sizes TEXT NOT NULL DEFAULT '[]'");
         if(!columns.some(column=>column.name==='colors'))await db.exec("ALTER TABLE products ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
+        if(!columns.some(column=>column.name==='extra'))await db.exec("ALTER TABLE products ADD COLUMN extra TEXT NOT NULL DEFAULT '{}'");
         const categoryColumns=await db.prepare('PRAGMA table_info(categories)').all();
         for(const column of ['parent','slug','cover'])if(!categoryColumns.some(c=>c.name===column))await db.exec(`ALTER TABLE categories ADD COLUMN ${column} TEXT`);
+        if(!(await db.prepare('PRAGMA table_info(sessions)').all()).some(c=>c.name==='user_id'))await db.exec('ALTER TABLE sessions ADD COLUMN user_id TEXT');
       }
       if(!await db.prepare("SELECT value FROM settings WHERE key='initialized'").get()){
         // A hosted database starts empty: transfer the real catalog with the import script.
@@ -143,7 +149,14 @@ export async function catalog(connection?:Database,{raw=false}:{raw?:boolean}={}
   // raw: the studio edits products' own offers, so it gets them unchanged.
   const family=(name:string)=>categoryFamily(categoryDetails,name);
   const offerFor=(p:Record<string,unknown>)=>{const own=JSON.parse(String(p.offer||'null'));return raw||own?.enabled?own:(saleOffer(site.sales.items,{id:Number(p.id),category:String(p.category)},family)||own);};
-  return {site,products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:offerFor(p),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]'))})) as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
+  // Best sellers for the homepage favourites row: most units sold in the last 90 days (IDs only).
+  let bestsellers:number[]=[];
+  if(site.home.favourites.source==='bestsellers'){
+    const since=new Date(Date.now()-90*86400000).toISOString(),sold=new Map<number,number>();
+    for(const row of await db.prepare('SELECT payload FROM orders WHERE created>=?').all(since)){const o=JSON.parse(String(row.payload)) as Order;if(o.status==='Cancelled'||o.status==='Returned')continue;for(const i of o.items)sold.set(i.id,(sold.get(i.id)||0)+i.qty);}
+    bestsellers=[...sold.entries()].sort((a,b)=>b[1]-a[1]).map(([id])=>id).slice(0,16);
+  }
+  return {bestsellers,site,products:products.map(p=>({...p,images:JSON.parse(String(p.images||'[]')),offer:offerFor(p),sizes:JSON.parse(String(p.sizes||'[]')),colors:JSON.parse(String(p.colors||'[]')),extra:{...defaultProductExtra,...JSON.parse(String(p.extra||'{}'))}})).filter(p=>raw||p.extra.status==='active') as unknown as Product[],categories:categoryDetails.map(c=>c.name),categoryDetails,promotions,hero,storefront,serverNow:Date.now()};
 }
 export async function orders(){
   return (await (await database()).prepare('SELECT payload FROM orders ORDER BY created DESC').all()).map(o=>JSON.parse(String(o.payload)) as Order);
@@ -165,4 +178,13 @@ export async function saveSetting(db:Database,key:string,value:unknown){
 /** Who changed what and when. One owner password today, so the actor is the role. */
 export async function logActivity(db:Database,area:string,detail:string,actor='Owner'){
   await db.prepare('INSERT INTO activity(at,actor,area,detail) VALUES(?,?,?,?)').run(new Date().toISOString(),actor,area,detail.slice(0,300));
+}
+/** Keeps per-size stock in step with the product total (orders, cancellations, returns). */
+export async function adjustSizeStock(db:Database,id:number,size:string,delta:number){
+  const row=await db.prepare('SELECT extra FROM products WHERE id=?').get(id);
+  if(!row)return;
+  const extra=JSON.parse(String(row.extra||'{}'));
+  if(!extra.sizeStock||!(size in extra.sizeStock))return;
+  extra.sizeStock[size]=Math.max(0,Number(extra.sizeStock[size])+delta);
+  await db.prepare('UPDATE products SET extra=? WHERE id=?').run(JSON.stringify(extra),id);
 }

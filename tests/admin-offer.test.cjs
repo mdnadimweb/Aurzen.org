@@ -21,7 +21,7 @@ test('offer writes require admin authorization; valid dates normalize to UTC and
   const original=auth.requireAdmin;
   assert.equal((await POST(request({...payload,offer:{enabled:true,percent:20}}))).status,401);
   try{
-    auth.requireAdmin=async()=>{};
+    auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
     assert.equal((await current()).offer,null);
     const offer={enabled:true,percent:20,startsAt:'2026-11-08T12:00+06:00',endsAt:'2026-11-09T12:00+06:00'};
     assert.equal((await POST(request({...payload,offer}))).status,200);
@@ -40,7 +40,7 @@ test('offer writes require admin authorization; valid dates normalize to UTC and
 test('invalid offer percentages and schedules are rejected atomically on the server',async()=>{
   const original=auth.requireAdmin;
   try{
-    auth.requireAdmin=async()=>{};
+    auth.requireAdmin=async()=>({id:null,name:'Owner',role:'owner',mustReset:false});
     const valid={enabled:true,percent:20,startsAt:null,endsAt:null};
     assert.equal((await POST(request({...payload,offer:valid}))).status,200);
     for(const offer of [

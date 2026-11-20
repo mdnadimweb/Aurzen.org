@@ -24,7 +24,8 @@ export default function SiteFooter(){
   ].filter(Boolean);
   const social=([['Facebook',g.facebook],['Instagram',g.instagram],['TikTok',g.tiktok],['YouTube',g.youtube]] as const).filter(([,url])=>url);
   const columns=[...f.columns.filter(c=>!c.hidden).map(c=>({id:c.id,title:c.title,body:<ul>{links(c.links)}</ul>})),...(contact.length?[{id:'contact',title:'Contact',body:<ul>{contact}</ul>}]:[])];
-  return <footer className="site-footer">
+  // Columns share the width equally whatever their number, so nothing is left empty on the right.
+  return <footer className="site-footer" style={{"--footer-cols":columns.length} as React.CSSProperties}>
     <div className="site-footer__brand">
       {g.logoDark?<Link href="/" className="logo brand-logo" aria-label={g.brand+' home'}><img src={g.logoDark} alt={g.brand} width={157} height={96}/></Link>:<BrandLogo variant="light"/>}
       {g.about&&<p className="site-footer__pre">{g.about}</p>}
