@@ -6,6 +6,7 @@ import LinkPicker from './link-picker';
 const localTime=(v?:string|null)=>v?new Date(new Date(v).getTime()-new Date(v).getTimezoneOffset()*60000).toISOString().slice(0,16):'';
 import {maxImageBytes,maxImageMegabytes} from '@aurzen/shared/upload-limits';
 import ProductImage from '../product-image';
+import {FoldToggle,openInvalid} from './fold';
 import BoxArt from '../box-art';
 import Icon from '../admin-icons';
 
@@ -49,13 +50,14 @@ function SlidePhoto({slide,index,disabled,onChange,onBusy}:{slide:HeroSlide;inde
 
 export default function HeroEditor({initialSlides,custom,categories,tree=[],products=[],pages=[],onSave,onReset}:{initialSlides:HeroSlide[];custom:boolean;categories:string[];tree?:Category[];products?:Product[];pages?:ContentPage[];onSave:(slides:HeroSlide[])=>Promise<void>;onReset:()=>Promise<void>}){
   const [slides,setSlides]=useState(initialSlides);
+  const [open,setOpen]=useState<number|null>(null);
   const [saving,setSaving]=useState(false),[uploads,setUploads]=useState(0),[error,setError]=useState(''),[dirty,setDirty]=useState(false);
   const busy=saving||uploads>0;
   const onBusy=(value:boolean)=>setUploads(count=>Math.max(0,count+(value?1:-1)));
   const update=(index:number,patch:Partial<HeroSlide>)=>{setSlides(current=>current.map((slide,i)=>i===index?{...slide,...patch}:slide));setDirty(true);};
-  const move=(from:number,to:number)=>{setSlides(current=>{const next=[...current];const [slide]=next.splice(from,1);next.splice(to,0,slide);return next;});setDirty(true);};
-  const remove=(index:number)=>{if(confirm(`Remove slide ${index+1}?`)){setSlides(current=>current.filter((_,i)=>i!==index));setDirty(true);}};
-  const add=()=>{setSlides(current=>[...current,{eyebrow:'NEW EDIT',title:'A new story,',emphasis:'just arrived.',description:'',image:'box',alt:'AURZÉN collection',caption:'',note:'',category:categories[0]||'',cta:'Shop now',tone:'rose'}]);setDirty(true);};
+  const move=(from:number,to:number)=>{setSlides(current=>{const next=[...current];const [slide]=next.splice(from,1);next.splice(to,0,slide);return next;});setDirty(true);setOpen(o=>o===from?to:o===to?from:o);};
+  const remove=(index:number)=>{if(confirm(`Remove slide ${index+1}?`)){setSlides(current=>current.filter((_,i)=>i!==index));setDirty(true);setOpen(null);}};
+  const add=()=>{setSlides(current=>[...current,{eyebrow:'NEW EDIT',title:'A new story,',emphasis:'just arrived.',description:'',image:'box',alt:'AURZÉN collection',caption:'',note:'',category:categories[0]||'',cta:'Shop now',tone:'rose'}]);setDirty(true);setOpen(slides.length);};
   async function save(){
     if(busy)return;
     setSaving(true);setError('');
@@ -73,18 +75,19 @@ export default function HeroEditor({initialSlides,custom,categories,tree=[],prod
       {options.hint&&<small className="hero-slide__hint">{options.hint}</small>}
     </label>;
   };
-  return <form className="hero-editor" aria-label="Homepage slides" onSubmit={e=>{e.preventDefault();void save();}}>
+  return <form className="hero-editor" aria-label="Homepage slides" onInvalidCapture={openInvalid(k=>setOpen(Number(k)))} onSubmit={e=>{e.preventDefault();void save();}}>
     <div className="admin-info hero-editor__status" role="note"><Icon name="info"/><p><strong>{custom?'Showing your custom slides':'Showing the automatic slides'}</strong>{custom?'Customers see the slides saved here. Reset to return to the automatic slides.':'These are the slides customers see right now. Edit them and save to make them your own.'}</p></div>
-    <ol className="hero-editor__list">{slides.map((slide,index)=><li key={index} className="a-card hero-slide">
+    <ol className="hero-editor__list">{slides.map((slide,index)=><li key={index} className="a-card hero-slide" data-fold={index} data-open={open===index||undefined}>
       <div className="hero-slide__head">
-        <h2>Slide {index+1}{index===0&&<small>Shown first</small>}</h2>
+        <h2>Slide {index+1}{index===0&&<small>Shown first</small>}{open!==index&&<span className="fold-summary">{[slide.title,slide.emphasis].filter(Boolean).join(' ')}</span>}</h2>
         <div className="admin-photo-actions">
+          <FoldToggle open={open===index} label={`slide ${index+1}`} onToggle={()=>setOpen(open===index?null:index)}/>
           <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={busy||index===0} onClick={()=>move(index,index-1)} aria-label={`Move slide ${index+1} earlier`}>Move earlier</button>
           <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={busy||index===slides.length-1} onClick={()=>move(index,index+1)} aria-label={`Move slide ${index+1} later`}>Move later</button>
           <button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" disabled={busy||slides.length<=1} onClick={()=>remove(index)} aria-label={`Remove slide ${index+1}`}><Icon name="trash"/>Remove</button>
         </div>
       </div>
-      <div className="hero-slide__body">
+      <div className="hero-slide__body" hidden={open!==index}>
         <section className="form-section"><h3>Text</h3>
           {text(index,'eyebrow','Eyebrow',{hint:'Small capital text above the heading.'})}
           <div className="form-pair">{text(index,'title','Heading',{required:true})}{text(index,'emphasis','Heading highlight',{hint:'Shown in italic after the heading.'})}</div>

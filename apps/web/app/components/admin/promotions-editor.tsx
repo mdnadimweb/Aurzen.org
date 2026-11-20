@@ -1,6 +1,7 @@
 'use client';
 // Admin → Homepage → Promotions: the compact "New Arrivals & Offers" banner.
 import {useState} from 'react';
+import {FoldToggle,openInvalid} from './fold';
 import {activePromotions,maxPromotions,promotionLimits,type Category,type Product,type Promotion} from '@aurzen/shared/catalog';
 import Icon from '../admin-icons';
 import ImageField from './image-field';
@@ -12,6 +13,7 @@ const state=(p:Promotion,now:number)=>p.hidden?'Hidden':p.startsAt&&Date.parse(p
 export default function PromotionsEditor({initial,products,categories,onSave}:{initial:Promotion[];products:Product[];categories:Category[];onSave:(promotions:Promotion[])=>Promise<void>}){
   const [slides,setSlides]=useState<Promotion[]>(initial),[saving,setSaving]=useState(false),[uploads,setUploads]=useState(0),[error,setError]=useState(''),[dirty,setDirty]=useState(false);
   const [now]=useState(()=>Date.now());
+  const [open,setOpen]=useState<string|null>(null);
   const busy=saving||uploads>0;
   const onBusy=(value:boolean)=>setUploads(n=>Math.max(0,n+(value?1:-1)));
   const update=(i:number,patch:Partial<Promotion>)=>{setSlides(list=>list.map((s,j)=>j===i?{...s,...patch}:s));setDirty(true);};
@@ -24,21 +26,22 @@ export default function PromotionsEditor({initial,products,categories,onSave}:{i
     try{await onSave(slides);setDirty(false);}catch(e){setError((e as Error).message);}finally{setSaving(false);}
   }
   const live=activePromotions(slides,now).length;
-  return <form className="a-card mt-6 p-5 promotions-editor" aria-label="Promotions banner" onSubmit={e=>{e.preventDefault();void save();}}>
+  return <form className="a-card mt-6 p-5 promotions-editor" aria-label="Promotions banner" onInvalidCapture={openInvalid(setOpen)} onSubmit={e=>{e.preventDefault();void save();}}>
     <h2 className="mt-0">Promotions</h2>
     <p className="hero-slide__hint mt-0">The “New Arrivals &amp; Offers” banner below the featured categories. {live===0?'No slide is live, so the banner is hidden.':live===1?'One live slide shows as a still banner.':`${live} live slides rotate automatically.`}</p>
     {!slides.length&&<div className="admin-empty"><h3>No promotion slides yet.</h3><p>Add a slide to show the banner on your homepage.</p></div>}
-    <ol className="hero-editor__list">{slides.map((s,i)=><li key={s.id} className="a-card hero-slide promo-editor-slide" data-hidden={s.hidden||undefined}>
+    <ol className="hero-editor__list">{slides.map((s,i)=><li key={s.id} className="a-card hero-slide promo-editor-slide" data-hidden={s.hidden||undefined} data-fold={s.id} data-open={open===s.id||undefined}>
       <div className="hero-slide__head">
-        <h3>Promotion {i+1} <small className="promo-state" data-state={state(s,now).toLowerCase()}>{state(s,now)}</small></h3>
+        <h3>Promotion {i+1} <small className="promo-state" data-state={state(s,now).toLowerCase()}>{state(s,now)}</small>{open!==s.id&&<span className="fold-summary">{s.headline}</span>}</h3>
         <div className="admin-photo-actions">
+          <FoldToggle open={open===s.id} label={`promotion ${i+1}`} onToggle={()=>setOpen(open===s.id?null:s.id)}/>
           <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={busy||i===0} onClick={()=>move(i,i-1)} aria-label={`Move promotion ${i+1} earlier`}>Move earlier</button>
           <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={busy||i===slides.length-1} onClick={()=>move(i,i+1)} aria-label={`Move promotion ${i+1} later`}>Move later</button>
           <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={busy} aria-pressed={s.hidden} onClick={()=>update(i,{hidden:!s.hidden})}>{s.hidden?'Show':'Hide'}</button>
           <button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" disabled={busy} aria-label={`Remove promotion ${i+1}`} onClick={()=>{if(confirm(`Remove promotion ${i+1}?`)){setSlides(list=>list.filter((_,j)=>j!==i));setDirty(true);}}}><Icon name="trash"/>Remove</button>
         </div>
       </div>
-      <div className="hero-slide__body">
+      <div className="hero-slide__body" hidden={open!==s.id}>
         <section className="form-section"><h4>Text and button</h4>
           <label>Headline<input required value={s.headline} maxLength={promotionLimits.headline} disabled={busy} onChange={e=>update(i,{headline:e.target.value})}/></label>
           <div className="form-pair">
@@ -62,7 +65,7 @@ export default function PromotionsEditor({initial,products,categories,onSave}:{i
     <div className="hero-editor__foot">
       {error&&<p className="form-error" role="alert">{error}</p>}
       <div className="form-modal__buttons">
-        <button type="button" className="a-btn a-btn--secondary" disabled={busy||slides.length>=maxPromotions} onClick={()=>{setSlides(list=>[...list,newSlide()]);setDirty(true);}}><Icon name="plus"/>Add promotion{slides.length>=maxPromotions?` (max ${maxPromotions})`:''}</button>
+        <button type="button" className="a-btn a-btn--secondary" disabled={busy||slides.length>=maxPromotions} onClick={()=>{const added=newSlide();setSlides(list=>[...list,added]);setOpen(added.id);setDirty(true);}}><Icon name="plus"/>Add promotion{slides.length>=maxPromotions?` (max ${maxPromotions})`:''}</button>
         <button className="a-btn a-btn--primary" disabled={busy}>{uploads?'Uploading photo…':saving?'Saving…':dirty?'Save promotions':'Saved'}</button>
       </div>
     </div>
