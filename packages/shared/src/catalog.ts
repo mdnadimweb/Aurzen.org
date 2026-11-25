@@ -3,8 +3,11 @@ export type Offer = {enabled:boolean;percent:number;startsAt:string|null;endsAt:
 // product has no such choice and the product page does not show a picker for it.
 export type Product = {id:number;name:string;category:string;price:number;stock:number;image:string;images?:string[];tag:string;description?:string;offer?:Offer|null;sizes?:string[];colors?:string[];extra?:ProductExtra};
 /** Studio-only product details. status: draft/hidden products never reach the shop. sizeStock: optional stock per size (then stock = their sum). */
-export type ProductExtra={sku:string;material:string;care:string;status:'active'|'draft'|'hidden';featured:boolean;lowStock:number;sizeStock:Record<string,number>;seoTitle:string;seoDescription:string;related:number[]};
-export const defaultProductExtra:ProductExtra={sku:'',material:'',care:'',status:'active',featured:false,lowStock:5,sizeStock:{},seoTitle:'',seoDescription:'',related:[]};
+export type ProductExtra={sku:string;material:string;care:string;status:'active'|'draft'|'hidden';featured:boolean;lowStock:number;sizeStock:Record<string,number>;seoTitle:string;seoDescription:string;related:number[];gift:GiftSetting};
+/** Gift wrap & card at checkout: 'auto' follows Settings → Gift options (categories); 'on'/'off' set it for this product. */
+export type GiftSetting='auto'|'on'|'off';
+export const giftSettings:GiftSetting[]=['auto','on','off'];
+export const defaultProductExtra:ProductExtra={sku:'',material:'',care:'',status:'active',featured:false,lowStock:5,sizeStock:{},seoTitle:'',seoDescription:'',related:[],gift:'auto'};
 export function normalizeProductExtra(value:unknown,sizes:string[]):ProductExtra{
   if(value===undefined||value===null)return {...defaultProductExtra};
   if(typeof value!=='object'||Array.isArray(value))throw new Error('Invalid product details.');
@@ -19,8 +22,9 @@ const text=(x:unknown,max:number,label:string,multi=false)=>{const s=typeof x===
     if(!Number.isSafeInteger(n)||(n as number)<0||(n as number)>1000000)throw new Error('Stock for size '+size+' must be a whole number.');
     sizeStock[size]=n as number;
   }
+  const gift=v.gift===undefined?'auto':v.gift as GiftSetting;if(!giftSettings.includes(gift))throw new Error('Choose Automatic, On or Off for the gift option.');
   const related=Array.isArray(v.related)?Array.from(new Set(v.related.filter(n=>Number.isSafeInteger(n)&&(n as number)>0) as number[])).slice(0,8):[];
-  return {sku:text(v.sku,60,'SKU'),material:text(v.material,200,'Fabric / material'),care:text(v.care,600,'Care instructions',true),status:v.status as ProductExtra['status'],featured:v.featured===true,lowStock,sizeStock,seoTitle:text(v.seoTitle,90,'SEO title'),seoDescription:text(v.seoDescription,170,'SEO description'),related};
+  return {sku:text(v.sku,60,'SKU'),material:text(v.material,200,'Fabric / material'),care:text(v.care,600,'Care instructions',true),status:v.status as ProductExtra['status'],featured:v.featured===true,lowStock,sizeStock,seoTitle:text(v.seoTitle,90,'SEO title'),seoDescription:text(v.seoDescription,170,'SEO description'),related,gift};
 }
 /** Units available in one size: its own count when per-size stock is set, else the product total. */
 export const sizeAvailable=(p:Pick<Product,'stock'|'extra'>,size:string)=>p.extra&&Object.keys(p.extra.sizeStock).length?(p.extra.sizeStock[size]??0):p.stock;

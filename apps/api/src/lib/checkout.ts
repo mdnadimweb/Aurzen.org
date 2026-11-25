@@ -49,7 +49,7 @@ async function calculateQuote(d:Record<string,unknown>,db?:Database):Promise<Che
     }
     // Gift wrap and message card (Studio → Gift options), only for eligible items.
     const giftInput=(d.gift&&typeof d.gift==='object'?d.gift:{}) as Record<string,unknown>;
-    const giftable=items.some(i=>giftEligible(site,categoryDetails,products.find(p=>p.id===i.id)!.category));
+    const giftable=items.some(i=>{const p=products.find(x=>x.id===i.id)!;return giftEligible(site,categoryDetails,p.category,p.extra?.gift);});
     const wrap=giftable&&site.gifts.wrap&&giftInput.wrap===true;
     const message=giftable&&site.gifts.card&&typeof giftInput.message==='string'?giftInput.message.replace(/\s+/g,' ').trim():'';
     assert(message.length<=site.gifts.cardLimit,'Your gift message can be at most '+site.gifts.cardLimit+' characters.');

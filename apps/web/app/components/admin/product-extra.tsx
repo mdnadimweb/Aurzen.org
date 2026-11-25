@@ -12,6 +12,7 @@ export function ProductExtraFields({product,products,disabled}:{product:Product|
       <label className="ec-toggle"><input type="checkbox" name="x-featured" defaultChecked={e.featured} disabled={disabled}/><span>Featured (pinned first in “Newest” lists)</span></label>
       <label>Fabric / material<input name="x-material" defaultValue={e.material} maxLength={200} disabled={disabled}/></label>
       <label>Care instructions<textarea name="x-care" defaultValue={e.care} maxLength={600} rows={2} disabled={disabled}/></label>
+      <label>Gift wrap &amp; message card<select name="x-gift" defaultValue={e.gift} disabled={disabled}><option value="auto">Automatic — follow Settings → Gift options</option><option value="on">On — always offer for this product</option><option value="off">Off — never offer for this product</option></select><small className="hero-slide__hint">Shown at checkout only when gift wrap or the message card is switched on in Settings → Gift options.</small></label>
       <label>Low-stock warning at<input name="x-lowStock" type="number" min={0} max={10000} defaultValue={e.lowStock} disabled={disabled}/></label>
     </section>
     {sizes.length>0&&<section className="form-section"><h3>Stock per size (optional)</h3>
@@ -29,5 +30,5 @@ export function ProductExtraFields({product,products,disabled}:{product:Product|
 export function readProductExtra(f:FormData){
   const sizeStock:Record<string,number>={};
   for(const [key,value] of f.entries())if(key.startsWith('x-size:')&&String(value).trim()!=='')sizeStock[key.slice(7)]=Math.round(Number(value));
-  return {status:f.get('x-status')||'active',sku:f.get('x-sku')||'',featured:f.get('x-featured')==='on',material:f.get('x-material')||'',care:f.get('x-care')||'',lowStock:Math.round(Number(f.get('x-lowStock')??5)),sizeStock,seoTitle:f.get('x-seoTitle')||'',seoDescription:f.get('x-seoDescription')||'',related:f.getAll('x-related').map(Number)};
+  return {status:f.get('x-status')||'active',sku:f.get('x-sku')||'',featured:f.get('x-featured')==='on',material:f.get('x-material')||'',care:f.get('x-care')||'',lowStock:Math.round(Number(f.get('x-lowStock')??5)),sizeStock,seoTitle:f.get('x-seoTitle')||'',seoDescription:f.get('x-seoDescription')||'',related:f.getAll('x-related').map(Number),gift:f.get('x-gift')||'auto'};
 }

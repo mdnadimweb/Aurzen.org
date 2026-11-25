@@ -46,8 +46,9 @@ export default function ProductBulk({selected,filtered,categories,owner,onRun,on
   return <div className="order-bulk product-bulk">
     <span>{selected.length?selected.length+' selected':'Select products for bulk changes'}</span>
     {owner&&<>
-      <select aria-label="Bulk action" value={op} disabled={!selected.length||busy} onChange={e=>{setOp(e.target.value);setValue('');}}><option value="">Bulk action…</option><option value="status">Set status</option><option value="price">Change price by %</option><option value="category">Move to category</option></select>
+      <select aria-label="Bulk action" value={op} disabled={!selected.length||busy} onChange={e=>{setOp(e.target.value);setValue('');}}><option value="">Bulk action…</option><option value="status">Set status</option><option value="gift">Set gift option</option><option value="price">Change price by %</option><option value="category">Move to category</option></select>
       {op==='status'&&<select aria-label="New status" value={value} onChange={e=>setValue(e.target.value)}><option value="">Choose…</option><option value="active">Active</option><option value="draft">Draft</option><option value="hidden">Hidden</option></select>}
+      {op==='gift'&&<select aria-label="Gift option" value={value} onChange={e=>setValue(e.target.value)}><option value="">Choose…</option><option value="on">On — always offer</option><option value="off">Off — never offer</option><option value="auto">Automatic — follow Gift options</option></select>}
       {op==='price'&&<input aria-label="Percent change" type="number" min={-90} max={300} placeholder="e.g. 10 or -15" value={value} onChange={e=>setValue(e.target.value)}/>}
       {op==='category'&&<select aria-label="New category" value={value} onChange={e=>setValue(e.target.value)}><option value="">Choose…</option>{leaves.map(c=><option key={c.name} value={c.name}>{c.parent?c.parent+' › ':''}{c.name}</option>)}</select>}
       <button type="button" className="a-btn a-btn--primary a-btn--sm" disabled={!op||value===''||busy} onClick={()=>void apply()}>{busy?'Working…':'Apply'}</button>

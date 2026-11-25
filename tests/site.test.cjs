@@ -85,6 +85,7 @@ test('size guides and gift options follow product, subcategory, then main catego
   assert.equal(sizeGuideFor(site,tree,{id:7,category:'Abayas'}).name,'Product');
   assert.equal(sizeGuideFor(site,tree,{id:1,category:'Love & Care'}),null);
   assert.equal(giftEligible(site,tree,'Love & Care'),true);assert.equal(giftEligible(site,tree,'Abayas'),false);
+  assert.equal(giftEligible(site,tree,'Abayas','on'),true);assert.equal(giftEligible(site,tree,'Love & Care','off'),false);assert.equal(giftEligible(site,tree,'Love & Care','auto'),true);
 });
 test('homepage sections keep every block once; older saved settings get new defaults',()=>{
   const home=normalizeSiteSection('home',{...defaultSite.home,order:['note','bogus','trust'],hidden:['mystery','mystery','x'],favourites:{...defaultSite.home.favourites,source:'manual',ids:[3,1]}});

@@ -33,3 +33,15 @@ test('bulk price change, duplicate as draft and CSV import with validation',asyn
   const r=await POST(new Request('https://shop.example/api/admin/',{method:'POST',headers:{Origin:'https://shop.example','Content-Type':'application/json'},body:JSON.stringify({action:'importProducts',rows:[{name:'Bad',category:'Nope',price:10,stock:1}]})}));
   assert.equal(r.status,400);assert.match((await r.json()).error,/row 2/);
 });
+test('gift option per product: On and Off override the category rule, also in bulk',async()=>{
+  await admin({action:'saveSite',section:'gifts',value:{wrap:true,wrapPrice:50,card:true,cardLimit:150,categories:[]}});
+  const item={id:1,qty:1,size:'S'};
+  await admin({...base,stock:10,extra:{status:'active'}});
+  assert.equal((await quoteOrder({area:'dhaka',items:[item]})).giftable,false,'Clothing is not giftable by default');
+  let data=await admin({...base,stock:10,extra:{status:'active',gift:'on'}});
+  assert.equal(data.products.find(p=>p.id===1).extra.gift,'on');
+  const q=await quoteOrder({area:'dhaka',items:[item],gift:{wrap:true}});assert.equal(q.giftable,true);assert.equal(q.gift.price,50);
+  await admin({action:'bulkProducts',op:'gift',ids:[1],value:'off'});
+  assert.equal((await quoteOrder({area:'dhaka',items:[item],gift:{wrap:true}})).giftable,false);
+  await assert.rejects(()=>admin({...base,extra:{status:'active',gift:'maybe'}}));
+});

@@ -116,7 +116,7 @@ export function GiftsEditor(p:SiteProps){
       <div className="form-pair"><label className="ec-toggle"><input type="checkbox" checked={d.wrap} onChange={e=>set({...d,wrap:e.target.checked})}/><span>Offer gift wrap</span></label><label>Gift wrap price (৳, 0 = free)<input type="number" min={0} value={d.wrapPrice} onChange={e=>set({...d,wrapPrice:Math.round(Number(e.target.value)||0)})}/></label></div>
       <div className="form-pair"><label className="ec-toggle"><input type="checkbox" checked={d.card} onChange={e=>set({...d,card:e.target.checked})}/><span>Offer a message card</span></label><label>Message length (characters)<input type="number" min={20} max={500} value={d.cardLimit} onChange={e=>set({...d,cardLimit:Math.round(Number(e.target.value)||0)})}/></label></div>
       <fieldset className="ec-tags"><legend>Offered when the bag has something from</legend>{mains.map(c=><label key={c.slug} className="ec-toggle"><input type="checkbox" checked={d.categories.includes(c.slug)} onChange={e=>set({...d,categories:e.target.checked?[...d.categories,c.slug]:d.categories.filter(x=>x!==c.slug)})}/><span>{c.name}</span></label>)}</fieldset>
-      <p className="hero-slide__hint">With nothing ticked, Mystery Box and Love &amp; Care get gift options automatically. Choices show on the order and the printed invoice.</p>
+      <p className="hero-slide__hint">With nothing ticked, Mystery Box and Love &amp; Care get gift options automatically. To switch it on or off for one product, open the product and use “Gift wrap &amp; message card” (or select several in Products → Bulk action → Set gift option). Choices show on the order and the printed invoice.</p>
     </>}/></EditableGroup>;
 }
 

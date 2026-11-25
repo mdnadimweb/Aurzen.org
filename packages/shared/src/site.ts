@@ -540,7 +540,10 @@ export function sizeGuideFor(site:SiteSettings,categories:Category[],product:{id
   return g.find(x=>x.products.includes(product.id))||(c&&g.find(x=>x.categories.includes(c.slug)))||(main&&g.find(x=>x.categories.includes(main.slug)))||null;
 }
 /** Gift options apply to the chosen categories, or by default to Mystery Box and Love & Care. */
-export function giftEligible(site:SiteSettings,categories:Category[],category:string){
+/** Whether a product gets gift options: its own On/Off setting wins; otherwise the category rule. */
+export function giftEligible(site:SiteSettings,categories:Category[],category:string,own:'auto'|'on'|'off'='auto'){
+  if(own==='on')return true;
+  if(own==='off')return false;
   const c=categories.find(x=>x.name===category),main=c?.parent?categories.find(x=>x.name===c.parent):c;
   const slugs=[c?.slug,main?.slug].filter(Boolean) as string[];
   return site.gifts.categories.length?slugs.some(s=>site.gifts.categories.includes(s)):/mystery|love/i.test(main?.name||category);
