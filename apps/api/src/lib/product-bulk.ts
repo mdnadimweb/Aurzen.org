@@ -23,6 +23,9 @@ export async function bulkProducts(db: Database, d: Record<string, any>) {
     if (d.op === 'status') {
         assert(['active', 'draft', 'hidden'].includes(d.value), 'Choose Active, Draft or Hidden.');
         for (const id of list) await updateExtra(db, id, e => { e.status = d.value; });
+    } else if (d.op === 'gift') {
+        assert(['auto', 'on', 'off'].includes(d.value), 'Choose Automatic, On or Off for the gift option.');
+        for (const id of list) await updateExtra(db, id, e => { e.gift = d.value; });
     } else if (d.op === 'price') {
         assert(Number.isInteger(d.value) && d.value >= -90 && d.value <= 300 && d.value !== 0, 'Change prices by a whole percentage from -90 to 300.');
         for (const id of list) {
