@@ -50,3 +50,30 @@ test('staff accounts: forced reset, limited actions, no price changes, disable e
   assert.equal((await call(admin.GET,{method:'GET',cookie:staff.cookie})).response.status,401);
   assert.equal((await call(session.POST,{body:{username:'rina',password:'my-own-password-9'}})).response.status,401);
 });
+test('owner password: change it in the studio, forgot password with the recovery key',async()=>{
+  const hosting='test-only-owner-password-123';
+  const first=await call(session.POST,{body:{password:hosting}});
+  const other=await call(session.POST,{body:{password:hosting}});
+  assert.equal(first.response.status,200);
+  const wrong=await call(admin.POST,{cookie:first.cookie,body:{action:'changePassword',current:'not-my-password',password:'owner-studio-pass-1'}});
+  assert.equal(wrong.response.status,400);assert.match(wrong.json.error,/current password/);
+  const changed=await call(admin.POST,{cookie:first.cookie,body:{action:'changePassword',current:hosting,password:'owner-studio-pass-1'}});
+  assert.equal(changed.response.status,200,JSON.stringify(changed.json));
+  // This browser stays signed in; other owner devices are signed out.
+  assert.equal((await call(admin.GET,{method:'GET',cookie:first.cookie})).response.status,200);
+  assert.equal((await call(admin.GET,{method:'GET',cookie:other.cookie})).response.status,401);
+  // The hosting password no longer signs in; the new one does.
+  assert.equal((await call(session.POST,{body:{password:hosting}})).response.status,401);
+  assert.equal((await call(session.POST,{body:{password:'owner-studio-pass-1'}})).response.status,200);
+  // Forgot password: a wrong recovery key is refused, the right one sets a new password and signs in.
+  const badKey=await call(session.POST,{body:{action:'recover',key:'owner-studio-pass-1',password:'recovered-pass-22'}});
+  assert.equal(badKey.response.status,401);
+  const weak=await call(session.POST,{body:{action:'recover',key:hosting,password:'short'}});
+  assert.equal(weak.response.status,400);
+  const recovered=await call(session.POST,{body:{action:'recover',key:hosting,password:'recovered-pass-22'}});
+  assert.equal(recovered.response.status,200,JSON.stringify(recovered.json));
+  assert.equal((await call(admin.GET,{method:'GET',cookie:recovered.cookie})).response.status,200);
+  assert.equal((await call(admin.GET,{method:'GET',cookie:first.cookie})).response.status,401);
+  assert.equal((await call(session.POST,{body:{password:'owner-studio-pass-1'}})).response.status,401);
+  assert.equal((await call(session.POST,{body:{password:'recovered-pass-22'}})).response.status,200);
+});

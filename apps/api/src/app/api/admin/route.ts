@@ -1,4 +1,4 @@
-import { requireAdmin, currentUser, hashPassword, checkNewPassword, verifyPassword, endSessionsOf, newUserId, type Staff } from '../../../lib/auth';
+import { requireAdmin, currentUser, hashPassword, checkNewPassword, verifyPassword, endSessionsOf, newUserId, ownerPasswordMatches, setOwnerPassword, endOwnerSessions, type Staff } from '../../../lib/auth';
 import { adjustSizeStock, catalog, content, database, logActivity, orders, saveSetting, transaction } from '../../../lib/database';
 import { normalizeSiteSection, normalizeContentSection, normalizeCustomer, normalizeCoupons, siteSections } from '@aurzen/shared/site';
 import type { Database } from '../../../lib/database';
@@ -187,12 +187,21 @@ export async function POST(request: Request) {
                 await db.prepare('DELETE FROM users WHERE id=?').run(id);
             }
             else if (d.action === 'changePassword') {
-                assert(user.id, 'The owner password is set in the hosting settings (ADMIN_PASSWORD).');
-                const row = await db.prepare('SELECT hash FROM users WHERE id=?').get(user.id);
-                assert(row && typeof d.current === 'string' && verifyPassword(d.current, String(row.hash)), 'Your current password is not correct.');
-                const next = checkNewPassword(d.password);
-                assert(next !== d.current, 'Choose a different password.');
-                await db.prepare('UPDATE users SET hash=?,must_reset=0 WHERE id=?').run(hashPassword(next), user.id);
+                if (!user.id) {
+                    // The main owner: store their own password; ADMIN_PASSWORD stays as the recovery key.
+                    assert(typeof d.current === 'string' && d.current.length <= 256 && await ownerPasswordMatches(d.current, db), 'Your current password is not correct.');
+                    const next = checkNewPassword(d.password);
+                    assert(next !== d.current, 'Choose a different password.');
+                    await setOwnerPassword(db, next);
+                    await endOwnerSessions(db, true);
+                }
+                else {
+                    const row = await db.prepare('SELECT hash FROM users WHERE id=?').get(user.id);
+                    assert(row && typeof d.current === 'string' && verifyPassword(d.current, String(row.hash)), 'Your current password is not correct.');
+                    const next = checkNewPassword(d.password);
+                    assert(next !== d.current, 'Choose a different password.');
+                    await db.prepare('UPDATE users SET hash=?,must_reset=0 WHERE id=?').run(hashPassword(next), user.id);
+                }
             }
             else if (d.action === 'bulkProducts') await bulkProducts(db, d);
             else if (d.action === 'duplicateProduct') await duplicateProduct(db, d.id);

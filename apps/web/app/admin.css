@@ -526,6 +526,9 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .login-card label{margin:20px 0 18px}
 .admin .login-card__submit{width:100%;min-height:46px}
 .login-card .form-error{margin:16px 0 0}
+.login-card label+label{margin-top:0}
+.admin .login-card__forgot{display:block;margin:-10px 0 16px auto;padding:4px 0;border:0;background:none;color:var(--a-plum);font:inherit;font-size:.8125rem;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.admin .login-card__forgot:hover{color:var(--a-ink,var(--a-plum));text-decoration-thickness:2px}
 @media(max-width:860px){
   main.admin.admin--login{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr}
   .login-brand{flex-direction:row;align-items:center;justify-content:center;gap:20px;padding:20px 24px}

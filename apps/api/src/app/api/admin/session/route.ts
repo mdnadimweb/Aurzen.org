@@ -1,4 +1,4 @@
-import { createSession, currentUser, logout, passwordMatches, rateLimit, verifyPassword } from '../../../../lib/auth';
+import { checkNewPassword, createSession, currentUser, endOwnerSessions, logout, ownerPasswordMatches, passwordMatches, rateLimit, setOwnerPassword, verifyPassword } from '../../../../lib/auth';
 import { database } from '../../../../lib/database';
 import { assert, body, failure, json, sameOrigin } from '../../../../lib/http';
 export const runtime = 'nodejs';
@@ -12,11 +12,23 @@ export async function POST(request: Request) {
         sameOrigin(request);
         await rateLimit('admin-login', 60, 15 * 60 * 1000);
         const data = await body(request);
+        if (data.action === 'recover') {
+            // Forgot password: the hosting ADMIN_PASSWORD is the owner's recovery key.
+            await rateLimit('admin-recover', 10, 60 * 60 * 1000);
+            assert(typeof data.key === 'string' && data.key.length <= 256 && passwordMatches(data.key), 'That recovery key is not correct.', 401);
+            const next = checkNewPassword(data.password);
+            assert(next !== data.key, 'Choose a password that is different from the recovery key.');
+            const db = await database();
+            await setOwnerPassword(db, next);
+            await endOwnerSessions(db);
+            await createSession();
+            return json({ ok: true });
+        }
         assert(typeof data.password === 'string' && data.password.length <= 256, 'Invalid password.');
         const username = typeof data.username === 'string' ? data.username.trim().toLowerCase() : '';
         if (!username) {
             await rateLimit('admin-login-owner', 20, 15 * 60 * 1000);
-            assert(passwordMatches(data.password), 'Incorrect password.', 401);
+            assert(await ownerPasswordMatches(data.password), 'Incorrect password.', 401);
             await createSession();
             return json({ ok: true });
         }
