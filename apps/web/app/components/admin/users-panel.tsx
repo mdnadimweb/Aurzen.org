@@ -11,7 +11,7 @@ type Save=(data:Record<string,unknown>)=>Promise<void>;
 export default function UsersPanel({users,onSave}:{users:StaffAccount[];onSave:Save}){
   const [adding,setAdding]=useState(false);
   return <EditableGroup>
-    <p className="hero-slide__hint"><strong>Owner</strong>: everything. <strong>Staff</strong>: orders, products (not prices or offers) and customers — no settings, storefront, marketing or accounts. You keep signing in with the main owner password; staff sign in with their username.</p>
+    <p className="hero-slide__hint"><strong>Owner</strong>: everything. <strong>Staff</strong>: orders, products (not prices or offers) and customers — no settings, storefront, marketing or accounts. You keep signing in with the main owner password (change it under Settings → My password); staff sign in with their username.</p>
     {users.map(u=><EditableCard key={u.id} title={u.name+' · @'+u.username} summary={(u.role==='owner'?'Owner':'Staff')+' · added '+new Date(u.created).toLocaleDateString('en-BD')+(u.mustReset?' · must choose a new password':'')} badge={u.disabled?{text:'Disabled',tone:'warn'}:{text:u.role==='owner'?'Owner':'Staff',tone:'on'}} initial={{name:u.name,username:u.username,role:u.role,disabled:u.disabled,password:''}}
       actions={<button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" onClick={()=>{if(confirm('Remove the account '+u.username+'? They are signed out at once. Their past activity stays in the log.'))void onSave({action:'deleteUser',id:u.id});}}>Remove</button>}
       onSave={async v=>{await onSave({action:'saveUser',id:u.id,name:v.name,username:v.username,role:v.role,disabled:v.disabled});if(v.password)await onSave({action:'resetUserPassword',id:u.id,password:v.password});}}
@@ -36,13 +36,16 @@ function NewAccount({onSave,onCancel}:{onSave:(v:Record<string,unknown>)=>Promis
     <div className="ec__buttons"><button type="button" className="a-btn a-btn--ghost" disabled={busy} onClick={onCancel}>Cancel</button><button className="a-btn a-btn--primary" disabled={busy}>{busy?'Adding…':'Add account'}</button></div>
   </form>;
 }
-/** Shown instead of the studio until a staff member replaces their temporary password. */
-export function ChangePassword({me,onSave}:{me:Me;onSave:Save}){
+/** Studio → My password, and (forced) the gate shown until a staff member replaces a temporary password. */
+export function ChangePassword({me,onSave,forced=false}:{me:Me;onSave:Save;forced?:boolean}){
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
-  return <form className="a-card p-5 ec__fields change-password" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(f.get('password')!==f.get('confirm')){setError('The new passwords do not match.');return;}setBusy(true);setError('');try{await onSave({action:'changePassword',current:f.get('current'),password:f.get('password')});}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}>
-    <h2 className="mt-0">Choose your own password, {me.name}</h2>
-    <p className="hero-slide__hint">Your account was given a temporary password. Choose a new one (at least 10 characters) to continue.</p>
-    <label>Temporary password<PasswordInput name="current" required autoComplete="current-password"/></label>
+  const mainOwner=me.id===null;
+  return <form className="a-card p-5 ec__fields change-password" onSubmit={async e=>{e.preventDefault();const form=e.currentTarget,f=new FormData(form);if(f.get('password')!==f.get('confirm')){setError('The new passwords do not match.');return;}setBusy(true);setError('');try{await onSave({action:'changePassword',current:f.get('current'),password:f.get('password')});form.reset();}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}>
+    <h2 className="mt-0">{forced?'Choose your own password, '+me.name:'Change your password'}</h2>
+    <p className="hero-slide__hint">{forced?'Your account was given a temporary password. Choose a new one (at least 10 characters) to continue.'
+      :mainOwner?'Use at least 10 characters. Your other signed-in devices are signed out. If you ever forget it, use “Forgot password?” on the sign-in page with your recovery key (the ADMIN_PASSWORD value in your Render settings).'
+      :'Use at least 10 characters. If you forget it, ask the store owner to set a temporary password for you.'}</p>
+    <label>{forced?'Temporary password':'Current password'}<PasswordInput name="current" required autoComplete="current-password"/></label>
     <label>New password<PasswordInput name="password" required minLength={10} maxLength={200} autoComplete="new-password"/></label>
     <label>Repeat new password<PasswordInput name="confirm" required minLength={10} maxLength={200} autoComplete="new-password"/></label>
     {error&&<p className="form-error" role="alert">{error}</p>}

@@ -23,10 +23,33 @@ export async function currentUser(): Promise<Staff | null> {
 export async function isAdmin() { return !!await currentUser(); }
 export async function requireAdmin() { const user = await currentUser(); assert(user, 'Please sign in to the studio.', 401); return user!; }
 export async function requireOwner() { const user = await requireAdmin(); assert(user.role === 'owner', 'Only an owner can do this.', 403); return user; }
+/** The hosting password (ADMIN_PASSWORD). Before the owner sets a studio password it signs in; afterwards it is only the recovery key. */
 export function passwordMatches(password: string) {
     const configuredPassword = process.env.ADMIN_PASSWORD;
     assert(configuredPassword && configuredPassword.length >= 16, 'Admin access needs configuration. Set ADMIN_PASSWORD to at least 16 characters in the API runtime environment.', 503);
     return timingSafeEqual(Buffer.from(hash(password)), Buffer.from(hash(configuredPassword!)));
+}
+const ownerKey = 'ownerPassword';
+/** The owner's own studio password, if one was chosen (Studio → My password). */
+async function ownerHash(db: Database) {
+    const row = await db.prepare('SELECT value FROM settings WHERE key=?').get(ownerKey);
+    return row ? String(JSON.parse(String(row.value))) : '';
+}
+/** Owner sign-in: the studio password once set, otherwise ADMIN_PASSWORD. */
+export async function ownerPasswordMatches(password: string, db?: Database) {
+    const stored = await ownerHash(db || await database());
+    // Always check the hosting configuration first so a missing ADMIN_PASSWORD still reports 503.
+    const hosting = passwordMatches(password);
+    return stored ? verifyPassword(password, stored) : hosting;
+}
+export async function setOwnerPassword(db: Database, password: string) {
+    await db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(ownerKey, JSON.stringify(hashPassword(password)));
+}
+/** Ends owner sessions; with keepCurrent the browser making this request stays signed in. */
+export async function endOwnerSessions(db: Database, keepCurrent = false) {
+    const token = keepCurrent ? (await cookies()).get(cookieName)?.value : undefined;
+    if (token) await db.prepare('DELETE FROM sessions WHERE user_id IS NULL AND token<>?').run(hash(token));
+    else await db.prepare('DELETE FROM sessions WHERE user_id IS NULL').run();
 }
 /** scrypt with a random salt: "salt:hash". */
 export function hashPassword(password: string) {
