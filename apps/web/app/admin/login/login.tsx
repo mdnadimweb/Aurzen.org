@@ -1,6 +1,7 @@
 'use client';
 import BrandLogo from '../../components/brand-logo';
 import Icon from '../../components/admin-icons';
+import PasswordInput from '../../components/admin/password-input';
 
 import {useState,useEffect} from 'react';
 import {useRouter} from 'next/navigation';
@@ -26,7 +27,7 @@ export default function Login(){
         <div className="admin-eyebrow">The studio</div>
         <h1>Welcome back.</h1>
         <p>Sign in to manage your collection and orders.</p>
-        {configured===false?<div className="form-error">Admin access is not configured. Set a unique ADMIN_PASSWORD of at least 16 characters in the repository root .env.development.local file for local development, or in the API runtime environment, and restart the server.</div>:<>{staff&&<label>Username<input name="username" required autoComplete="username" autoCapitalize="none" maxLength={60}/></label>}<label>{staff?"Password":"Admin password"}<input name="password" type="password" required autoComplete="current-password" maxLength={256}/></label><button className="a-btn a-btn--primary login-card__submit" disabled={busy||configured===null}><Icon name="lock"/>{busy?'Signing in…':'Sign in'}</button><button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={()=>{setStaff(!staff);setError('');}}>{staff?'Owner sign-in':'Staff sign-in'}</button></>}
+        {configured===false?<div className="form-error">Admin access is not configured. Set a unique ADMIN_PASSWORD of at least 16 characters in the repository root .env.development.local file for local development, or in the API runtime environment, and restart the server.</div>:<>{staff&&<label>Username<input name="username" required autoComplete="username" autoCapitalize="none" maxLength={60}/></label>}<label>{staff?"Password":"Admin password"}<PasswordInput name="password" required autoComplete="current-password" maxLength={256}/></label><button className="a-btn a-btn--primary login-card__submit" disabled={busy||configured===null}><Icon name="lock"/>{busy?'Signing in…':'Sign in'}</button><button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={()=>{setStaff(!staff);setError('');}}>{staff?'Owner sign-in':'Staff sign-in'}</button></>}
         {error&&<p className="form-error" role="alert">{error}</p>}
       </form>
       <Link className="a-btn a-btn--ghost a-btn--sm login-back" href="/"><Icon name="storefront"/>Return to the storefront</Link>

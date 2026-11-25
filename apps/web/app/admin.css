@@ -625,3 +625,12 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 @media(max-width:640px){.admin .admin-order-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.admin .admin-order-filters .admin-order-filters__search,.admin .admin-order-filters .admin-order-filters__reset{grid-column:1 / -1;grid-row:auto}.admin .admin-order-filters .admin-order-filters__search{grid-row:1}}
 @media(max-width:640px){.admin .admin-order-filters>label:nth-of-type(4){grid-column:1 / -1}}
 .admin .admin-order-filters select,.admin .admin-order-filters input[type=date],.admin .admin-order-filters input[type=search]{height:42px;min-height:42px;box-sizing:border-box}
+
+/* Password fields: eye button to show or hide what was typed */
+.admin .pw-field{position:relative;display:block;margin-top:6px}
+.admin .pw-field input{margin-top:0;padding-right:48px}
+.admin .pw-field input::-ms-reveal{display:none}
+.admin .pw-field__toggle{position:absolute;top:50%;right:4px;display:grid;place-items:center;width:38px;height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--a-muted);cursor:pointer;transform:translateY(-50%)}
+.admin .pw-field__toggle:hover{background:var(--a-hover);color:var(--a-plum)}
+.admin .pw-field__toggle:focus-visible{outline:2px solid var(--a-plum);outline-offset:1px}
+.admin .pw-field__toggle .a-icon{width:19px;height:19px}
