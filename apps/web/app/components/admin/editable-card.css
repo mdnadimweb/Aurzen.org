@@ -20,12 +20,18 @@
 @keyframes ec-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.ec__panel{animation:none}.ec{transition:none}}
 .ec__fields{border:0;margin:0;padding:0;display:grid;gap:14px;min-width:0}
+.a-card.ec__fields{padding:24px;border:1px solid var(--a-line)}
+.a-card.ec__fields>h2,.a-card.ec__fields>h3{margin:0}
+.a-card.ec__fields label{margin:0}
+.admin .a-card.ec__fields .form-pair{row-gap:14px}
 .ec__fields label{display:grid;gap:6px}
 .ec__fields h4{margin:10px 0 0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#8a6d2f}
 .ec__buttons{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:16px;position:sticky;bottom:0;background:#fff;padding-top:10px}
 .ec__reset{margin-right:auto}
 .ec-toggle{display:flex!important;align-items:center;gap:10px;min-height:44px;cursor:pointer}
 .admin .ec-toggle input[type=checkbox]{width:20px;height:20px;min-height:0;flex:0 0 20px;padding:0;margin:0;border:0;box-shadow:none;accent-color:#5b2a63}
+/* A checkbox beside a text box lines up with the box, not with its label */
+.admin .form-pair>.ec-toggle{align-self:end;min-height:42px}
 .ec-list{display:grid;gap:10px}
 .ec-list__item{border:1px dashed #dccfd8;border-radius:12px;padding:12px;display:grid;gap:10px}
 .ec-list__head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
