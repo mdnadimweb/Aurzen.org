@@ -242,23 +242,59 @@
 .admin-table tbody tr:last-child td{border-bottom:0}
 .admin-table tbody tr:hover td{background:var(--a-hover)}
 .admin-table td small{display:block;margin-top:3px;color:var(--a-muted);font-size:.8125rem;line-height:1.5}
-.admin-table--orders td{vertical-align:top}
-.admin-table--orders td:last-child{min-width:250px}
-.admin-table--orders td:nth-child(2){min-width:140px}
-.admin-table--orders td:nth-child(4){min-width:190px}
-/* Items: compact list (quantity badge, name on one line, size/colour below). Total keeps room for its payment line. */
-.admin-table--orders td.admin-order-items{min-width:220px;max-width:300px}
-.admin-table--orders td.admin-num{min-width:128px}
-.admin-table--orders td.admin-num small{white-space:normal}
-.order-items__count{margin:0 0 8px;color:var(--a-muted);font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-.order-items ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}
-.order-items li{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:10px;margin:0}
-.order-items__qty{display:inline-grid;place-items:center;min-width:28px;height:22px;padding:0 6px;border-radius:999px;background:#f4edf1;color:var(--a-plum);font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
-.order-items__text{display:grid;min-width:0;line-height:1.35}
-.order-items__name{overflow:hidden;color:var(--a-ink,inherit);font-size:.8125rem;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
-.order-items__option{color:var(--a-muted);font-size:.75rem}
-.admin .order-items__more{margin:8px 0 0 38px;padding:2px 0;border:0;background:none;color:var(--a-plum);font:inherit;font-size:.75rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.admin .order-items__more:focus-visible{outline:2px solid var(--a-plum);outline-offset:2px;border-radius:4px}
+.admin-table--orders>tbody>tr>td{vertical-align:top}
+/* Orders: fixed columns so Items gets the room it needs (stacked cards when the card is narrower, see below). */
+.admin-orders{container:admin-orders/inline-size}
+.admin-table--orders{table-layout:fixed}
+.admin-table--orders>thead th:nth-child(1){width:150px}
+.admin-table--orders>thead th:nth-child(2){width:170px}
+.admin-table--orders>thead th:nth-child(3){width:200px}
+.admin-table--orders>thead th:nth-child(5){width:130px}
+.admin-table--orders>thead th:nth-child(6){width:260px}
+.admin-order-address__text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.admin-table--orders>tbody>tr>td.admin-num{white-space:nowrap}
+.admin-table--orders>tbody>tr>td.admin-num small{white-space:nowrap}
+/* Items cell: first item (thumb, one-line name, "M · Qty 1") and a pill that opens the full list below the row. */
+.oi{display:grid;gap:8px;min-width:0}
+.oi__first{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:10px;min-width:0}
+.oi-thumb{display:grid;place-items:center;width:40px;height:40px;overflow:hidden;border-radius:8px;background:#f4edf1;color:var(--a-plum)}
+.oi-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.oi-thumb svg{width:18px;height:18px}
+.oi__text{display:grid;min-width:0;line-height:1.35}
+.oi__name{overflow:hidden;color:var(--a-ink);font-size:.8125rem;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.oi__meta{overflow:hidden;color:var(--a-muted);font-size:.75rem;text-overflow:ellipsis;white-space:nowrap}
+.oi__nowrap,.oi-nowrap{white-space:nowrap}
+.admin .oi__toggle{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:28px;padding:0 10px 0 12px;border:1px solid #e6dce2;border-radius:999px;background:#faf6f8;color:var(--a-plum);font:inherit;font-size:.75rem;font-weight:600;white-space:nowrap;cursor:pointer;transition:background-color .2s ease,border-color .2s ease}
+.admin .oi__toggle:hover{border-color:var(--a-plum);background:#f4edf1}
+.admin .oi__toggle:focus-visible{outline:2px solid var(--a-plum);outline-offset:2px}
+.oi__count{padding-left:8px;border-left:1px solid #e0d3da;color:var(--a-muted);font-weight:500}
+.oi__toggle svg{width:14px;height:14px;transition:transform .2s ease}
+.oi__toggle.is-open svg{transform:rotate(90deg)}
+/* Opened: a full-width row under the order with a mini-table and the order's real totals. */
+.admin-table--orders>tbody>tr.is-items-open>td{border-bottom-color:transparent}
+.admin-table--orders>tbody>tr.oi-row>td{padding:0 24px 20px;background:#fcfaf9}
+.admin-table--orders>tbody>tr.oi-row:hover>td{background:#fcfaf9}
+.oi-detail{padding:4px 18px 16px;border:1px solid var(--a-line);border-radius:12px;background:#fff;animation:oi-open .2s ease-out}
+@keyframes oi-open{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.admin .oi-table{width:100%;border-collapse:collapse;font-size:.8125rem}
+.admin .oi-table th{position:static;padding:10px 8px;border-bottom:1px solid var(--a-line);background:none;color:var(--a-muted);font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-align:left;text-transform:uppercase}
+.admin .oi-table td{padding:8px;border-bottom:1px solid var(--a-line);background:none;vertical-align:middle;line-height:1.4}
+.admin .oi-table th:first-child,.admin .oi-table td:first-child{width:56px;padding-left:0}
+.admin .oi-table th:last-child,.admin .oi-table td:last-child{padding-right:0}
+.admin .oi-table tbody tr:hover td{background:none}
+.oi-table__name{max-width:360px;overflow:hidden;color:var(--a-ink);font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.admin .oi-table .oi-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.oi-detail__foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px 32px;padding-top:14px}
+.oi-detail__notes{display:grid;align-content:start;gap:6px;color:var(--a-ink);font-size:.8125rem}
+.oi-detail__notes p{margin:0}
+.oi-detail__notes strong{display:inline-block;min-width:170px;color:var(--a-muted);font-weight:600}
+.oi-totals{display:grid;gap:6px;min-width:260px;margin:0 0 0 auto;font-size:.8125rem}
+.oi-totals div{display:flex;justify-content:space-between;gap:24px}
+.oi-totals dt{color:var(--a-muted)}
+.oi-totals dd{margin:0;white-space:nowrap;font-variant-numeric:tabular-nums}
+.oi-totals__grand{padding-top:8px;border-top:1px solid var(--a-line);font-size:.875rem;font-weight:600}
+.oi-totals .oi-totals__grand dt{color:var(--a-ink)}
+@media(prefers-reduced-motion:reduce){.oi-detail{animation:none}.oi__toggle svg,.admin .oi__toggle{transition:none}}
 .admin-num small{white-space:nowrap}
 .admin-mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8125rem;color:var(--a-plum);overflow-wrap:anywhere}
 .admin-num{font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -446,8 +482,24 @@
   .admin-product{min-width:0}
   .admin-delivery__state{max-width:none}
 }
-/* Orders has five dense columns: stacked cards until there is room for them. */
-@media(max-width:1180px){
+/* Orders has six columns: stacked cards until the orders card is wide enough for them (about 1080px). */
+@container admin-orders (max-width:1079px){
+  .admin-table--orders{table-layout:auto}
+  .admin-table--orders>tbody>tr.oi-row>td{grid-column:1/-1;padding:0}
+  .admin-table--orders>tbody>tr.oi-row>td::before{content:none}
+  .admin-table--orders>tbody>tr.oi-row{padding-top:0}
+  .admin-table--orders>tbody>tr.is-items-open{border-bottom-color:transparent}
+  .admin .oi-table tr{display:grid;grid-template-columns:40px auto auto auto minmax(0,1fr) auto;align-items:center;gap:2px 14px;padding:10px 0;border-bottom:1px solid var(--a-line)}
+  .admin .oi-table td,.admin .oi-table td:first-child,.admin .oi-table td:last-child{position:static;display:block;width:auto;min-width:0;padding:0;border:0}
+  .admin .oi-table td::before{content:none}
+  .admin .oi-table td:nth-child(1){grid-row:1/3}
+  .admin .oi-table td:nth-child(2){grid-column:2/6;max-width:none}
+  .admin .oi-table td:nth-child(6){grid-column:6;grid-row:1}
+  .admin .oi-table td[data-label]{grid-row:2;color:var(--a-muted);font-size:.75rem;text-align:left}
+  .admin .oi-table td[data-label]::before{content:attr(data-label) ' ';position:static;display:inline;width:auto;color:var(--a-muted);font-size:inherit;font-weight:600;letter-spacing:0;text-transform:none}
+  .oi-detail{padding:4px 14px 14px}
+  .oi-totals{min-width:0;width:100%}
+
   .admin-table--orders thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   .admin-table--orders,.admin-table--orders tbody{display:block}
   .admin-table--orders tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;padding:18px 24px;border-bottom:1px solid var(--a-line)}
@@ -458,8 +510,14 @@
   .admin-table--orders td:last-child{grid-column:1/-1}
   .admin-table--orders td.admin-num{text-align:left}
 }
-@media(max-width:600px){
-  .admin-table--orders tr{grid-template-columns:minmax(0,1fr);padding:16px 18px}
+@container admin-orders (max-width:560px){
+  .admin-table--orders>tbody>tr{grid-template-columns:minmax(0,1fr);padding:16px 18px}
+  .admin .oi-table tr{position:relative;display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:2px 12px;min-height:56px;padding:10px 0 10px 54px}
+  .admin .oi-table td:nth-child(1){position:absolute;top:10px;left:0}
+  .admin .oi-table td:nth-child(2){flex:1 1 calc(100% - 96px);white-space:normal}
+  .admin .oi-table td:nth-child(6){flex:none;order:1}
+  .admin .oi-table td[data-label]{flex:none;order:2;white-space:nowrap}
+  .oi-detail__notes strong{display:block;min-width:0}
 }
 @media(max-width:600px){
   .admin-breadcrumb li:not([aria-current]){display:none}

@@ -19,7 +19,7 @@ import BrandLogo from './brand-logo';
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { defaultContent, type Content, type CustomerInfo, type Coupon } from '@aurzen/shared/site';
 import { OrderActions, paymentName } from './admin/order-tools';
-import OrderItems from './admin/order-items';
+import {OrderItemsSummary,OrderItemsDetail} from './admin/order-items';
 import CustomersPanel from './admin/customers-panel';
 import CouponsEditor from './admin/coupons-editor';
 import OverviewExtras from './admin/overview-extras';
@@ -57,6 +57,9 @@ export default function AdminWorkspace() {
     const [categoryRequest,setCategoryRequest]=useState(false);
     const [orders, setOrders] = useState<Order[]>([]), [tab, setTab] = useState('Overview'), [notice, setNoticeState] = useState<Notice|null>(null), [adminLoaded, setAdminLoaded] = useState(false), [dirty, setDirty] = useState(false);
     const orderFilter=useOrderFilters(orders);
+    // Orders whose item list is opened below the row (all collapsed on load).
+    const [openItems,setOpenItems]=useState<Set<string>>(()=>new Set());
+    const toggleItems=(id:string)=>setOpenItems(prev=>{const next=new Set(prev);if(next.has(id))next.delete(id);else next.add(id);return next;});
     const [navOpen,setNavOpen]=useState(false),[bannerOpen,setBannerOpen]=useState(true),[editingOrder,setEditingOrder]=useState<Order|null>(null);
     const menuButton=useRef<HTMLButtonElement>(null),sidebar=useRef<HTMLElement>(null);
     const setNotice=(text:string,kind:Notice['kind']='success')=>setNoticeState(text?{text,kind}:null);
@@ -181,14 +184,14 @@ export default function AdminWorkspace() {
     {adminLoaded && tab === 'Users & roles' && me?.role==='owner' && <UsersPanel users={users} onSave={async data=>{await mutate(data);setNotice('Account saved');}}/>}
     {adminLoaded && tab === 'My password' && me && <ChangePassword me={me} onSave={async data=>{await mutate(data);setNotice('Password changed');}}/>}
     {adminLoaded && tab === 'Backup' && <Backup products={products} categories={categoryTree} orders={orders} site={site} content={content} onImport={async value=>{for(const [section,data] of Object.entries(value))await mutate({action:'saveSite',section,value:data});setNotice('Settings imported');}}/>}
-    {tab === 'Orders' && <section className="a-card a-card--flush" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <><OrderFilters state={orderFilter}/>{!orderFilter.filtered.length ? <div className="admin-empty" role="status"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders found</h3><p>Try another search, status or date range.</p><button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={orderFilter.reset}>Reset filters</button></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orderFilter.filtered.map(o => <tr key={o.id}>
+    {tab === 'Orders' && <section className="a-card a-card--flush admin-orders" aria-label="Orders">{!orders.length ? <div className="admin-empty"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders yet.</h3><p>Place an order from the storefront.</p></div> : <><OrderFilters state={orderFilter}/>{!orderFilter.filtered.length ? <div className="admin-empty" role="status"><span className="admin-empty__icon"><Icon name="orders"/></span><h3>No orders found</h3><p>Try another search, status or date range.</p><button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={orderFilter.reset}>Reset filters</button></div> : <div className="admin-table-wrap"><table className="admin-table admin-table--orders"><thead><tr><th scope="col">Order</th><th scope="col">Customer</th><th scope="col">Delivery address</th><th scope="col">Items</th><th scope="col" className="admin-num">Total</th><th scope="col">Status & courier</th></tr></thead><tbody>{orderFilter.filtered.map(o => <Fragment key={o.id}><tr className={openItems.has(o.id)?'is-items-open':undefined}>
         <td data-label="Order"><span className="admin-mono">{o.id}</span>{!o.readAt&&<span className="admin-new-marker">New<span className="sr-only"> unread order</span></span>}<small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>{markRead(o);setEditingOrder(o);}}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
         <td data-label="Customer"><strong className="admin-order-name">{o.name}</strong><small>{o.phone}</small></td>
-        <td data-label="Address" className="admin-order-address">{o.address}<small>{o.area === 'dhaka' ? 'Dhaka city' : 'Outside Dhaka'} · Delivery {money(o.delivery)}</small></td>
-        <td data-label="Items" className="admin-order-items"><OrderItems items={o.items}/></td>
+        <td data-label="Address" className="admin-order-address"><span className="admin-order-address__text" title={o.address}>{o.address}</span><small>{o.area === 'dhaka' ? 'Dhaka city' : 'Outside Dhaka'} · Delivery {money(o.delivery)}</small></td>
+        <td data-label="Items" className="admin-order-items"><OrderItemsSummary order={o} products={products} open={openItems.has(o.id)} onToggle={()=>toggleItems(o.id)}/></td>
         <td data-label="Total" className="admin-num">{money(o.total)}<small>{paymentName(o)}</small></td>
         <td data-label="Status"><OrderActions order={o} orders={orders} site={site} customer={customers[o.phone]} onSave={change} onOpen={()=>markRead(o)}><div className="a-status-select" data-status={statusKey(o.status)}><span className="a-pill__dot" aria-hidden="true"/><select aria-label={'Status for '+o.id} value={o.status} onChange={e => { const status = e.target.value; const reason = status === 'Cancelled' ? prompt('Reason for cancelling (optional)') : ''; if (reason === null) { e.target.value = o.status; return; } void change({ action: 'status', id: o.id, status, reason }); }}>{statusOptions(o.status).map(s => <option key={s}>{s}</option>)}</select></div></OrderActions></td>
-    </tr>)}</tbody></table></div>}</>}</section>}
+    </tr>{openItems.has(o.id)&&<tr className="oi-row"><td colSpan={6}><OrderItemsDetail order={o} products={products} categories={categoryTree}/></td></tr>}</Fragment>)}</tbody></table></div>}</>}</section>}
     {tab === 'Customers' && adminLoaded && <CustomersPanel orders={orders} customers={customers} onSave={async(phone,info)=>{await mutate({action:'saveCustomer',phone,info});setNotice('Customer saved');}}/>}</>}
         </div>
     </div>
