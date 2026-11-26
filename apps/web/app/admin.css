@@ -543,7 +543,7 @@
 .admin-order-name{display:block;color:var(--a-ink);font-weight:600}
 .admin-table--orders td.admin-order-address{min-width:180px;max-width:280px;overflow-wrap:anywhere}
 .admin .admin-order-edit{margin-top:10px}
-.admin-order-locked{display:inline-flex!important;align-items:center;gap:6px;margin-top:10px!important}
+.admin-order-locked{display:inline-flex!important;align-items:center;gap:6px;margin-top:10px!important;white-space:nowrap}
 .admin-order-locked .a-icon{width:14px;height:14px}
 
 /* Order editor dialog */
