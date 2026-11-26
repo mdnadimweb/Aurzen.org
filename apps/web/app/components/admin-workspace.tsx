@@ -19,6 +19,7 @@ import BrandLogo from './brand-logo';
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { defaultContent, type Content, type CustomerInfo, type Coupon } from '@aurzen/shared/site';
 import { OrderActions, paymentName } from './admin/order-tools';
+import OrderItems from './admin/order-items';
 import CustomersPanel from './admin/customers-panel';
 import CouponsEditor from './admin/coupons-editor';
 import OverviewExtras from './admin/overview-extras';
@@ -28,7 +29,7 @@ import { MessageTemplates, CategorySettingsEditor, StorefrontSettings, GeneralSe
 import Backup from './admin/backup';
 import './admin/editable-card.css';
 import { useRouter, usePathname } from 'next/navigation';
-import { money, editableStatuses, statusOptions, lineKey, optionLabel, mainCategories, type Product, type Order } from '@aurzen/shared/catalog';
+import { money, editableStatuses, statusOptions, mainCategories, type Product, type Order } from '@aurzen/shared/catalog';
 import { api, useStore } from '../providers';
 
 const tabs:{name:string;icon:IconName;group?:string}[]=[{name:'Overview',icon:'overview'},{name:'Orders',icon:'orders'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Customers',icon:'customers'},
@@ -184,7 +185,7 @@ export default function AdminWorkspace() {
         <td data-label="Order"><span className="admin-mono">{o.id}</span>{!o.readAt&&<span className="admin-new-marker">New<span className="sr-only"> unread order</span></span>}<small>{new Date(o.date).toLocaleDateString('en-BD')}{o.editedAt&&<> · Edited {relativeTime(o.editedAt)}</>}</small>{editableStatuses.includes(o.status)?<button type="button" className="a-btn a-btn--secondary a-btn--sm admin-order-edit" data-row-action="edit-order" aria-label={'Edit order '+o.id} onClick={()=>{markRead(o);setEditingOrder(o);}}><Icon name="edit"/>Edit order</button>:<small className="admin-order-locked"><Icon name="lock"/>{o.status==='Cancelled'?'Locked · order cancelled':o.status==='Returned'?'Locked · order returned':'Locked · already shipped'}</small>}</td>
         <td data-label="Customer"><strong className="admin-order-name">{o.name}</strong><small>{o.phone}</small></td>
         <td data-label="Address" className="admin-order-address">{o.address}<small>{o.area === 'dhaka' ? 'Dhaka city' : 'Outside Dhaka'} · Delivery {money(o.delivery)}</small></td>
-        <td data-label="Items">{o.items.map((x) => <small key={lineKey(x)}>{x.name} × {x.qty}<br />{optionLabel(x)}</small>)}</td>
+        <td data-label="Items" className="admin-order-items"><OrderItems items={o.items}/></td>
         <td data-label="Total" className="admin-num">{money(o.total)}<small>{paymentName(o)}</small></td>
         <td data-label="Status"><OrderActions order={o} orders={orders} site={site} customer={customers[o.phone]} onSave={change} onOpen={()=>markRead(o)}><div className="a-status-select" data-status={statusKey(o.status)}><span className="a-pill__dot" aria-hidden="true"/><select aria-label={'Status for '+o.id} value={o.status} onChange={e => { const status = e.target.value; const reason = status === 'Cancelled' ? prompt('Reason for cancelling (optional)') : ''; if (reason === null) { e.target.value = o.status; return; } void change({ action: 'status', id: o.id, status, reason }); }}>{statusOptions(o.status).map(s => <option key={s}>{s}</option>)}</select></div></OrderActions></td>
     </tr>)}</tbody></table></div>}</>}</section>}

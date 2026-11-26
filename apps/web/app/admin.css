@@ -246,6 +246,19 @@
 .admin-table--orders td:last-child{min-width:250px}
 .admin-table--orders td:nth-child(2){min-width:140px}
 .admin-table--orders td:nth-child(4){min-width:190px}
+/* Items: compact list (quantity badge, name on one line, size/colour below). Total keeps room for its payment line. */
+.admin-table--orders td.admin-order-items{min-width:220px;max-width:300px}
+.admin-table--orders td.admin-num{min-width:128px}
+.admin-table--orders td.admin-num small{white-space:normal}
+.order-items__count{margin:0 0 8px;color:var(--a-muted);font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.order-items ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.order-items li{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:10px;margin:0}
+.order-items__qty{display:inline-grid;place-items:center;min-width:28px;height:22px;padding:0 6px;border-radius:999px;background:#f4edf1;color:var(--a-plum);font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
+.order-items__text{display:grid;min-width:0;line-height:1.35}
+.order-items__name{overflow:hidden;color:var(--a-ink,inherit);font-size:.8125rem;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.order-items__option{color:var(--a-muted);font-size:.75rem}
+.admin .order-items__more{margin:8px 0 0 38px;padding:2px 0;border:0;background:none;color:var(--a-plum);font:inherit;font-size:.75rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.admin .order-items__more:focus-visible{outline:2px solid var(--a-plum);outline-offset:2px;border-radius:4px}
 .admin-num small{white-space:nowrap}
 .admin-mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8125rem;color:var(--a-plum);overflow-wrap:anywhere}
 .admin-num{font-variant-numeric:tabular-nums;white-space:nowrap}
