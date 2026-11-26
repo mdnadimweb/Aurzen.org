@@ -50,7 +50,8 @@ export default function AdminWorkspace() {
     const [me,setMe]=useState<Me|null>(null),[users,setUsers]=useState<StaffAccount[]>([]);
     // Staff see orders, products and customers only (the API enforces the same rule).
     const staffTabs=['Overview','Orders','Products','Customers','My password'];
-    const visibleTabs=me?.role==='staff'?tabs.filter(t=>staffTabs.includes(t.name)):tabs;
+    // Owners change their password inside Settings; staff (no Settings access) keep a "My password" link.
+    const visibleTabs=me?.role==='staff'?tabs.filter(t=>staffTabs.includes(t.name)):tabs.filter(t=>t.name!=='My password');
     const ownerName=me?.role==='staff'?me.name:'Nadim';
     const [customers,setCustomers]=useState<Record<string,CustomerInfo>>({});
     const [content,setContent]=useState<Content>(defaultContent),[subscribers,setSubscribers]=useState<{contact:string;created:string}[]>([]),[activity,setActivity]=useState<{at:string;actor:string;area:string;detail:string}[]>([]);
@@ -174,7 +175,7 @@ export default function AdminWorkspace() {
     {adminLoaded && tab === 'Coupons' && <CouponsEditor coupons={coupons} orders={orders} categories={categoryTree} products={products} onSave={async list=>{await mutate({action:'saveCoupons',coupons:list});setNotice('Coupons saved');}}/>}
     {adminLoaded && tab === 'Popup' && <PopupSettings {...siteProps}/>}
     {adminLoaded && tab === 'Subscribers' && <Subscribers list={subscribers} onDelete={contact=>void change({action:'deleteSubscriber',contact})}/>}
-    {adminLoaded && tab === 'Settings' && <><GeneralSettings {...siteProps}/><div className="mt-6"><MessageTemplates {...siteProps}/></div></>}
+    {adminLoaded && tab === 'Settings' && <><GeneralSettings {...siteProps}/><div className="mt-6"><MessageTemplates {...siteProps}/></div>{me&&<div className="mt-6" id="my-password"><ChangePassword me={me} onSave={async data=>{await mutate(data);setNotice('Password changed');}}/></div>}</>}
     {adminLoaded && tab === 'SEO & integrations' && <><SeoSettings {...siteProps}/><div className="mt-6"><RedirectsEditor {...siteProps}/></div></>}
     {adminLoaded && tab === 'Sales' && <SalesEditor {...siteProps}/>}
     {adminLoaded && tab === 'Gift options' && <GiftsEditor {...siteProps}/>}
