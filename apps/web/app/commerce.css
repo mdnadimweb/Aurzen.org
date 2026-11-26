@@ -26,16 +26,20 @@ body:has(dialog[open]) .mobile-purchase{display:none}
 
 /* Shared detail and sticky purchase actions. Dialogs retain the top layer. */
 .purchase-actions{display:flex;gap:12px;flex-wrap:wrap}
-/* Product page: "View your bag" and "Order on WhatsApp" as quiet pill buttons under the main actions. */
-.detail-copy .purchase-links{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 4px}
-.detail-copy .purchase-link{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:0 16px;border:1px solid #e3d5db;border-radius:999px;background:linear-gradient(180deg,#fffdfa,#f8f2ee);color:var(--plum);font-size:.875rem;font-weight:500;letter-spacing:.01em;white-space:nowrap;text-decoration:none;box-shadow:0 1px 2px #30202b0a;transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
-.detail-copy .purchase-link svg{flex:none;opacity:.85}
-.detail-copy .purchase-link--wa svg{color:#1fa855;opacity:1}
-.detail-copy .purchase-link:hover{border-color:var(--plum);box-shadow:0 6px 18px #30202b14;transform:translateY(-1px);text-decoration:none}
-.detail-copy .purchase-link:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
-.detail-copy .purchase-links+small{display:block;margin-top:10px}
-@media(max-width:480px){.detail-copy .purchase-links{grid-template-columns:1fr;gap:10px}}
-@media(prefers-reduced-motion:reduce){.detail-copy .purchase-link{transition:none}.detail-copy .purchase-link:hover{transform:none}}
+/* Product page, under Add to Bag / Buy Now: one quiet WhatsApp line, then small trust points. Both centred on the button row. */
+.detail-copy .purchase-chat{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin:14px 0 0;padding:0;color:var(--muted);font-size:.875rem;text-decoration:none}
+.detail-copy .purchase-chat>span{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
+.detail-copy .purchase-chat svg{flex:none;color:#1fa855}
+.detail-copy .purchase-chat__cta{color:var(--plum);font-weight:500;text-decoration:underline;text-decoration-color:#c9b3bd;text-decoration-thickness:1px;text-underline-offset:4px;transition:text-decoration-color .2s ease}
+.detail-copy .purchase-chat__arrow{color:var(--plum);transition:transform .2s ease}
+.detail-copy .purchase-chat:hover .purchase-chat__cta{text-decoration-color:var(--plum)}
+.detail-copy .purchase-chat:hover .purchase-chat__arrow{transform:translateX(3px)}
+.detail-copy .purchase-chat:focus-visible{outline:2px solid var(--plum);outline-offset:2px;border-radius:999px}
+.detail-copy .purchase-trust{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px 28px;list-style:none;margin:12px 0 0;padding:16px 0 0;border-top:1px solid #eadfe3}
+.detail-copy .purchase-trust li{display:inline-flex;align-items:center;gap:9px;margin:0;color:var(--muted);font-size:.8125rem;letter-spacing:.01em}
+.detail-copy .purchase-trust__icon{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#f6eeea;border:1px solid #eadcd9;color:var(--plum)}
+@media(max-width:480px){.detail-copy .purchase-trust{gap:8px 14px;padding-top:14px}.detail-copy .purchase-trust li{gap:7px;font-size:.75rem}.detail-copy .purchase-trust__icon{width:26px;height:26px}.detail-copy .purchase-trust__icon svg{width:14px;height:14px}}
+@media(prefers-reduced-motion:reduce){.detail-copy .purchase-chat__arrow,.detail-copy .purchase-chat__cta{transition:none}.detail-copy .purchase-chat:hover .purchase-chat__arrow{transform:none}}
 .detail-copy .purchase-actions .primary{flex:1;min-width:130px;min-height:48px;margin:0;padding:14px 16px;justify-content:center;white-space:nowrap}
 .detail-copy .purchase-actions .purchase-add{background:transparent;color:var(--plum);border:1px solid var(--plum)}
 @media(max-width:750px){
