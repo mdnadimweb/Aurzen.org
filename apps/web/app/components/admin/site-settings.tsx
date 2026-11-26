@@ -7,6 +7,7 @@ import {homeSectionLabels,cardLabels,cardLabelText,type CategorySettings,linkHre
 import EditableCard,{EditableGroup,RowTools,move,newId} from './editable-card';
 import LinkPicker from './link-picker';
 import ImageField from './image-field';
+import MysteryPhotos from './mystery-photos';
 
 export type SiteProps={site:SiteSettings;content:Content;categories:Category[];products:Product[];
   saveSite:<K extends keyof SiteSettings>(section:K,value:SiteSettings[K])=>Promise<void>;resetSite:(section:keyof SiteSettings)=>Promise<void>;
@@ -102,12 +103,13 @@ export function StorefrontSettings(p:SiteProps){
         {f.source==='manual'&&<><label>Add a product<select value="" onChange={e=>{const id=Number(e.target.value);if(id&&!f.ids.includes(id)&&f.ids.length<8)s({...f,ids:[...f.ids,id]});}}><option value="">Choose…</option>{p.products.filter(x=>!f.ids.includes(x.id)).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
           <div className="ec-list">{f.ids.map((id,i)=><div key={id} className="ec-list__head"><span>{p.products.find(x=>x.id===id)?.name||'Removed product'}</span><RowTools index={i} count={f.ids.length} label="product" onMove={(a,b)=>s({...f,ids:move(f.ids,a,b)})} onRemove={()=>s({...f,ids:f.ids.filter(x=>x!==id)})}/></div>)}</div></>}
         <p className="hero-slide__hint">Products shown here are not repeated in the category rows below.</p></>;}}/>
-    <EditableCard title="Mystery box section" summary={site.home.mystery.title.replace(/\n/g,' ')} badge={onOff(!site.home.mystery.hidden,'Shown','Hidden')} initial={site.home} onSave={v=>p.saveSite('home',v)}
+    <EditableCard title="Mystery box section" summary={site.home.mystery.title.replace(/\n/g,' ')+(site.home.mystery.images?.length?' · '+site.home.mystery.images.length+' photos':'')} badge={onOff(!site.home.mystery.hidden,'Shown','Hidden')} initial={site.home} onSave={v=>p.saveSite('home',v)}
       render={(d,set)=>{const m=d.mystery,s=(mystery:typeof m)=>set({...d,mystery});return <>
         <label className="ec-toggle"><input type="checkbox" checked={!m.hidden} onChange={e=>s({...m,hidden:!e.target.checked})}/><span>Show this section (needs a Mystery category)</span></label>
         <Pair><Text label="Eyebrow" draft={m} set={s} k="eyebrow" max={60}/><Text label="Heading (Enter for a new line)" draft={m} set={s} k="title" max={80} area required/></Pair>
         <Text label="Text" draft={m} set={s} k="text" max={400} area/>
-        <Pair><Text label="Button text" draft={m} set={s} k="cta" max={40}/><Text label="Small print" draft={m} set={s} k="small" max={120}/></Pair></>;}}/>
+        <Pair><Text label="Button text" draft={m} set={s} k="cta" max={40}/><Text label="Small print" draft={m} set={s} k="small" max={120}/></Pair>
+        <MysteryPhotos images={m.images||[]} interval={m.interval||5} onImages={images=>s({...m,images})} onInterval={interval=>s({...m,interval})}/></>;}}/>
     <EditableCard title="A note from the brand" summary={site.home.note.title+' '+site.home.note.emphasis} badge={onOff(!site.home.note.hidden,'Shown','Hidden')} initial={site.home} onSave={v=>p.saveSite('home',v)} onReset={()=>p.resetSite('home')}
       render={(d,set)=>{const n=d.note,s=(note:typeof n)=>set({...d,note});return <>
         <label className="ec-toggle"><input type="checkbox" checked={!n.hidden} onChange={e=>s({...n,hidden:!e.target.checked})}/><span>Show this section</span></label>

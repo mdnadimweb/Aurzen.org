@@ -130,3 +130,16 @@ test('WhatsApp: any number format becomes 8801…, links are encoded, bad number
   assert.equal(normalizeSiteSection('messages',{'Ask for details':'Hi {name}'})['Ask for details'],'Hi {name}');
   assert.match(fillTemplate(extraMessageTemplates['Ask for details'],{name:'Rina',order_id:'AZ-1',total:'৳500'}),/Rina.*AZ-1.*৳500/);
 });
+test('mystery box section: photos and seconds per photo are optional, validated and kept',()=>{
+  const {mysteryImageLimit}=require('@aurzen/shared/site');
+  const base=defaultSite.home;
+  const old={...base,mystery:{...base.mystery}};delete old.mystery.images;delete old.mystery.interval;
+  const upgraded=normalizeSiteSection('home',old).mystery;
+  assert.deepEqual(upgraded.images,[]);assert.equal(upgraded.interval,5);
+  const photos=['/media/3f2b8c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f.webp','https://images.example.com/box.jpg'];
+  const saved=normalizeSiteSection('home',{...base,mystery:{...base.mystery,images:photos,interval:8}}).mystery;
+  assert.deepEqual(saved.images,photos);assert.equal(saved.interval,8);
+  assert.throws(()=>normalizeSiteSection('home',{...base,mystery:{...base.mystery,images:['http://insecure.example.com/a.jpg']}}),/Mystery photo 1/);
+  assert.throws(()=>normalizeSiteSection('home',{...base,mystery:{...base.mystery,images:Array(mysteryImageLimit+1).fill(photos[1])}}),/at most/);
+  assert.throws(()=>normalizeSiteSection('home',{...base,mystery:{...base.mystery,interval:1}}),/Seconds per photo/);
+});

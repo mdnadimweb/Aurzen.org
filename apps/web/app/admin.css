@@ -709,6 +709,22 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .admin .pw-field__toggle:focus-visible{outline:2px solid var(--a-plum);outline-offset:1px}
 .admin .pw-field__toggle .a-icon{width:19px;height:19px}
 
+/* Settings → Mystery box section photos. */
+.admin .mystery-photos{display:grid;gap:12px;margin:8px 0 0;padding:16px 0 0;border:0;border-top:1px solid var(--a-line)}
+.admin .mystery-photos legend{padding:0;font-size:.8125rem;font-weight:600;color:var(--a-ink)}
+.mystery-photos legend span{color:var(--a-muted);font-weight:400}
+.mystery-photos__list{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px;margin:0;padding:0;list-style:none}
+.mystery-photos__list li{position:relative;overflow:hidden;border:1px solid var(--a-line);border-radius:10px;background:#f6f3f1}
+.mystery-photos__list img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.mystery-photos__n{position:absolute;top:6px;left:6px;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#2e1f2acc;color:#fff;font-size:.6875rem;font-weight:600}
+.mystery-photos__tools{display:flex;justify-content:center;gap:2px;padding:4px;border-top:1px solid var(--a-line);background:#fff}
+.admin .mystery-photos__tools .a-btn{width:32px;min-height:32px;height:32px}
+.mystery-photos__add{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.mystery-photos__add small{color:var(--a-muted);font-size:.75rem}
+.mystery-photos__add label[aria-disabled=true]{opacity:.5;pointer-events:none}
+.admin .mystery-photos__interval{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0;font-size:.8125rem;font-weight:600}
+.mystery-photos__interval span{display:inline-flex;align-items:center;gap:8px;font-weight:400;color:var(--a-muted)}
+.admin .mystery-photos__interval input{width:80px;margin:0}
 /* Orders → notes icon: notes, history and messages in a centred dialog (header and footer fixed, body scrolls). */
 .admin .order-notes-dialog{width:min(600px,calc(100% - 32px));max-height:90vh;max-height:90dvh;overflow:hidden;border:1px solid var(--a-line);border-radius:12px;box-shadow:0 30px 80px -20px #2e1f2a66}
 .admin .order-notes-dialog::backdrop{background:rgb(35 20 32 / .55);-webkit-backdrop-filter:none;backdrop-filter:none}
