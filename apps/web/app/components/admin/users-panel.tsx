@@ -11,7 +11,7 @@ type Save=(data:Record<string,unknown>)=>Promise<void>;
 export default function UsersPanel({users,onSave}:{users:StaffAccount[];onSave:Save}){
   const [adding,setAdding]=useState(false);
   return <EditableGroup>
-    <p className="hero-slide__hint"><strong>Owner</strong>: everything. <strong>Staff</strong>: orders, products (not prices or offers) and customers — no settings, storefront, marketing or accounts. You keep signing in with the main owner password (change it at the bottom of Settings); staff sign in with their username.</p>
+    <p className="hero-slide__hint"><strong>Owner</strong>: everything. <strong>Staff</strong>: orders, products (not prices or offers) and customers — no settings, storefront, marketing or accounts. You keep signing in with the main owner password (change it in Settings → Password); staff sign in with their username.</p>
     {users.map(u=><EditableCard key={u.id} title={u.name+' · @'+u.username} summary={(u.role==='owner'?'Owner':'Staff')+' · added '+new Date(u.created).toLocaleDateString('en-BD')+(u.mustReset?' · must choose a new password':'')} badge={u.disabled?{text:'Disabled',tone:'warn'}:{text:u.role==='owner'?'Owner':'Staff',tone:'on'}} initial={{name:u.name,username:u.username,role:u.role,disabled:u.disabled,password:''}}
       actions={<button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" onClick={()=>{if(confirm('Remove the account '+u.username+'? They are signed out at once. Their past activity stays in the log.'))void onSave({action:'deleteUser',id:u.id});}}>Remove</button>}
       onSave={async v=>{await onSave({action:'saveUser',id:u.id,name:v.name,username:v.username,role:v.role,disabled:v.disabled});if(v.password)await onSave({action:'resetUserPassword',id:u.id,password:v.password});}}
@@ -37,11 +37,22 @@ function NewAccount({onSave,onCancel}:{onSave:(v:Record<string,unknown>)=>Promis
   </form>;
 }
 /** Studio → My password, and (forced) the gate shown until a staff member replaces a temporary password. */
-export function ChangePassword({me,onSave,forced=false}:{me:Me;onSave:Save;forced?:boolean}){
+/** Settings → "Password" row: closed like the other Settings cards; "Change" opens the form. */
+export function PasswordCard({me,onSave}:{me:Me;onSave:Save}){
+  const [open,setOpen]=useState(false);
+  return <div className="ec-group"><section className={'ec'+(open?' is-open':'')}>
+    <div className="ec__row">
+      <div className="ec__text"><h3>Password</h3><p>Change the password you use to sign in to the studio.</p></div>
+      <button type="button" className="a-btn a-btn--secondary a-btn--sm" aria-expanded={open} aria-controls="password-card-panel" onClick={()=>setOpen(!open)}>{open?'Close':'Change'}</button>
+    </div>
+    {open&&<div id="password-card-panel" className="ec__panel"><ChangePassword me={me} inCard onSave={async data=>{await onSave(data);setOpen(false);}}/></div>}
+  </section></div>;
+}
+export function ChangePassword({me,onSave,forced=false,inCard=false}:{me:Me;onSave:Save;forced?:boolean;inCard?:boolean}){
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const mainOwner=me.id===null;
-  return <form className="a-card p-5 ec__fields change-password" onSubmit={async e=>{e.preventDefault();const form=e.currentTarget,f=new FormData(form);if(f.get('password')!==f.get('confirm')){setError('The new passwords do not match.');return;}setBusy(true);setError('');try{await onSave({action:'changePassword',current:f.get('current'),password:f.get('password')});form.reset();}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}>
-    <h2 className="mt-0">{forced?'Choose your own password, '+me.name:'Change your password'}</h2>
+  return <form className={(inCard?'':'a-card p-5 ')+'ec__fields change-password'} onSubmit={async e=>{e.preventDefault();const form=e.currentTarget,f=new FormData(form);if(f.get('password')!==f.get('confirm')){setError('The new passwords do not match.');return;}setBusy(true);setError('');try{await onSave({action:'changePassword',current:f.get('current'),password:f.get('password')});form.reset();}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}>
+    {!inCard&&<h2 className="mt-0">{forced?'Choose your own password, '+me.name:'Change your password'}</h2>}
     <p className="hero-slide__hint">{forced?'Your account was given a temporary password. Choose a new one (at least 8 characters) to continue.'
       :mainOwner?'Use at least 8 characters. Your other signed-in devices are signed out. If you ever forget it, use “Forgot password?” on the sign-in page with your recovery key (the ADMIN_PASSWORD value in your Render settings).'
       :'Use at least 8 characters. If you forget it, ask the store owner to set a temporary password for you.'}</p>

@@ -23,7 +23,7 @@ import {OrderItemsSummary,OrderItemsDetail} from './admin/order-items';
 import CustomersPanel from './admin/customers-panel';
 import CouponsEditor from './admin/coupons-editor';
 import OverviewExtras from './admin/overview-extras';
-import UsersPanel,{ChangePassword,type Me,type StaffAccount} from './admin/users-panel';
+import UsersPanel,{ChangePassword,PasswordCard,type Me,type StaffAccount} from './admin/users-panel';
 import { SalesEditor, AppearanceEditor, RedirectsEditor, SizeGuidesEditor, GiftsEditor, MysteryEditor, BannersEditor } from './admin/more-settings';
 import { MessageTemplates, CategorySettingsEditor, StorefrontSettings, GeneralSettings, SeoSettings, PopupSettings, PagesEditor, FaqEditor, ReviewsEditor, Subscribers, ActivityLog, type SiteProps } from './admin/site-settings';
 import Backup from './admin/backup';
@@ -175,7 +175,7 @@ export default function AdminWorkspace() {
     {adminLoaded && tab === 'Coupons' && <CouponsEditor coupons={coupons} orders={orders} categories={categoryTree} products={products} onSave={async list=>{await mutate({action:'saveCoupons',coupons:list});setNotice('Coupons saved');}}/>}
     {adminLoaded && tab === 'Popup' && <PopupSettings {...siteProps}/>}
     {adminLoaded && tab === 'Subscribers' && <Subscribers list={subscribers} onDelete={contact=>void change({action:'deleteSubscriber',contact})}/>}
-    {adminLoaded && tab === 'Settings' && <><GeneralSettings {...siteProps}/><div className="mt-6"><MessageTemplates {...siteProps}/></div>{me&&<div className="mt-6" id="my-password"><ChangePassword me={me} onSave={async data=>{await mutate(data);setNotice('Password changed');}}/></div>}</>}
+    {adminLoaded && tab === 'Settings' && <><GeneralSettings {...siteProps}/><div className="mt-6"><MessageTemplates {...siteProps}/></div>{me&&<div className="mt-6" id="my-password"><PasswordCard me={me} onSave={async data=>{await mutate(data);setNotice('Password changed');}}/></div>}</>}
     {adminLoaded && tab === 'SEO & integrations' && <><SeoSettings {...siteProps}/><div className="mt-6"><RedirectsEditor {...siteProps}/></div></>}
     {adminLoaded && tab === 'Sales' && <SalesEditor {...siteProps}/>}
     {adminLoaded && tab === 'Gift options' && <GiftsEditor {...siteProps}/>}
