@@ -63,8 +63,8 @@ export function verifyPassword(password: string, stored: string) {
     return actual.length === wanted.length && timingSafeEqual(actual, wanted);
 }
 export function checkNewPassword(password: unknown) {
-    assert(typeof password === 'string' && password.length >= 10 && password.length <= 200, 'Use a password of 10 to 200 characters.');
-    assert(!/^(.)\1+$/.test(password as string) && !/^(password|1234567890|aurzen)/i.test(password as string), 'Choose a less guessable password.');
+    assert(typeof password === 'string' && password.length >= 8 && password.length <= 200, 'Use a password of 8 to 200 characters.');
+    assert(!/^(.)\1+$/.test(password as string) && !/^(password|12345678|87654321|qwerty|aurzen)/i.test(password as string), 'Choose a less guessable password.');
     return password as string;
 }
 export async function createSession(userId: string | null = null) {

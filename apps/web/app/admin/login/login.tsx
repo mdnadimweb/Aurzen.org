@@ -50,8 +50,8 @@ function Recover({staff,onBack}:{staff:boolean;onBack:()=>void}){
     <h1>Choose a new password.</h1>
     <p>Enter your recovery key: the <strong>ADMIN_PASSWORD</strong> value in your Render dashboard (your API service → Environment). Then pick a new password for the studio.</p>
     <label>Recovery key<PasswordInput name="key" required autoComplete="off" maxLength={256}/></label>
-    <label>New password<PasswordInput name="password" required minLength={10} maxLength={200} autoComplete="new-password"/></label>
-    <label>Repeat new password<PasswordInput name="confirm" required minLength={10} maxLength={200} autoComplete="new-password"/></label>
+    <label>New password<PasswordInput name="password" required minLength={8} maxLength={200} autoComplete="new-password"/></label>
+    <label>Repeat new password<PasswordInput name="confirm" required minLength={8} maxLength={200} autoComplete="new-password"/></label>
     <button className="a-btn a-btn--primary login-card__submit" disabled={busy}><Icon name="lock"/>{busy?'Saving…':'Save and sign in'}</button>
     <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={onBack}>Back to sign in</button>
     {error&&<p className="form-error" role="alert">{error}</p>}

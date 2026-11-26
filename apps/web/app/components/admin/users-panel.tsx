@@ -15,7 +15,7 @@ export default function UsersPanel({users,onSave}:{users:StaffAccount[];onSave:S
     {users.map(u=><EditableCard key={u.id} title={u.name+' · @'+u.username} summary={(u.role==='owner'?'Owner':'Staff')+' · added '+new Date(u.created).toLocaleDateString('en-BD')+(u.mustReset?' · must choose a new password':'')} badge={u.disabled?{text:'Disabled',tone:'warn'}:{text:u.role==='owner'?'Owner':'Staff',tone:'on'}} initial={{name:u.name,username:u.username,role:u.role,disabled:u.disabled,password:''}}
       actions={<button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" onClick={()=>{if(confirm('Remove the account '+u.username+'? They are signed out at once. Their past activity stays in the log.'))void onSave({action:'deleteUser',id:u.id});}}>Remove</button>}
       onSave={async v=>{await onSave({action:'saveUser',id:u.id,name:v.name,username:v.username,role:v.role,disabled:v.disabled});if(v.password)await onSave({action:'resetUserPassword',id:u.id,password:v.password});}}
-      validate={v=>v.password&&v.password.length<10?'Temporary passwords need at least 10 characters.':''}
+      validate={v=>v.password&&v.password.length<8?'Temporary passwords need at least 8 characters.':''}
       render={(d,set)=><>
         <div className="form-pair"><label>Name<input value={d.name} maxLength={60} onChange={e=>set({...d,name:e.target.value})}/></label><label>Username<input value={d.username} maxLength={40} autoComplete="off" onChange={e=>set({...d,username:e.target.value.toLowerCase()})}/></label></div>
         <label>Role<select value={d.role} onChange={e=>set({...d,role:e.target.value as 'owner'|'staff'})}><option value="staff">Staff</option><option value="owner">Owner</option></select></label>
@@ -30,7 +30,7 @@ function NewAccount({onSave,onCancel}:{onSave:(v:Record<string,unknown>)=>Promis
   return <form className="a-card p-5 ec__fields" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);setBusy(true);setError('');try{await onSave({name:f.get('name'),username:String(f.get('username')||'').toLowerCase(),role:f.get('role'),password:f.get('password')});}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}>
     <h3 className="mt-0">New account</h3>
     <div className="form-pair"><label>Name<input name="name" required minLength={2} maxLength={60}/></label><label>Username<input name="username" required minLength={3} maxLength={40} pattern="[a-zA-Z0-9._\-]+" autoComplete="off"/></label></div>
-    <div className="form-pair"><label>Role<select name="role" defaultValue="staff"><option value="staff">Staff</option><option value="owner">Owner</option></select></label><label>Temporary password<PasswordInput name="password" required minLength={10} maxLength={200} autoComplete="new-password"/></label></div>
+    <div className="form-pair"><label>Role<select name="role" defaultValue="staff"><option value="staff">Staff</option><option value="owner">Owner</option></select></label><label>Temporary password<PasswordInput name="password" required minLength={8} maxLength={200} autoComplete="new-password"/></label></div>
     <p className="hero-slide__hint">Give them the username and temporary password in person; they choose their own at the first sign-in.</p>
     {error&&<p className="form-error" role="alert">{error}</p>}
     <div className="ec__buttons"><button type="button" className="a-btn a-btn--ghost" disabled={busy} onClick={onCancel}>Cancel</button><button className="a-btn a-btn--primary" disabled={busy}>{busy?'Adding…':'Add account'}</button></div>
@@ -42,12 +42,12 @@ export function ChangePassword({me,onSave,forced=false}:{me:Me;onSave:Save;force
   const mainOwner=me.id===null;
   return <form className="a-card p-5 ec__fields change-password" onSubmit={async e=>{e.preventDefault();const form=e.currentTarget,f=new FormData(form);if(f.get('password')!==f.get('confirm')){setError('The new passwords do not match.');return;}setBusy(true);setError('');try{await onSave({action:'changePassword',current:f.get('current'),password:f.get('password')});form.reset();}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}>
     <h2 className="mt-0">{forced?'Choose your own password, '+me.name:'Change your password'}</h2>
-    <p className="hero-slide__hint">{forced?'Your account was given a temporary password. Choose a new one (at least 10 characters) to continue.'
-      :mainOwner?'Use at least 10 characters. Your other signed-in devices are signed out. If you ever forget it, use “Forgot password?” on the sign-in page with your recovery key (the ADMIN_PASSWORD value in your Render settings).'
-      :'Use at least 10 characters. If you forget it, ask the store owner to set a temporary password for you.'}</p>
+    <p className="hero-slide__hint">{forced?'Your account was given a temporary password. Choose a new one (at least 8 characters) to continue.'
+      :mainOwner?'Use at least 8 characters. Your other signed-in devices are signed out. If you ever forget it, use “Forgot password?” on the sign-in page with your recovery key (the ADMIN_PASSWORD value in your Render settings).'
+      :'Use at least 8 characters. If you forget it, ask the store owner to set a temporary password for you.'}</p>
     <label>{forced?'Temporary password':'Current password'}<PasswordInput name="current" required autoComplete="current-password"/></label>
-    <label>New password<PasswordInput name="password" required minLength={10} maxLength={200} autoComplete="new-password"/></label>
-    <label>Repeat new password<PasswordInput name="confirm" required minLength={10} maxLength={200} autoComplete="new-password"/></label>
+    <label>New password<PasswordInput name="password" required minLength={8} maxLength={200} autoComplete="new-password"/></label>
+    <label>Repeat new password<PasswordInput name="confirm" required minLength={8} maxLength={200} autoComplete="new-password"/></label>
     {error&&<p className="form-error" role="alert">{error}</p>}
     <div className="ec__buttons"><button className="a-btn a-btn--primary" disabled={busy}>{busy?'Saving…':'Save new password'}</button></div>
   </form>;

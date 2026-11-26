@@ -21,7 +21,7 @@ test('passwords are salted scrypt hashes and weak ones are refused',()=>{
   const stored=auth.hashPassword('a-good-password');
   assert.notEqual(stored,auth.hashPassword('a-good-password'));
   assert(auth.verifyPassword('a-good-password',stored));assert(!auth.verifyPassword('wrong-password',stored));
-  assert.throws(()=>auth.checkNewPassword('short'),/10 to 200/);assert.throws(()=>auth.checkNewPassword('password123456'),/guessable/);
+  assert.throws(()=>auth.checkNewPassword('short'),/8 to 200/);assert.throws(()=>auth.checkNewPassword('password123456'),/guessable/);
 });
 test('staff accounts: forced reset, limited actions, no price changes, disable ends access',async()=>{
   const owner=await call(session.POST,{body:{password:'test-only-owner-password-123'}});
@@ -76,4 +76,9 @@ test('owner password: change it in the studio, forgot password with the recovery
   assert.equal((await call(admin.GET,{method:'GET',cookie:first.cookie})).response.status,401);
   assert.equal((await call(session.POST,{body:{password:'owner-studio-pass-1'}})).response.status,401);
   assert.equal((await call(session.POST,{body:{password:'recovered-pass-22'}})).response.status,200);
+});
+test('studio passwords: 8 characters is enough, obvious ones are still refused',()=>{
+  assert.equal(auth.checkNewPassword('Rose2024'),'Rose2024');
+  assert.throws(()=>auth.checkNewPassword('Rose202'),/8 to 200/);
+  for(const weak of ['12345678','password1','qwerty12','aaaaaaaa','Aurzen123'])assert.throws(()=>auth.checkNewPassword(weak),/guessable/,weak);
 });
