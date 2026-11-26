@@ -106,3 +106,27 @@ test('hero slides accept a safe link and a schedule; banner settings are bounded
   assert.deepEqual(normalizeSiteSection('banners',{enabled:false,interval:6,transition:'fade'}),{enabled:false,interval:6,transition:'fade'});
   assert.throws(()=>normalizeSiteSection('banners',{enabled:true,interval:1,transition:'fade'}),/2 to 20/);
 });
+test('WhatsApp: any number format becomes 8801…, links are encoded, bad numbers never make a link',()=>{
+  const {formatWhatsAppNumber:f,whatsappLink,displayWhatsAppNumber,shopWhatsApp,extraMessageTemplates,fillTemplate}=require('@aurzen/shared/site');
+  for(const input of ['01864568745','+8801864568745','8801864568745','+880 1864-568745','008801864568745','+880 01864568745','1864568745',' 018 6456 8745 '])
+    assert.equal(f(input),'8801864568745',input);
+  for(const input of ['','0186456874','018645687451','01264568745','abc','880123',undefined])assert.equal(f(input),'',String(input));
+  assert.equal(f('+44 7700 900123'),'447700900123');
+  assert.equal(displayWhatsAppNumber('01864568745'),'+880 1864-568745');
+  assert.equal(whatsappLink(''),'');assert.equal(whatsappLink('undefined','hi'),'');
+  const link=whatsappLink('01864568745','Hi & hello\nদাম: ৳1,200 #1');
+  assert.equal(link,'https://wa.me/8801864568745?text='+encodeURIComponent('Hi & hello\nদাম: ৳1,200 #1'));
+  assert.match(link,/%0A/);assert.doesNotMatch(link.split('?text=')[1],/[ &#\n]/);
+  assert.equal(new URL(link).searchParams.get('text'),'Hi & hello\nদাম: ৳1,200 #1');
+  // Saving settings normalises the number and refuses an invalid one with a clear message.
+  assert.equal(normalizeSiteSection('general',{...defaultSite.general,whatsapp:'01864-568745'}).whatsapp,'8801864568745');
+  assert.throws(()=>normalizeSiteSection('general',{...defaultSite.general,whatsapp:'0186456'}),/valid WhatsApp number/);
+  // The button may be switched on before a number exists: it simply stays hidden.
+  const i=normalizeSiteSection('integrations',{...defaultSite.integrations,whatsapp:{...defaultSite.integrations.whatsapp,enabled:true,number:''}});
+  assert.equal(shopWhatsApp({...defaultSite,integrations:i}),'');
+  assert.equal(shopWhatsApp({...defaultSite,general:{...defaultSite.general,whatsapp:'8801711111111'},integrations:{...i,whatsapp:{...i.whatsapp,number:'8801822222222'}}}),'8801711111111');
+  assert.equal(shopWhatsApp({...defaultSite,integrations:{...i,whatsapp:{...i.whatsapp,number:'8801822222222'}}}),'8801822222222');
+  // "Ask for details" is a valid template name with sensible default text.
+  assert.equal(normalizeSiteSection('messages',{'Ask for details':'Hi {name}'})['Ask for details'],'Hi {name}');
+  assert.match(fillTemplate(extraMessageTemplates['Ask for details'],{name:'Rina',order_id:'AZ-1',total:'৳500'}),/Rina.*AZ-1.*৳500/);
+});

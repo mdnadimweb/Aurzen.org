@@ -3,7 +3,7 @@
 // Every section is an EditableCard: collapsed summary, Edit opens the form, Save goes to the server.
 import {useState,type ReactNode} from 'react';
 import {money,type Category,type Product} from '@aurzen/shared/catalog';
-import {homeSectionLabels,cardLabels,cardLabelText,type CategorySettings,linkHref,linkTypeLabels,type Content,type ContentPage,type FaqGroup,type NavItem,type Review,type SiteLink,type SiteSettings} from '@aurzen/shared/site';
+import {homeSectionLabels,cardLabels,cardLabelText,type CategorySettings,linkHref,linkTypeLabels,type Content,type ContentPage,type FaqGroup,type NavItem,type Review,type SiteLink,type SiteSettings,shopWhatsApp,displayWhatsAppNumber,extraMessageTemplates} from '@aurzen/shared/site';
 import EditableCard,{EditableGroup,RowTools,move,newId} from './editable-card';
 import LinkPicker from './link-picker';
 import ImageField from './image-field';
@@ -130,7 +130,7 @@ export function GeneralSettings(p:SiteProps){
       </>}/>
     <EditableCard title="Contact & social" summary={[g.whatsapp&&'WhatsApp '+g.whatsapp,g.phone,g.email,[g.facebook,g.instagram,g.tiktok,g.youtube].filter(Boolean).length+' social links'].filter(Boolean).join(' · ')} initial={g} onSave={v=>p.saveSite('general',v)}
       render={(d,set)=><>
-        <Pair><Text label="WhatsApp number" draft={d} set={set} k="whatsapp" max={20} hint="With country code, e.g. 8801XXXXXXXXX."/><Text label="Phone" draft={d} set={set} k="phone" max={30}/></Pair>
+        <Pair><Text label="WhatsApp number" draft={d} set={set} k="whatsapp" max={25} hint="Type it any way (01XXXXXXXXX or +880 1XXX-XXXXXX); it is saved as 8801XXXXXXXXX and used by every WhatsApp button and link."/><Text label="Phone" draft={d} set={set} k="phone" max={30}/></Pair>
         <Pair><Text label="Email" type="email" draft={d} set={set} k="email" max={120}/><Text label="Messenger / Facebook page link" draft={d} set={set} k="messenger" max={500}/></Pair>
         <Pair><Text label="Support hours" draft={d} set={set} k="hours" max={120}/><Text label="Address" draft={d} set={set} k="address" max={300} area/></Pair>
         <Pair><Text label="Facebook" draft={d} set={set} k="facebook" max={500}/><Text label="Instagram" draft={d} set={set} k="instagram" max={500}/></Pair>
@@ -163,8 +163,8 @@ export function GeneralSettings(p:SiteProps){
 export function MessageTemplates(p:SiteProps){
   const m=p.site.messages,statuses=['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'];
   return <EditableGroup><EditableCard title="Order messages (WhatsApp / SMS)" summary={Object.keys(m).length+' templates · '+Object.keys(m).join(', ')} initial={m} onSave={v=>p.saveSite('messages',v)} onReset={()=>p.resetSite('messages')}
-    render={(d,set)=><><p className="hero-slide__hint">On each order, a button opens WhatsApp (or SMS) with this text ready to send. Placeholders: {'{order_id} {name} {total} {status} {courier} {tracking}'}. Leave empty for no message.</p>
-      {statuses.map(s=><label key={s}>{s}<textarea rows={2} maxLength={500} value={d[s]||''} onChange={e=>set({...d,[s]:e.target.value})}/></label>)}</>}/></EditableGroup>;
+    render={(d,set)=><><p className="hero-slide__hint">On each order, a button opens WhatsApp (or SMS) with this text ready to send. Placeholders: {'{order_id} {name} {total} {status} {courier} {tracking}'}. Leave a status empty for no message.</p>
+      {[...statuses,...Object.keys(extraMessageTemplates)].map(s=><label key={s}>{s}<textarea rows={2} maxLength={500} value={d[s]||''} placeholder={(extraMessageTemplates as Record<string,string>)[s]||''} onChange={e=>set({...d,[s]:e.target.value})}/></label>)}</>}/></EditableGroup>;
 }
 export function SeoSettings(p:SiteProps){
   const {seo,integrations:i}=p.site,[busy,setBusy]=useState(false);
@@ -183,11 +183,11 @@ export function SeoSettings(p:SiteProps){
         <Text label="Google Search Console code" draft={d} set={set} k="searchConsole" max={100} hint="Only the content=&quot;…&quot; value of the meta tag."/>
         <p className="hero-slide__hint">Scripts load only when an ID is set, after the page has finished loading.</p>
       </>}/>
-    <EditableCard title="Chat buttons" summary={[i.whatsapp.enabled&&'WhatsApp '+i.whatsapp.number,i.messenger.enabled&&'Messenger'].filter(Boolean).join(' · ')||'Off'} badge={onOff(i.whatsapp.enabled||i.messenger.enabled)} initial={i} onSave={v=>p.saveSite('integrations',v)}
+    <EditableCard title="Chat buttons" summary={[i.whatsapp.enabled&&'WhatsApp '+(displayWhatsAppNumber(shopWhatsApp(p.site))||'— no number'),i.messenger.enabled&&'Messenger'].filter(Boolean).join(' · ')||'Off'} badge={onOff(i.whatsapp.enabled||i.messenger.enabled)} initial={i} onSave={v=>p.saveSite('integrations',v)}
       render={(d,set)=>{const w=d.whatsapp,sw=(whatsapp:typeof w)=>set({...d,whatsapp}),m=d.messenger,sm=(messenger:typeof m)=>set({...d,messenger});return <>
         <Toggle label="WhatsApp chat button" draft={w} set={sw} k="enabled"/>
-        <Pair><Text label="WhatsApp number" draft={w} set={sw} k="number" max={20} hint="With country code: 8801XXXXXXXXX"/><label>Side<select value={w.position} onChange={e=>sw({...w,position:e.target.value as 'left'|'right'})}><option value="right">Bottom right</option><option value="left">Bottom left</option></select></label></Pair>
-        <Text label="Pre-filled message" draft={w} set={sw} k="message" max={200}/>
+        <p className="hero-slide__hint">{shopWhatsApp(p.site)?'Opens a chat with '+displayWhatsAppNumber(shopWhatsApp(p.site))+'. ':'No WhatsApp number yet, so the button stays hidden. '}Change the number in Settings → Contact & social.</p>
+        <Pair><label>Side<select value={w.position} onChange={e=>sw({...w,position:e.target.value as 'left'|'right'})}><option value="right">Bottom right</option><option value="left">Bottom left</option></select></label><Text label="Pre-filled message" draft={w} set={sw} k="message" max={200}/></Pair>
         <Toggle label="Messenger chat button" draft={m} set={sm} k="enabled"/><Text label="Messenger link" draft={m} set={sm} k="link" max={500} hint="https://m.me/yourpage"/></>;}}/>
   </EditableGroup>;
 }

@@ -2,7 +2,7 @@
 import {useState,type FormEvent} from 'react';
 import Link from 'next/link';
 import {categoryPath,mainCategories} from '@aurzen/shared/catalog';
-import {linkHref,whatsappLink,type NavItem} from '@aurzen/shared/site';
+import {linkHref,whatsappLink,shopWhatsApp,displayWhatsAppNumber,type NavItem} from '@aurzen/shared/site';
 import BrandLogo from './brand-logo';
 import {api,useStore} from '../providers';
 
@@ -15,7 +15,7 @@ export default function SiteFooter(){
     ?mainCategories(categoryTree).map(c=><li key={item.id+c.slug}><Link href={categoryPath(categoryTree,c.name)}>{c.name}</Link></li>)
     :[<li key={item.id}>{item.link.type==='url'&&/^https?:/.test(item.link.value)?<a href={item.link.value} rel="noopener noreferrer" target="_blank">{item.label}</a>:<Link href={linkHref(item.link,categoryTree)}>{item.label}</Link>}</li>]);
   const contact=[
-    g.whatsapp&&<li key="wa"><a href={whatsappLink(g.whatsapp)} rel="noopener noreferrer" target="_blank">WhatsApp {g.whatsapp}</a></li>,
+    shopWhatsApp(site)&&<li key="wa"><a href={whatsappLink(shopWhatsApp(site))} rel="noopener noreferrer" target="_blank" aria-label={'Chat with '+g.brand+' on WhatsApp'}>WhatsApp {displayWhatsAppNumber(shopWhatsApp(site))}</a></li>,
     g.phone&&<li key="ph"><a href={'tel:'+g.phone.replace(/[^\d+]/g,'')}>{g.phone}</a></li>,
     g.email&&<li key="em"><a href={'mailto:'+g.email}>{g.email}</a></li>,
     g.messenger&&<li key="ms"><a href={g.messenger} rel="noopener noreferrer" target="_blank">Messenger</a></li>,

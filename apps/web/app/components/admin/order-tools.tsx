@@ -4,11 +4,10 @@
 import {useMemo,useState,type ReactNode} from 'react';
 import Icon from '../admin-icons';
 import {money,optionLabel,type Order} from '@aurzen/shared/catalog';
-import {fillTemplate,orderFlags,whatsappLink,type CustomerInfo,type SiteSettings} from '@aurzen/shared/site';
+import {fillTemplate,orderFlags,whatsappLink,formatWhatsAppNumber,extraMessageTemplates,type CustomerInfo,type SiteSettings} from '@aurzen/shared/site';
 
 const paymentNames:Record<string,string>={cod:'Cash on delivery',bkash:'bKash',nagad:'Nagad',advance:'Advance payment'};
 export const paymentName=(o:Order)=>paymentNames[o.paymentMethod||'cod'];
-const intlPhone=(phone:string)=>'88'+phone.replace(/\D/g,'').replace(/^88/,'');
 const esc=(s:string)=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]!));
 
 type Save=(data:Record<string,unknown>)=>Promise<void>;
@@ -47,8 +46,13 @@ function DeliveryForm({order,onSave}:{order:Order;onSave:Save}){
 function OrderTools({order,flags,site,customer,onSave}:{order:Order;flags:string[];site:SiteSettings;customer?:CustomerInfo;onSave:Save}){
   const [notes,setNotes]=useState(order.notes||''),[busy,setBusy]=useState(false);
   const values={order_id:order.id,name:order.name,total:money(order.total),status:order.status,courier:order.courier||'our courier',tracking:order.trackingReference||'—'};
+  // Saved templates plus "Ask for details" (default text when not customised); this order's status first.
+  const templates:Record<string,string>={...extraMessageTemplates,...site.messages};
+  const names=[...(templates[order.status]?[order.status]:[]),...Object.keys(templates).filter(k=>k!==order.status&&templates[k])];
+  const [chosen,setChosen]=useState(names[0]||'');
+  const [message,setMessage]=useState(chosen?fillTemplate(templates[chosen],values):'');
   const template=site.messages[order.status];
-  const message=template?fillTemplate(template,values):'';
+  const customerWa=whatsappLink(formatWhatsAppNumber(order.phone),message);
   return <div className="order-tools order-panel">
     <div className="order-tools__body">
       {flags.map(f=><p key={f} className="order-flag-text">⚑ {f}</p>)}
@@ -59,11 +63,13 @@ function OrderTools({order,flags,site,customer,onSave}:{order:Order;flags:string
       {order.gift&&<p><strong>🎁 Gift:</strong> {order.gift.wrap?"Gift wrap ("+money(order.gift.price)+")":""}{order.gift.wrap&&order.gift.message?" · ":""}{order.gift.message?"Card: “"+order.gift.message+"”":""}</p>}
       {order.cancelReason&&<p><strong>Cancel reason:</strong> {order.cancelReason}</p>}
       <ol className="order-timeline">{(order.history?.length?order.history:[{status:'New',date:order.date}]).map((h,i)=><li key={i}><strong>{h.status}</strong> <small>{new Date(h.date).toLocaleString('en-BD')}</small></li>)}</ol>
+      {names.length>0&&<div className="form-pair"><label>Message template<select value={chosen} onChange={e=>{setChosen(e.target.value);setMessage(fillTemplate(templates[e.target.value],values));}}>{names.map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+        <label>Message to the customer (edit before sending)<textarea rows={3} maxLength={1000} value={message} onChange={e=>setMessage(e.target.value)}/></label></div>}
       <label>Internal notes (only you see these)<textarea rows={3} maxLength={2000} value={notes} disabled={busy} onChange={e=>setNotes(e.target.value)}/></label>
       <div className="order-tools__actions">
         <button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={busy||notes===(order.notes||'')} onClick={async()=>{setBusy(true);try{await onSave({action:'orderNotes',id:order.id,notes});}finally{setBusy(false);}}}>Save notes</button>
-        {message&&<a className="a-btn a-btn--secondary a-btn--sm" href={whatsappLink(intlPhone(order.phone),message)} target="_blank" rel="noopener noreferrer">WhatsApp “{order.status}” message</a>}
-        {message&&<a className="a-btn a-btn--ghost a-btn--sm" href={'sms:'+order.phone+'?body='+encodeURIComponent(message)}>SMS</a>}
+        {customerWa?<a className="a-btn a-btn--secondary a-btn--sm" href={customerWa} target="_blank" rel="noopener noreferrer" aria-label={'WhatsApp '+order.name}>WhatsApp customer</a>:<span className="hero-slide__hint">No valid WhatsApp number for {order.phone}.</span>}
+        {message.trim()&&<a className="a-btn a-btn--ghost a-btn--sm" href={'sms:'+order.phone+'?body='+encodeURIComponent(message)}>SMS</a>}
         <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={()=>printOrders([order],site,'invoice')}>Print invoice</button>
         <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={()=>printOrders([order],site,'label')}>Print label</button>
       </div>
