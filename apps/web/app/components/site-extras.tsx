@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {linkHref,popupActive,whatsappLink} from '@aurzen/shared/site';
+import {linkHref,popupActive,whatsappLink,shopWhatsApp} from '@aurzen/shared/site';
 import {useStore} from '../providers';
 
 type Tracker=((...args:unknown[])=>void)&{queue?:unknown[];loaded?:boolean;version?:string;callMethod?:(...args:unknown[])=>void;push?:unknown};
@@ -41,9 +41,11 @@ export default function SiteExtras(){
   },[pixel,analytics,storefront]);
   useEffect(()=>{if(storefront)try{window.fbq?.('track','PageView');}catch{}},[pathname,storefront]);
   if(!storefront)return null;
+  // Hidden (never a broken link) when the button is off or no valid number is set in Settings → Contact & social.
+  const waHref=whatsapp.enabled?whatsappLink(shopWhatsApp(site),whatsapp.message):'';
   return <>
-    {(whatsapp.enabled||messenger.enabled)&&<div className={'chat-buttons chat-buttons--'+whatsapp.position}>
-      {whatsapp.enabled&&<a data-kind="whatsapp" href={whatsappLink(whatsapp.number,whatsapp.message)} target="_blank" rel="noopener noreferrer" aria-label="Chat with us on WhatsApp"><svg aria-hidden="true" viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .1-1.2c0-.1-.2-.2-.4-.3Z"/></svg></a>}
+    {(waHref||messenger.enabled)&&<div className={'chat-buttons chat-buttons--'+whatsapp.position}>
+      {waHref&&<a data-kind="whatsapp" href={waHref} target="_blank" rel="noopener noreferrer" aria-label={'Chat with '+site.general.brand+' on WhatsApp'}><svg aria-hidden="true" viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .1-1.2c0-.1-.2-.2-.4-.3Z"/></svg></a>}
       {messenger.enabled&&<a data-kind="messenger" href={messenger.link} target="_blank" rel="noopener noreferrer" aria-label="Chat with us on Messenger"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.4 2 2 6.1 2 11.6c0 2.9 1.2 5.4 3.2 7.1V22l3-1.7c.9.3 1.8.4 2.8.4 5.6 0 10-4.1 10-9.6S17.6 2 12 2Zm1 12.9-2.5-2.7-5 2.7 5.5-5.8 2.6 2.7 4.9-2.7-5.5 5.8Z"/></svg></a>}
     </div>}
     {popupActive(site,now||Date.now())&&<Popup key={site.popup.title} site={site} href={site.popup.link?linkHref(site.popup.link,categoryTree):''}/>}

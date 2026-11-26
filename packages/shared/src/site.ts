@@ -171,8 +171,8 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
   general(v){
     const g=obj(v,'general settings');
     const contact=(key:string,label:string,max=200)=>str(g[key],max,label);
-    const whatsapp=str(g.whatsapp,20,'WhatsApp number').replace(/[^\d+]/g,'');
-    if(whatsapp&&!/^\+?\d{8,15}$/.test(whatsapp))fail('WhatsApp number must be 8–15 digits, e.g. 8801XXXXXXXXX.');
+    const typed=str(g.whatsapp,25,'WhatsApp number'),whatsapp=formatWhatsAppNumber(typed);
+    if(typed&&!whatsapp)fail('Enter a valid WhatsApp number, e.g. 01XXXXXXXXX or 8801XXXXXXXXX (11 digits starting with 01 in Bangladesh).');
     const email=str(g.email,120,'Email');if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('Enter a valid email address.');
     return {brand:str(g.brand,40,'Brand name',{required:true}),tagline:str(g.tagline,120,'Tagline'),about:str(g.about,300,'Footer text',{multiline:true}),
       logo:safeImage(g.logo,'Logo'),logoDark:safeImage(g.logoDark,'Light logo'),favicon:safeImage(g.favicon,'Favicon'),
@@ -246,8 +246,10 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
     const pixel=str(i.pixel,20,'Meta Pixel ID');if(pixel&&!/^\d{8,20}$/.test(pixel))fail('Meta Pixel ID is a number of 8–20 digits.');
     const analytics=str(i.analytics,20,'Google Analytics ID');if(analytics&&!/^G-[A-Z0-9]{4,15}$/.test(analytics))fail('Google Analytics ID looks like G-XXXXXXXXXX.');
     const searchConsole=str(i.searchConsole,100,'Search Console code');if(searchConsole&&!/^[A-Za-z0-9_-]{10,100}$/.test(searchConsole))fail('Paste only the content value of the Search Console meta tag.');
-    const number=str(w.number,20,'WhatsApp button number').replace(/[^\d]/g,'');
-    const enabled=bool(w.enabled,'WhatsApp button');if(enabled&&!/^\d{8,15}$/.test(number))fail('Enter the WhatsApp number with country code, e.g. 8801XXXXXXXXX.');
+    // The button uses the number in Contact & social; this older field is only a fallback.
+    const typed=str(w.number,25,'WhatsApp button number'),number=formatWhatsAppNumber(typed);
+    if(typed&&!number)fail('Enter a valid WhatsApp number, e.g. 01XXXXXXXXX or 8801XXXXXXXXX.');
+    const enabled=bool(w.enabled,'WhatsApp button');
     if(w.position!=='left'&&w.position!=='right')fail('Choose the WhatsApp button side.');
     const link=safeUrl(m.link,'Messenger link');const mEnabled=bool(m.enabled,'Messenger button');if(mEnabled&&!/^https:\/\/(m\.me|www\.messenger\.com|messenger\.com)\//.test(link))fail('Messenger link must start with https://m.me/.');
     return {pixel,analytics,searchConsole,whatsapp:{enabled,number,message:str(w.message,200,'WhatsApp message'),position:w.position as 'left'|'right'},messenger:{enabled:mEnabled,link}};
@@ -337,7 +339,7 @@ banners(v){    const b=obj(v,'banner settings');    const interval=Number(b.inte
   messages(v){
     const m=obj(v,'message templates'),out:Record<string,string>={};
     for(const [status,text] of Object.entries(m)){
-      if(!['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned'].includes(status))fail('Unknown order status in message templates.');
+      if(!['New','Confirmed','Processing','Shipped','Delivered','Cancelled','Returned',...Object.keys(extraMessageTemplates)].includes(status))fail('Unknown order status in message templates.');
       const t=str(text,500,status+' message',{multiline:true});if(t)out[status]=t;
     }
     return out;
@@ -369,7 +371,31 @@ export function deliveryCharge(checkout:SiteSettings['checkout'],area:'dhaka'|'o
   return base+(checkout.cod?checkout.codFee:0);
 }
 export const pageTitle=(site:SiteSettings,name:string)=>site.seo.titleTemplate.replace('%s',name);
-export const whatsappLink=(number:string,message='')=>'https://wa.me/'+number.replace(/[^\d]/g,'')+(message?'?text='+encodeURIComponent(message):'');
+/**
+ * Any way a number is typed (01XXXXXXXXX, +880 1XXX-XXXXXX, 8801XXXXXXXXX, 008801…) → digits for wa.me: 8801XXXXXXXXX.
+ * Returns '' when it can't be a valid number, so callers can hide the link instead of rendering a broken one.
+ */
+export function formatWhatsAppNumber(input:unknown){
+  if(typeof input!=='string')return '';
+  let d=input.replace(/\D/g,'');
+  if(d.startsWith('00'))d=d.slice(2);
+  if(/^8800\d{10}$/.test(d))d='880'+d.slice(4); // +880 01XXXXXXXXX
+  if(/^01\d{9}$/.test(d))d='88'+d;          // 01XXXXXXXXX
+  else if(/^1[3-9]\d{8}$/.test(d))d='880'+d; // 1XXXXXXXXX (leading 0 dropped)
+  if(d.startsWith('880'))return /^8801[3-9]\d{8}$/.test(d)?d:''; // Bangladesh mobile: 13 digits
+  return /^[1-9]\d{7,14}$/.test(d)?d:'';
+}
+/** 8801XXXXXXXXX → +880 1XXX-XXXXXX for display. */
+export const displayWhatsAppNumber=(number:string)=>{const d=formatWhatsAppNumber(number);return /^880\d{10}$/.test(d)?'+880 '+d.slice(3,7)+'-'+d.slice(7):d?'+'+d:'';};
+/** https://wa.me/<number>?text=<encoded message>; '' when the number is missing or invalid. */
+export function whatsappLink(number:string,message=''){
+  const d=formatWhatsAppNumber(number);
+  return d?'https://wa.me/'+d+(message.trim()?'?text='+encodeURIComponent(message):''):'';
+}
+/** The shop's WhatsApp number: Settings → Contact & social (older chat-button number as a fallback). */
+export const shopWhatsApp=(site:SiteSettings)=>formatWhatsAppNumber(site.general.whatsapp)||formatWhatsAppNumber(site.integrations.whatsapp.number);
+/** Extra message templates that are not tied to an order status. */
+export const extraMessageTemplates={'Ask for details':'Hi {name}, this is AURZÉN about your order {order_id} ({total}). Could you please confirm your full delivery address and a good time to deliver? Thank you!'};
 
 // ---- Content pages, FAQ and reviews (separate rows: larger, not needed on every page) ----
 export type ContentPage={slug:string;title:string;body:string;seoTitle:string;seoDescription:string;published:boolean};

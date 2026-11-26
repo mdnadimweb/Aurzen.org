@@ -67,12 +67,20 @@
 .faq-group details p{margin:0 0 18px;line-height:1.8;white-space:pre-line}
 
 /* WhatsApp / Messenger chat buttons and the welcome popup. */
-.chat-buttons{position:fixed;bottom:max(18px,env(safe-area-inset-bottom));z-index:40;display:grid;gap:10px}
-.chat-buttons--right{right:18px}.chat-buttons--left{left:18px}
+/* z-index 35: above the mobile "Add to bag" bar (30), below overlays, toasts and dialogs. */
+.chat-buttons{position:fixed;bottom:max(18px,calc(10px + env(safe-area-inset-bottom)));z-index:35;display:grid;gap:10px}
+.chat-buttons--right{right:max(18px,env(safe-area-inset-right))}.chat-buttons--left{left:max(18px,env(safe-area-inset-left))}
+.chat-buttons a:focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 6px var(--plum,#3b2340)}
 .chat-buttons a{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;box-shadow:0 8px 24px rgba(30,15,35,.22)}
 .chat-buttons a[data-kind=whatsapp]{background:#25d366}
 .chat-buttons a[data-kind=messenger]{background:#7b3fe4}
-body:has(.has-mobile-purchase) .chat-buttons{bottom:96px}
+@media(max-width:750px){body:has(.mobile-purchase) .chat-buttons{bottom:calc(116px + env(safe-area-inset-bottom))}}
+/* WhatsApp text links (product page, bag, receipt, tracking): secondary to the main buttons. */
+.wa-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 2px;color:var(--plum,#3b2340);font-size:.875rem;text-decoration:underline;text-underline-offset:3px}
+.wa-link svg{flex:none;color:#1fa855}
+.wa-link:hover{text-decoration-thickness:2px}
+.wa-link:focus-visible{outline:2px solid var(--plum,#3b2340);outline-offset:3px;border-radius:4px}
+.wa-link--help{display:flex;justify-content:center;margin-top:4px}
 .site-popup{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(30,15,35,.45);padding:16px}
 .site-popup__card{position:relative;background:#fffdfa;border-radius:18px;max-width:420px;width:100%;overflow:hidden;box-shadow:0 30px 70px rgba(30,15,35,.3)}
 .site-popup__card img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
