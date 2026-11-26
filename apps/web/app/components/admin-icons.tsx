@@ -27,6 +27,10 @@ const paths={
   box:<><path d="M3 8 12 3l9 5v8l-9 5-9-5Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></>,
   eye:<><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></>,
   eyeOff:<><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.2 3.1"/><path d="M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/></>,
+  flag:<><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></>,
+  message:<><path d="M4 5h16v11H9l-5 4Z"/><path d="M8 9.5h8M8 12.5h5"/></>,
+  receipt:<><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></>,
+  whatsapp:<><path d="M4.5 19.5 5.6 16A8 8 0 1 1 8.3 18.6Z"/><path d="M9.6 8.6c-.3 2.4 2.2 5.3 5 5.6l.9-1.1-1.6-.9-.7.6c-.9-.4-1.6-1.1-2-2l.6-.7-.8-1.6Z"/></>,
   slides:<><rect x="3" y="4" width="18" height="13" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 14-5-5-8 8"/><path d="M9 21h.01M12 21h.01M15 21h.01"/></>,
 };
 export type IconName=keyof typeof paths;
