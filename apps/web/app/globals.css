@@ -85,6 +85,16 @@ i{font-style:normal;background:#eee5df;padding:3px 5px;font-size:0.6875rem;margi
 .product-info b{font-size:var(--text-price);padding-top:0;font-weight:600}
 .mystery{margin:0 5%;display:grid;grid-template-columns:1fr 1fr;background:#eee6df;min-height:390px}
 .mystery>.boxart{min-height:390px}
+/* Mystery section photos: stacked, the active one fades in and zooms in slowly for its whole turn. */
+.mystery-slides{position:relative;overflow:hidden;background:#e7ddd5}
+.mystery-slides img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.02);transition:opacity 1s ease,transform 0s linear 1s}
+.mystery-slides img.is-active{opacity:1;transform:scale(1.08);transition:opacity 1s ease,transform var(--mystery-ms,5000ms) linear}
+.mystery-slides__dots{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:4px}
+.mystery-slides__dots button{width:24px;height:24px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center}
+.mystery-slides__dots button::before{content:"";width:8px;height:8px;border-radius:50%;background:#fffdfa99;box-shadow:0 1px 3px #30202b40;transition:width .3s ease,background-color .3s ease}
+.mystery-slides__dots button[aria-current]::before{width:20px;border-radius:999px;background:#fffdfa}
+.mystery-slides__dots button:focus-visible{outline:2px solid #fffdfa;outline-offset:1px;border-radius:999px}
+@media(prefers-reduced-motion:reduce){.mystery-slides img,.mystery-slides img.is-active{transform:none;transition:none}.mystery-slides__dots button::before{transition:none}}
 .mystery>div:last-child{padding:50px 55px}
 .mystery h2{font-size:clamp(1.875rem, 1.4rem + 1.5vw, 2.5rem)}
 .mystery p{font-size:var(--text-body)}

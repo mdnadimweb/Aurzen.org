@@ -27,6 +27,7 @@ const AdminWorkspace=dynamic(()=>import('./components/admin-workspace'));
 import BagDrawer from './components/bag-drawer';
 import ProductPurchase from './components/product-purchase';
 import WhatsAppLink from './components/whatsapp-link';
+import MysterySlides from './components/mystery-slides';
 import ProductGallery from './components/product-gallery';
 import ProductPrice,{OfferBadge} from './components/product-price';
 import ProductImage from './components/product-image';
@@ -98,7 +99,7 @@ export default function Store({ initial = 'home', product, directCheckout, colle
         promos:<PromoCarousel/>,
         favourites:showFavourites&&<FadeIn as="section" className="section picks"><div className="section-heading">{f.eyebrow&&<div className="eyebrow">{f.eyebrow}</div>}<h2>{f.title}</h2>{f.cta&&<button className="text-link" onClick={() => go('shop')}>{f.cta}</button>}</div><div className="product-grid">{favourites.map((p,i) => <Card key={p.id} p={p} delay={(i%4)*60}/>)}</div></FadeIn>,
         categoryRows:<CategoryPreviews exclude={showFavourites?favourites.map(p => p.id):[]}/>,
-        mystery:mystery&&!h.mystery.hidden&&<FadeIn as="section" className="mystery"><Box /><div>{h.mystery.eyebrow&&<div className="eyebrow">{h.mystery.eyebrow}</div>}<h2>{lines(h.mystery.title)}</h2>{h.mystery.text&&<p>{h.mystery.text}</p>}{h.mystery.cta&&<Link className="primary" href={categoryPath(categoryTree,mystery.name)}>{h.mystery.cta}</Link>}{h.mystery.small&&<small>{h.mystery.small}</small>}</div></FadeIn>,
+        mystery:mystery&&!h.mystery.hidden&&<FadeIn as="section" className="mystery">{h.mystery.images?.length?<MysterySlides images={h.mystery.images} interval={h.mystery.interval} label={h.mystery.title.replace(/\n/g,' ')}/>:<Box />}<div>{h.mystery.eyebrow&&<div className="eyebrow">{h.mystery.eyebrow}</div>}<h2>{lines(h.mystery.title)}</h2>{h.mystery.text&&<p>{h.mystery.text}</p>}{h.mystery.cta&&<Link className="primary" href={categoryPath(categoryTree,mystery.name)}>{h.mystery.cta}</Link>}{h.mystery.small&&<small>{h.mystery.small}</small>}</div></FadeIn>,
         testimonials:<Testimonials reviews={reviews}/>,
         note:!h.note.hidden&&<FadeIn as="section" className="brand-note">{h.note.eyebrow&&<div className="eyebrow">{h.note.eyebrow}</div>}<h2>{h.note.title}{h.note.emphasis&&<><br /><em>{h.note.emphasis}</em></>}</h2>{h.note.text&&<p>{h.note.text}</p>}</FadeIn>,
       };

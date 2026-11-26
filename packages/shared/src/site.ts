@@ -32,6 +32,8 @@ export type Sale={id:string;name:string;percent:number;target:'all'|'category'|'
 export type Appearance={primary:string;accent:string;background:string;text:string;headingFont:'cormorant'|'georgia'|'system';bodyFont:'dm-sans'|'system';buttons:'pill'|'rounded'|'square';buttonFill:'filled'|'outline';imageRatio:'default'|'4/5'|'1/1';showBadge:boolean;showSaved:boolean;motion:'off'|'slow'|'normal';maintenance:boolean;maintenanceMessage:string;notFoundTitle:string;notFoundText:string};
 export type SizeGuide={id:string;name:string;columns:string[];rows:string[][];note:string;categories:string[];products:number[]};
 /** Homepage blocks below the hero, in the owner's order. */
+/** Most photos the homepage mystery box section rotates through. */
+export const mysteryImageLimit=8;
 export const homeSections=['trust','collections','promos','favourites','categoryRows','mystery','testimonials','note'];
 export const homeSectionLabels:Record<string,string>={trust:'Trust strip',collections:'Shop by collection',promos:'Promotion banners',favourites:'Favourites row',categoryRows:'Category rows',mystery:'Mystery box section',testimonials:'Customer reviews',note:'A note from the brand'};
 export type TrustItem={id:string;icon:string;text:string;hidden:boolean};
@@ -42,7 +44,7 @@ export type SiteSettings={
   navigation:{items:NavItem[]};
   footer:{columns:FooterColumn[];bottomText:string;payments:string[];legal:NavItem[];newsletter:{enabled:boolean;title:string;text:string}};
   checkout:{dhaka:number;outside:number;freeThreshold:number;cod:boolean;codFee:number;bkash:{enabled:boolean;instructions:string};nagad:{enabled:boolean;instructions:string};advance:{enabled:boolean;instructions:string};minOrder:number;email:'hidden'|'optional'|'required';note:boolean;paymentNote:string;returnsNote:string;confirmTitle:string;confirmText:string;trackingIntro:string;estimate:string};
-  home:{trust:TrustItem[];order:string[];hidden:string[];favourites:{hidden:boolean;eyebrow:string;title:string;cta:string;count:number;source:'first'|'newest'|'bestsellers'|'sale'|'category'|'manual';category:string;ids:number[]};mystery:{hidden:boolean;eyebrow:string;title:string;text:string;cta:string;small:string};note:{hidden:boolean;eyebrow:string;title:string;emphasis:string;text:string}};
+  home:{trust:TrustItem[];order:string[];hidden:string[];favourites:{hidden:boolean;eyebrow:string;title:string;cta:string;count:number;source:'first'|'newest'|'bestsellers'|'sale'|'category'|'manual';category:string;ids:number[]};mystery:{hidden:boolean;eyebrow:string;title:string;text:string;cta:string;small:string;/** Photos shown in turn instead of the box drawing; seconds per photo. */images:string[];interval:number};note:{hidden:boolean;eyebrow:string;title:string;emphasis:string;text:string}};
   seo:{title:string;titleTemplate:string;description:string;ogImage:string;indexing:boolean};
   integrations:{pixel:string;analytics:string;searchConsole:string;whatsapp:{enabled:boolean;number:string;message:string;position:'left'|'right'};messenger:{enabled:boolean;link:string}};
   popup:{enabled:boolean;title:string;text:string;image:string;cta:string;link:SiteLink|null;days:number;startsAt:string|null;endsAt:string|null};
@@ -83,7 +85,7 @@ export const defaultSite:SiteSettings={
     trust:[{id:'selected',icon:'♧',text:'Thoughtfully selected',hidden:false},{id:'premium',icon:'◇',text:'Premium, within reach',hidden:false},{id:'cod',icon:'▧',text:'Cash on delivery',hidden:false},{id:'love',icon:'♡',text:'Packed with a little love',hidden:false}],
     order:homeSections.slice(),hidden:[],
     favourites:{hidden:false,eyebrow:'LOVED FOR A REASON',title:'The current favourites.',cta:'Discover the edit ↗',count:4,source:'first',category:'',ids:[]},
-    mystery:{hidden:false,eyebrow:'A SURPRISE WITH YOUR NAME ON IT',title:'Good things come\nin mystery boxes.',text:'Tell us a little about your style. We’ll take care of the surprise. A thoughtfully curated box of fashion and accessories, made to brighten your everyday.',cta:'Find your mystery box ↗',small:'Thoughtfully selected · Beautifully wrapped · Uniquely you'},
+    mystery:{hidden:false,eyebrow:'A SURPRISE WITH YOUR NAME ON IT',title:'Good things come\nin mystery boxes.',text:'Tell us a little about your style. We’ll take care of the surprise. A thoughtfully curated box of fashion and accessories, made to brighten your everyday.',cta:'Find your mystery box ↗',small:'Thoughtfully selected · Beautifully wrapped · Uniquely you',images:[],interval:5},
     note:{hidden:false,eyebrow:'A NOTE FROM AURZÉN',title:'Beautiful things.',emphasis:'Without the extraordinary price.',text:'We believe a little elegance belongs in every day. We’re building AURZÉN around pieces that feel special, thoughtful details, and the joy of finding something that feels like you.'},
   },
   seo:{title:'AURZÉN | A little elegance. A little unexpected.',titleTemplate:'%s | AURZÉN',description:'Discover thoughtfully selected fashion and Mystery Style Boxes from AURZÉN. Premium style for everyday moments, delivered across Bangladesh.',ogImage:'',indexing:true},
@@ -233,7 +235,9 @@ const sectionNormalizers:{[K in keyof SiteSettings]:(v:unknown)=>SiteSettings[K]
     const hidden=Array.from(new Set((h.hidden as unknown[]).filter((s):s is string=>homeSections.includes(s as string))));
     return {trust,order,hidden,
       favourites:{hidden:fv.hidden===true,eyebrow:str(fv.eyebrow,60,'Favourites eyebrow'),title:str(fv.title,80,'Favourites heading',{required:true}),cta:str(fv.cta,40,'Favourites button'),count:fv.count as number,source:fv.source as SiteSettings['home']['favourites']['source'],category:fv.source==='category'?str(fv.category,100,'Favourites category',{required:true}):'',ids:fv.source==='manual'?(fv.ids as unknown[]).map(n=>int(n,1,1e9,'Favourite product')):[]},
-      mystery:{hidden:my.hidden===true,eyebrow:str(my.eyebrow,60,'Mystery eyebrow'),title:str(my.title,80,'Mystery heading',{required:true,multiline:true}),text:str(my.text,400,'Mystery text',{multiline:true}),cta:str(my.cta,40,'Mystery button'),small:str(my.small,120,'Mystery small print')},
+      mystery:{hidden:my.hidden===true,eyebrow:str(my.eyebrow,60,'Mystery eyebrow'),title:str(my.title,80,'Mystery heading',{required:true,multiline:true}),text:str(my.text,400,'Mystery text',{multiline:true}),cta:str(my.cta,40,'Mystery button'),small:str(my.small,120,'Mystery small print'),
+        images:(()=>{const list=my.images===undefined?[]:my.images;if(!Array.isArray(list)||list.length>mysteryImageLimit)fail('Use at most '+mysteryImageLimit+' photos in the mystery box section.');return (list as unknown[]).map((x,i)=>safeImage(x,'Mystery photo '+(i+1))).filter(Boolean);})(),
+        interval:my.interval===undefined?5:int(my.interval,2,30,'Seconds per photo')},
       note:{hidden:no.hidden===true,eyebrow:str(no.eyebrow,60,'Note eyebrow'),title:str(no.title,80,'Note heading',{required:true}),emphasis:str(no.emphasis,80,'Note highlight'),text:str(no.text,600,'Note text',{multiline:true})}};
   },
   seo(v){
