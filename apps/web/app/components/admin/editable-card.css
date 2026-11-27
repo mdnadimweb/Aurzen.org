@@ -70,13 +70,15 @@
 .ov-extras__stat strong{font-size:22px}
 .ov-extras__stat span{font-size:13px;color:#6f6170}
 .ov-extras__pending{cursor:pointer;border:1px solid #e3cfa2}
-.ov-extras__list{grid-column:span 2;padding:14px 16px}
+/* Top products and Low stock share the full row, half each, so no empty gap is left beside them. */
+.ov-extras__lists{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px}
+.ov-extras__list{padding:14px 16px}
 .ov-extras__list h3{margin:0 0 8px;font-size:15px}
 .ov-extras__list ol,.ov-extras__list ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
-.ov-extras__list li{display:flex;justify-content:space-between;gap:10px}
+.ov-extras__list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.admin .ov-extras__list li .text-link{padding:0;min-height:0;border:0;text-align:left;font-size:inherit}
 .ov-extras__list b{font-weight:600;white-space:nowrap}.ov-extras__list b.is-out{color:#9b3b2b}
 .ov-extras__list p{margin:0;color:#6f6170;font-size:14px}
-@media (max-width:640px){.ov-extras__list{grid-column:1/-1}}
 .admin-reset-gate{position:fixed;inset:0;z-index:80;background:rgba(30,15,35,.55);display:grid;place-items:center;padding:16px;overflow:auto}
 .admin-reset-gate .change-password{max-width:460px;width:100%;background:#fff}
 .size-stock{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px}
