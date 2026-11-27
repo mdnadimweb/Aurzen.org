@@ -797,3 +797,45 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .order-create__source:focus-within{outline:2px solid var(--a-gold);outline-offset:2px}
 .order-summary .order-create__amount{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 2px;font-size:.875rem}
 .order-summary .order-create__amount input{width:120px;margin:0;text-align:right}
+
+/* Sales report: one day at a time (day picker, 7-day strip, totals, orders, products, cancelled/returned). */
+.sales-report{display:grid;gap:16px;min-width:0}
+.sales-report>*{min-width:0}
+.sales-report__bar{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:14px 18px}
+.sales-report__day{display:flex;align-items:center;gap:8px}
+.sales-report__prev svg{transform:rotate(180deg)}
+.sales-report__date input{height:40px;margin:0}
+.sales-report__title{flex:1 1 220px;margin:0;font-size:1.125rem}
+.sales-report__week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.sales-report__week button{display:grid;gap:2px;padding:10px 8px;border:1px solid var(--a-line);border-radius:14px;background:var(--a-surface);font:inherit;text-align:center;cursor:pointer;min-width:0}
+.sales-report__week button:hover{background:var(--a-hover)}
+.sales-report__week button.is-on{border-color:var(--a-plum);background:var(--a-tint)}
+.sales-report__week small{color:var(--a-muted);font-size:.6875rem;letter-spacing:.04em;text-transform:uppercase}
+.sales-report__week strong{font-size:.875rem;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.sales-report__week span{color:var(--a-muted);font-size:.75rem}
+.sales-report__stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.sales-report__stats strong{font-variant-numeric:tabular-nums}
+.sales-report__head{display:flex;align-items:baseline;gap:10px;margin:0;padding:16px 24px;border-bottom:1px solid var(--a-line);font-size:1rem}
+.sales-report__head small{color:var(--a-muted);font-size:.8125rem;font-weight:400}
+.sales-report__table .admin-num{text-align:right;white-space:nowrap}
+.sales-report__table tfoot th,.sales-report__table tfoot td{padding:14px 16px;border-top:1px solid var(--a-line);background:#faf8f6;text-align:right;font-size:.875rem}
+.sales-report__table tfoot th:first-child{padding-left:24px}
+.sales-report__table tfoot td:last-child{padding-right:24px}
+.sales-report__items{margin:0;padding:0;list-style:none;display:grid;gap:2px}
+.sales-report__items span{color:var(--a-muted);font-size:.8125rem;white-space:nowrap}
+.sales-report__block--lost .admin-table td{color:var(--a-muted)}
+.sales-report__none{margin:0;padding:20px 24px;color:var(--a-muted)}
+.sales-report__foot{margin:0;color:var(--a-muted);font-size:.8125rem}
+@media(max-width:760px){
+  .sales-report__week{grid-template-columns:repeat(7,minmax(92px,1fr));overflow-x:auto;padding-bottom:4px}
+  .sales-report__table thead{display:none}
+  .sales-report__table,.sales-report__table tbody,.sales-report__table tr,.sales-report__table td{display:block;width:100%}
+  .sales-report__table tbody tr{padding:12px 16px;border-bottom:1px solid var(--a-line)}
+  .admin .sales-report__table tbody td{display:grid;grid-template-columns:84px minmax(0,1fr);column-gap:12px;padding:4px 0!important;border:0;text-align:right;overflow-wrap:anywhere}
+  .admin .sales-report__table tbody td>*{grid-column:2;margin:0}
+  .admin .sales-report__table tbody td::before{content:attr(data-label);grid-column:1;grid-row:1;color:var(--a-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;padding-top:2px}
+  .sales-report__table tbody td small{margin-top:2px}
+  .sales-report__items{justify-items:end}
+  .sales-report__table tfoot{display:block}.sales-report__table tfoot tr{display:flex;justify-content:space-between;padding:0 16px}
+  .sales-report__table tfoot th,.sales-report__table tfoot td{border:0;background:none;padding:12px 0!important}
+}

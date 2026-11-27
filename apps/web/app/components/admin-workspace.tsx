@@ -6,6 +6,7 @@ import Overview from './admin/overview';
 import {initials,relativeTime} from './admin/metrics';
 import OrderEditor from './admin/order-editor';
 import OrderCreate from './admin/order-create';
+import SalesReport from './admin/sales-report';
 import HeroEditor from './admin/hero-editor';
 import StorefrontEditor from './admin/storefront-editor';
 import CategoryManager from './admin/category-manager';
@@ -33,7 +34,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { money, editableStatuses, statusOptions, mainCategories, orderSourceOf, type Product, type Order } from '@aurzen/shared/catalog';
 import { api, useStore } from '../providers';
 
-const tabs:{name:string;icon:IconName;group?:string}[]=[{name:'Overview',icon:'overview'},{name:'Orders',icon:'orders'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Customers',icon:'customers'},
+const tabs:{name:string;icon:IconName;group?:string}[]=[{name:'Overview',icon:'overview'},{name:'Orders',icon:'orders'},{name:'Sales report',icon:'receipt'},{name:'Products',icon:'products'},{name:'Categories',icon:'categories'},{name:'Customers',icon:'customers'},
     {name:'Homepage',icon:'slides',group:'Storefront'},{name:'Menus & text',icon:'storefront',group:'Storefront'},{name:'Pages',icon:'edit',group:'Storefront'},{name:'FAQ',icon:'info',group:'Storefront'},{name:'Reviews',icon:'check',group:'Storefront'},
     {name:'Coupons',icon:'plus',group:'Marketing'},{name:'Sales',icon:'plus',group:'Marketing'},{name:'Gift options',icon:'check',group:'Marketing'},{name:'Popup',icon:'plus',group:'Marketing'},{name:'Subscribers',icon:'customers',group:'Marketing'},
     {name:'Settings',icon:'lock',group:'Settings'},{name:'Appearance',icon:'storefront',group:'Settings'},{name:'Size guides',icon:'products',group:'Settings'},{name:'SEO & integrations',icon:'external',group:'Settings'},{name:'Users & roles',icon:'customers',group:'Settings'},{name:'My password',icon:'lock',group:'Settings'},{name:'Activity log',icon:'overview',group:'Settings'},{name:'Backup',icon:'truck',group:'Settings'}];
@@ -50,7 +51,7 @@ export default function AdminWorkspace() {
     const [coupons,setCoupons]=useState<Coupon[]>([]);
     const [me,setMe]=useState<Me|null>(null),[users,setUsers]=useState<StaffAccount[]>([]);
     // Staff see orders, products and customers only (the API enforces the same rule).
-    const staffTabs=['Overview','Orders','Products','Customers','My password'];
+    const staffTabs=['Overview','Orders','Sales report','Products','Customers','My password'];
     // Owners change their password inside Settings; staff (no Settings access) keep a "My password" link.
     const visibleTabs=me?.role==='staff'?tabs.filter(t=>staffTabs.includes(t.name)):tabs.filter(t=>t.name!=='My password');
     const ownerName=me?.role==='staff'?me.name:'Nadim';
@@ -194,6 +195,7 @@ export default function AdminWorkspace() {
         <td data-label="Total" className="admin-num">{money(o.total)}<small>{paymentName(o)}</small></td>
         <td data-label="Status"><OrderActions order={o} orders={orders} site={site} customer={customers[o.phone]} onSave={change} onOpen={()=>markRead(o)}><div className="a-status-select" data-status={statusKey(o.status)}><span className="a-pill__dot" aria-hidden="true"/><select aria-label={'Status for '+o.id} value={o.status} onChange={e => { const status = e.target.value; const reason = status === 'Cancelled' ? prompt('Reason for cancelling (optional)') : ''; if (reason === null) { e.target.value = o.status; return; } void change({ action: 'status', id: o.id, status, reason }); }}>{statusOptions(o.status).map(s => <option key={s}>{s}</option>)}</select></div></OrderActions></td>
     </tr>{openItems.has(o.id)&&<tr className="oi-row"><td colSpan={6}><OrderItemsDetail order={o} products={products} categories={categoryTree}/></td></tr>}</Fragment>)}</tbody></table></div>}</>}</section>}
+    {tab === 'Sales report' && adminLoaded && <SalesReport orders={orders} onOpenOrders={()=>setTab('Orders')}/>}
     {tab === 'Customers' && adminLoaded && <CustomersPanel orders={orders} customers={customers} onSave={async(phone,info)=>{await mutate({action:'saveCustomer',phone,info});setNotice('Customer saved');}}/>}</>}
         </div>
     </div>
