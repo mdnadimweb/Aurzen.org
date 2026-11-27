@@ -5,15 +5,15 @@
 @keyframes aurzen-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes aurzen-toast{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes aurzen-bag{0%,100%{transform:scale(1)}45%{transform:scale(1.08)}}
-@keyframes aurzen-page-enter{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes aurzen-page-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes aurzen-drawer{from{transform:translateX(100%)}to{transform:translateX(0)}}
 @keyframes aurzen-label{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @keyframes aurzen-overlay{from{opacity:0}to{opacity:1}}
 
 @media(prefers-reduced-motion:no-preference){
   html{scroll-behavior:smooth}
-  .page-enter{animation:aurzen-page-enter .28s var(--ease-premium) backwards}
-  .hero-copy>*{animation:aurzen-rise .55s var(--ease-premium) both}
+  .page-enter{animation:aurzen-page-enter .45s var(--ease-premium) backwards}
+  .hero-copy>*{animation:aurzen-rise .75s var(--ease-premium) both}
   .hero-copy>:nth-child(2){animation-delay:.07s}
   .hero-copy>:nth-child(3){animation-delay:.14s}
   .hero-copy>:nth-child(4){animation-delay:.21s}
@@ -65,11 +65,10 @@ html{scroll-padding-top:96px}
 
 @media(prefers-reduced-motion:no-preference){
   /* Scroll reveals (FadeIn.tsx adds .is-visible once the element enters the viewport). */
-  /* Quick and subtle: a short lift and fade, so fast scrolling never shows empty space. */
-  [data-fade]{opacity:0;transform:translateY(10px)}
-  [data-fade].is-visible{opacity:1;transform:none;transition:opacity .3s ease-out var(--fade-delay,0ms),transform .35s var(--ease-premium) var(--fade-delay,0ms),translate .45s var(--ease-premium)}
-  [data-fade-media]{clip-path:inset(0% 0% 0% 0% round 14px);transition:clip-path .4s var(--ease-premium) var(--fade-delay,0ms)}
-  [data-fade]:not(.is-visible) [data-fade-media]{clip-path:inset(3% 2% 3% 2% round 14px)}
+  [data-fade]{opacity:0;transform:translateY(20px)}
+  [data-fade].is-visible{opacity:1;transform:none;transition:opacity .45s var(--ease-premium) var(--fade-delay,0ms),transform .45s var(--ease-premium) var(--fade-delay,0ms),translate .45s var(--ease-premium)}
+  [data-fade-media]{clip-path:inset(0% 0% 0% 0% round 14px);transition:clip-path .7s var(--ease-premium) calc(var(--fade-delay,0ms) + 50ms)}
+  [data-fade]:not(.is-visible) [data-fade-media]{clip-path:inset(8% 6% 8% 6% round 14px)}
   .store-header-wrap header.store-header{transition:height .45s var(--ease-premium),margin .45s var(--ease-premium),padding .45s var(--ease-premium),background-color .35s ease,box-shadow .35s ease,border-color .35s ease}
   .store-header-wrap .store-header .brand-logo img{transition:width .45s var(--ease-premium),height .45s var(--ease-premium)}
   .product{transition:translate .45s var(--ease-premium)}

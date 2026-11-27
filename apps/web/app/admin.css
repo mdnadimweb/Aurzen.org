@@ -246,11 +246,11 @@
 /* Orders: fixed columns so Items gets the room it needs (stacked cards when the card is narrower, see below). */
 .admin-orders{container:admin-orders/inline-size}
 .admin-table--orders{table-layout:fixed}
-.admin-table--orders>thead th:nth-child(1){width:150px}
-.admin-table--orders>thead th:nth-child(2){width:170px}
-.admin-table--orders>thead th:nth-child(3){width:200px}
-.admin-table--orders>thead th:nth-child(5){width:130px}
-.admin-table--orders>thead th:nth-child(6){width:260px}
+.admin-table--orders>thead th:nth-child(1){width:140px}
+.admin-table--orders>thead th:nth-child(2){width:160px}
+.admin-table--orders>thead th:nth-child(3){width:180px}
+.admin-table--orders>thead th:nth-child(5){width:112px}
+.admin-table--orders>thead th:nth-child(6){width:236px}
 .admin-order-address__text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
 .admin-table--orders>tbody>tr>td.admin-num{white-space:nowrap}
 .admin-table--orders>tbody>tr>td.admin-num small{white-space:nowrap}
@@ -482,8 +482,8 @@
   .admin-product{min-width:0}
   .admin-delivery__state{max-width:none}
 }
-/* Orders has six columns: stacked cards until the orders card is wide enough for them (about 1080px). */
-@container admin-orders (max-width:1079px){
+/* Orders has six columns: stacked cards until the orders card is wide enough for them (about 1000px, so 1366px laptops get the table). */
+@container admin-orders (max-width:999px){
   .admin-table--orders{table-layout:auto}
   .admin-table--orders>tbody>tr.oi-row>td{grid-column:1/-1;padding:0}
   .admin-table--orders>tbody>tr.oi-row>td::before{content:none}
@@ -827,7 +827,8 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .sales-report__none{margin:0;padding:20px 24px;color:var(--a-muted)}
 .sales-report__foot{margin:0;color:var(--a-muted);font-size:.8125rem}
 @media(max-width:760px){
-  .sales-report__week{grid-template-columns:repeat(7,minmax(92px,1fr));overflow-x:auto;padding-bottom:4px}
+  .admin .sales-report .sales-report__week{grid-template-columns:repeat(7,minmax(92px,1fr));overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding-bottom:4px}
+  .admin .sales-report__week button{scroll-snap-align:start}
   .sales-report__table thead{display:none}
   .sales-report__table,.sales-report__table tbody,.sales-report__table tr,.sales-report__table td{display:block;width:100%}
   .sales-report__table tbody tr{padding:12px 16px;border-bottom:1px solid var(--a-line)}
@@ -857,3 +858,44 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .desc-field__preview ul{margin:0 0 10px;padding-left:20px}
 .desc-field__empty{color:var(--a-muted)}
 .desc-field__help{color:var(--a-muted);font-size:.75rem;line-height:1.5}
+
+/* Order forms: product search (name or pasted link), size chips, and the list of what is missing. */
+.picker{position:relative;display:grid;gap:10px;margin:4px 0 12px}
+.picker__search{display:grid;gap:6px;font-weight:600;font-size:.875rem}
+.picker__field{position:relative;display:block}
+.picker__field svg{position:absolute;left:12px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--a-muted);pointer-events:none}
+.picker__field input{width:100%;height:44px;margin:0;padding-left:40px;box-sizing:border-box;font-weight:400}
+.picker__results{position:absolute;z-index:5;top:74px;left:0;right:0;max-height:320px;overflow:auto;margin:0;padding:6px;list-style:none;background:var(--a-surface);border:1px solid var(--a-field);border-radius:14px;box-shadow:0 18px 40px -18px #2b232740}
+.picker__results li{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px;border-radius:10px;cursor:pointer}
+.picker__results li.is-active{background:var(--a-tint)}
+.picker__results li.is-out{opacity:.5;cursor:not-allowed}
+.picker__results .picker__none{display:block;color:var(--a-muted);cursor:default}
+.picker__thumb{display:grid;place-items:center;width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--a-tint);color:var(--a-muted)}
+.picker__thumb img{width:100%;height:100%;object-fit:cover}
+.picker__thumb svg{width:18px;height:18px}
+.picker__name,.picker__meta{display:grid;min-width:0}
+.picker__name strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.875rem}
+.picker__name small,.picker__meta small{color:var(--a-muted);font-size:.75rem}
+.picker__meta{text-align:right;font-size:.875rem;font-variant-numeric:tabular-nums}
+.picker__chosen{display:grid;gap:8px;padding:12px;border:1px solid var(--a-plum);border-radius:12px;background:var(--a-tint)}
+.picker__chosen-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.picker__hint{margin:0;color:var(--a-muted);font-size:.8125rem}
+.picker__sizes{display:flex;flex-wrap:wrap;gap:6px}
+.picker__sizes .a-btn{display:inline-grid;justify-items:center;gap:0;min-width:56px;height:auto;padding:6px 10px;line-height:1.2}
+.picker__sizes small{color:var(--a-muted);font-size:.6875rem;font-weight:400}
+.picker__color{display:grid;gap:4px;font-size:.8125rem;max-width:220px}
+.order-create__empty{margin:0 0 8px;padding:12px;border:1px dashed var(--a-field);border-radius:12px;color:var(--a-muted);font-size:.8125rem;text-align:center}
+.form-modal__foot .form-error p{margin:0}
+.form-modal__foot .form-error ul{margin:4px 0 0;padding-left:18px}
+
+/* Order item details (opened under an order): use the full row width with roomier columns. */
+.admin-table--orders>tbody>tr.oi-row>td{padding:0 10px 16px}
+.oi-detail{padding:10px 24px 18px}
+.admin .oi-table{font-size:.875rem;table-layout:auto}
+.admin .oi-table th{padding:12px 14px}
+.admin .oi-table td{padding:12px 14px}
+.admin .oi-table th:first-child,.admin .oi-table td:first-child{width:60px}
+.oi-table__name{max-width:none;white-space:normal}
+.oi-totals{min-width:300px;font-size:.875rem}
+.oi-totals__grand{font-size:.9375rem}
+@container admin-orders (max-width:999px){.admin-table--orders>tbody>tr.oi-row>td{padding:0}.oi-detail{padding:6px 16px 16px}.admin .oi-table td,.admin .oi-table td:first-child{padding:0;width:auto}.oi-totals{min-width:0}}
