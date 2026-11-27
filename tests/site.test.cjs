@@ -143,3 +143,12 @@ test('mystery box section: photos and seconds per photo are optional, validated 
   assert.throws(()=>normalizeSiteSection('home',{...base,mystery:{...base.mystery,images:Array(mysteryImageLimit+1).fill(photos[1])}}),/at most/);
   assert.throws(()=>normalizeSiteSection('home',{...base,mystery:{...base.mystery,interval:1}}),/Seconds per photo/);
 });
+
+test('product descriptions: formatting renders safely and is stripped for search engines',()=>{
+  const {renderMarkdown,plainText}=require('@aurzen/shared/site');
+  const text='Soft cotton.\n\n## Details\n\n- Relaxed fit\n- **Machine wash** cold\n\n<script>alert(1)</script>';
+  const html=renderMarkdown(text);
+  assert.match(html,/<h2>Details<\/h2>/);assert.match(html,/<li><strong>Machine wash<\/strong> cold<\/li>/);
+  assert.doesNotMatch(html,/<script>/,'no HTML from the owner reaches the page');
+  assert.equal(plainText(text),'Soft cotton. Details Relaxed fit Machine wash cold <script>alert(1)</script>');
+});

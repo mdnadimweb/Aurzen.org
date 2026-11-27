@@ -846,3 +846,14 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
 .hero-slide__mobile-title small{color:var(--a-muted);font-weight:400}
 .hero-slide__photo--mobile .hero-slide__preview{max-width:140px}
 .hero-slide__empty{display:grid;place-items:center;min-height:120px;margin:0;padding:12px;color:var(--a-muted);font-size:.8125rem;text-align:center}
+
+/* Product editor: description toolbar and preview. */
+.desc-field{display:grid;gap:8px}
+.desc-field__bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.desc-field__spacer{flex:1}
+.desc-field__preview{min-height:160px;padding:12px 14px;border:1px solid var(--a-field);border-radius:12px;background:var(--a-surface);font-size:.9375rem}
+.desc-field__preview h2,.desc-field__preview h3{font-size:1.05rem;margin:12px 0 4px}
+.desc-field__preview p{margin:0 0 10px;line-height:1.7}
+.desc-field__preview ul{margin:0 0 10px;padding-left:20px}
+.desc-field__empty{color:var(--a-muted)}
+.desc-field__help{color:var(--a-muted);font-size:.75rem;line-height:1.5}

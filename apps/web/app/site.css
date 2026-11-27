@@ -177,3 +177,11 @@
 /* Hero: optional phone photo per slide (Studio → Homepage → slide → Phone photo). */
 .lux-hero__photo--mobile{display:none}
 @media (max-width:640px){.lux-hero__photo--desktop{display:none}.lux-hero__photo--mobile{display:block}}
+
+/* Product description with simple formatting (bold, lists, small headings). */
+.product-description{margin:14px 0 4px}
+.product-description p,.product-description li{line-height:1.75}
+.product-description p{margin:0 0 12px}
+.product-description h2,.product-description h3{font-size:18px;margin:18px 0 6px}
+.product-description ul{margin:0 0 12px;padding-left:20px}
+.product-description li{margin:2px 0}

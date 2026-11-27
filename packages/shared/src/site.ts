@@ -475,6 +475,10 @@ export function renderMarkdown(source:string):string{
     return '<p>'+lines.map(inline).join('<br>')+'</p>';
   }).join('');
 }
+/** Text without formatting marks, for search engines, link previews and short summaries. */
+export function plainText(source:string){
+  return source.replace(/^#{2,3} /gm,'').replace(/^[-*] /gm,'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/\[([^\]]+)\]\([^)\s]+\)/g,'$1').replace(/\s+/g,' ').trim();
+}
 /** Mystery Box categories (and their subcategories) never ask for a size. */
 export function isMystery(categories:Category[],name:string){
   const c=categories.find(x=>x.name===name);
