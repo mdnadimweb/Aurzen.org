@@ -13,11 +13,13 @@ import Icon from '../admin-icons';
 const toneLabels:Record<HeroSlide['tone'],string>={rose:'Rose',sand:'Sand',plum:'Plum'};
 type Field=keyof typeof heroFieldLimits;
 
-function SlidePhoto({slide,index,disabled,onChange,onBusy}:{slide:HeroSlide;index:number;disabled:boolean;onChange:(image:string)=>void;onBusy:(busy:boolean)=>void}){
+function SlidePhoto({slide,index,disabled,onChange,onBusy,mobile=false}:{slide:HeroSlide;index:number;disabled:boolean;onChange:(image:string)=>void;onBusy:(busy:boolean)=>void;mobile?:boolean}){
+  // The phone photo is optional: empty means phones show the main photo.
+  const value=mobile?slide.mobileImage||'':slide.image;
   const id=useId();
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const uploading=useRef(false);
-  const isUrl=slide.image!=='box'&&!/^\/(media|images)\//.test(slide.image);
+  const isUrl=!!value&&value!=='box'&&!/^\/(media|images)\//.test(value);
   async function upload(file:File){
     if(uploading.current||disabled)return;
     setError('');
@@ -34,15 +36,17 @@ function SlidePhoto({slide,index,disabled,onChange,onBusy}:{slide:HeroSlide;inde
     }catch(e){setError((e as Error).message);}
     finally{uploading.current=false;setBusy(false);onBusy(false);}
   }
-  return <div className="photo-field hero-slide__photo">
+  return <div className={'photo-field hero-slide__photo'+(mobile?' hero-slide__photo--mobile':'')}>
+    {mobile&&<h4 className="hero-slide__mobile-title">Phone photo <small>(optional)</small></h4>}
     <div className="hero-slide__preview" data-tone={slide.tone}>
-      {slide.image==='box'?<div className="hero-slide__box" role="img" aria-label={`Slide ${index+1}: gift box illustration`}><BoxArt/></div>:<ProductImage className="admin-photo-preview" src={slide.image} alt={`Slide ${index+1} photo`}/>}
+      {mobile&&!value?<p className="hero-slide__empty">Phones show the main photo.</p>:value==='box'?<div className="hero-slide__box" role="img" aria-label={`Slide ${index+1}: gift box illustration`}><BoxArt/></div>:<ProductImage className="admin-photo-preview" src={value} alt={`Slide ${index+1} ${mobile?'phone ':''}photo`}/>}
     </div>
-    <label htmlFor={id}>Upload a new photo</label>
+    <label htmlFor={id}>{mobile?'Upload a phone photo':'Upload a new photo'}</label>
     <input id={id} type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled||busy} aria-describedby={id+'-help'} onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';if(file)void upload(file);}}/>
-    <p id={id+'-help'} className="upload-help">JPG, PNG or WebP, up to {maxImageMegabytes} MB. A tall (portrait) photo looks best.</p>
-    <label>Or paste an HTTPS image link<input type="url" inputMode="url" placeholder="https://…" value={isUrl?slide.image:''} disabled={disabled||busy} maxLength={2000} onChange={e=>onChange(e.target.value.trim())}/></label>
-    <button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||slide.image==='box'} onClick={()=>onChange('box')}><Icon name="box"/>Use the gift box illustration</button>
+    <p id={id+'-help'} className="upload-help">JPG, PNG or WebP, up to {maxImageMegabytes} MB. {mobile?' Use a tall photo cropped for phones; leave empty to use the main photo.':' A tall (portrait) photo looks best.'}</p>
+    <label>Or paste an HTTPS image link<input type="url" inputMode="url" placeholder="https://…" value={isUrl?value:''} disabled={disabled||busy} maxLength={2000} onChange={e=>onChange(e.target.value.trim())}/></label>
+    {mobile?<button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||!value} onClick={()=>onChange('')}><Icon name="trash"/>Remove phone photo</button>
+    :<button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||slide.image==='box'} onClick={()=>onChange('box')}><Icon name="box"/>Use the gift box illustration</button>}
     {busy&&<p role="status">Uploading photo… Please keep this page open.</p>}
     {error&&<p className="form-error" role="alert">{error}</p>}
   </div>;
@@ -109,6 +113,7 @@ export default function HeroEditor({initialSlides,custom,categories,tree=[],prod
         </section>
         <section className="form-section"><h3>Photo</h3>
           <SlidePhoto slide={slide} index={index} disabled={busy&&uploads===0} onChange={image=>update(index,{image})} onBusy={onBusy}/>
+          {slide.image!=='box'&&<SlidePhoto mobile slide={slide} index={index} disabled={busy&&uploads===0} onChange={mobileImage=>update(index,{mobileImage})} onBusy={onBusy}/>}
           {text(index,'alt','Photo description',{required:true,hint:'Describes the photo for screen readers.'})}
           <div className="form-pair">{text(index,'caption','Photo caption')}{text(index,'note','Photo note')}</div>
         </section>

@@ -64,15 +64,16 @@ export const quoteOrder=(d:Record<string,unknown>)=>calculateQuote(d);
 // Short, easy-to-read order references such as AZ-482193 (6 random digits).
 // Random rather than sequential so order numbers don't reveal how many orders the shop gets.
 // Tracking still needs the customer's phone number as well, so a short reference is not
-// enough on its own to look an order up.
-export const orderIdPattern=/^AZ-\d{6}$/;
-async function newOrderId(db:Database){
+// enough on its own to look an order up. Orders typed in the studio (Facebook, WhatsApp, calls)
+// use MO-482193 so they stand out from website orders.
+export const orderIdPattern=/^(?:AZ|MO)-\d{6}$/;
+export async function newOrderId(db:Database,prefix:'AZ'|'MO'='AZ'){
     for(let attempt=0;attempt<25;attempt++){
-        const id='AZ-'+randomInt(100000,1000000);
+        const id=prefix+'-'+randomInt(100000,1000000);
         if(!await db.prepare('SELECT id FROM orders WHERE id=?').get(id))return id;
     }
     // Practically unreachable before hundreds of thousands of orders; keeps checkout working regardless.
-    return 'AZ-'+randomUUID().slice(0,8).toUpperCase();
+    return prefix+'-'+randomUUID().slice(0,8).toUpperCase();
 }
 export async function placeOrder(d: Record<string, unknown>) {
     const settings = deliverySettings();

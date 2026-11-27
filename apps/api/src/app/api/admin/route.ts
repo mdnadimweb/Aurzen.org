@@ -7,6 +7,7 @@ import { defaultProductExtra, normalizeProductExtra, statuses, statusTransitions
 import { addCategory, editCategory, deleteCategory, moveProducts } from '../../../lib/categories';
 import { imagePath } from '../../../lib/images';
 import { editOrder } from '../../../lib/order-edit';
+import { createManualOrder } from '../../../lib/manual-order';
 import { bulkProducts, duplicateProduct, importProducts } from '../../../lib/product-bulk';
 function productOffer(value:unknown){
     try{return normalizeOffer(value);}
@@ -17,8 +18,8 @@ function productVariants(value:unknown,label:'size'|'colour'){
     catch(error){throw new HttpError(400,error instanceof Error?error.message:'Invalid '+label+' list.');}
 }
 /** What staff accounts may do: orders, products (not prices) and customers. Everything else is owner-only. */
-const staffActions=new Set(['duplicateProduct','saveProduct','stock','markRead','status','bulkStatus','editOrder','delivery','orderNotes','saveCustomer','changePassword']);
-const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers',saveCoupons:'Marketing',bulkProducts:'Products',duplicateProduct:'Products',importProducts:'Products',saveUser:'Users',resetUserPassword:'Users',deleteUser:'Users',changePassword:'Users'};
+const staffActions=new Set(['createOrder','duplicateProduct','saveProduct','stock','markRead','status','bulkStatus','editOrder','delivery','orderNotes','saveCustomer','changePassword']);
+const areas:Record<string,string>={saveProduct:'Products',stock:'Products',deleteProduct:'Products',addCategory:'Categories',editCategory:'Categories',deleteCategory:'Categories',moveProducts:'Categories',markRead:'Orders',status:'Orders',editOrder:'Orders',createOrder:'Orders',delivery:'Orders',savePromotions:'Storefront',saveHero:'Storefront',resetHero:'Storefront',saveStorefront:'Storefront',saveSite:'Settings',resetSite:'Settings',saveContent:'Content',deleteSubscriber:'Marketing',bulkStatus:'Orders',orderNotes:'Orders',saveCustomer:'Customers',saveCoupons:'Marketing',bulkProducts:'Products',duplicateProduct:'Products',importProducts:'Products',saveUser:'Users',resetUserPassword:'Users',deleteUser:'Users',changePassword:'Users'};
 const activityArea=(d:Record<string,any>)=>areas[d.action]||'Other';
 function activityDetail(d:Record<string,any>){
     const what=(x:unknown)=>typeof x==='string'||typeof x==='number'?String(x).slice(0,80):'';
@@ -39,6 +40,7 @@ function activityDetail(d:Record<string,any>){
         case 'changePassword':return 'Changed own password';
         case 'saveCoupons':return 'Saved coupons ('+(Array.isArray(d.coupons)?d.coupons.length:0)+')';
         case 'editOrder':return 'Edited order '+what(d.id);
+        case 'createOrder':return 'Added '+what(d.source)+' order for '+what(d.name);
         case 'delivery':return 'Courier details for order '+what(d.id);
         case 'markRead':return 'Opened order '+what(d.id);
         case 'saveSite':return 'Saved settings: '+what(d.section);
@@ -227,6 +229,7 @@ export async function POST(request: Request) {
                 for(const [index,slide] of slides.entries()){
                     assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(slide.category),`Choose an existing category for slide ${index+1}.`);
                     if(imagePath.test(slide.image))assert(await db.prepare('SELECT id FROM images WHERE id=?').get(slide.image.slice('/media/'.length)),`The photo on slide ${index+1} is unavailable. Upload it again.`);
+                    if(slide.mobileImage&&imagePath.test(slide.mobileImage))assert(await db.prepare('SELECT id FROM images WHERE id=?').get(slide.mobileImage.slice('/media/'.length)),`The phone photo on slide ${index+1} is unavailable. Upload it again.`);
                 }
                 await db.prepare("INSERT INTO settings(key,value) VALUES('heroSlides',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(slides));
             }
@@ -250,6 +253,8 @@ export async function POST(request: Request) {
                 const savedSite=siteRow?JSON.parse(String(siteRow.value)):null;
                 if(savedSite?.announcement?.items?.length){savedSite.announcement.items[0]={...savedSite.announcement.items[0],text:storefront.announcement.message,detail:storefront.announcement.detail};await saveSetting(db,'site',savedSite);}
             }
+            else if(d.action==='createOrder')
+                await createManualOrder(db,d);
             else if(d.action==='editOrder')
                 await editOrder(db,d);
             else if(d.action==='delivery'){

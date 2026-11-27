@@ -71,7 +71,7 @@ export function normalizeOffer(value:unknown):Offer|null{
 // gift box illustration, an uploaded /media/ photo, or an HTTPS image URL.
 export const heroTones=['rose','sand','plum'] as const;
 export const maxHeroSlides=6;
-export type HeroSlide={eyebrow:string;title:string;emphasis:string;description:string;image:string;alt:string;caption:string;note:string;category:string;cta:string;tone:typeof heroTones[number];
+export type HeroSlide={eyebrow:string;title:string;emphasis:string;description:string;image:string;/** Optional photo for phones (else `image`). */mobileImage?:string;alt:string;caption:string;note:string;category:string;cta:string;tone:typeof heroTones[number];
   /** Optional: where the button goes (else the category), and when the slide shows. */
   link?:{type:string;value:string}|null;startsAt?:string|null;endsAt?:string|null;hidden?:boolean};
 const heroLinkTypes=['home','shop','collections','sale','tracking','category','product','page','faq','url'];
@@ -95,6 +95,10 @@ export function normalizeHeroSlides(value:unknown):HeroSlide[]{
     let valid=image==='box'||/^\/media\/[a-f0-9-]{36}\.webp$/.test(image)||/^\/images\/[a-z0-9-]+\.(?:jpe?g|png|webp)$/.test(image);
     if(!valid&&image.length<=2000)try{valid=new URL(image).protocol==='https:';}catch{}
     if(!valid)throw new Error(`Upload a photo, use an HTTPS image URL or choose the gift box${at}.`);
+    const mobileImage=typeof s.mobileImage==='string'?s.mobileImage.trim():'';
+    let mobileValid=!mobileImage||/^\/media\/[a-f0-9-]{36}\.webp$/.test(mobileImage)||/^\/images\/[a-z0-9-]+\.(?:jpe?g|png|webp)$/.test(mobileImage);
+    if(!mobileValid&&mobileImage.length<=2000)try{mobileValid=new URL(mobileImage).protocol==='https:';}catch{}
+    if(!mobileValid)throw new Error(`Upload a valid phone photo or use an HTTPS image URL${at}.`);
     if(!heroTones.includes(s.tone as HeroSlide['tone']))throw new Error(`Choose a colour mood${at}.`);
     const l=s.link as Record<string,unknown>|null|undefined;
     let link:HeroSlide['link']=null;
@@ -108,7 +112,7 @@ export function normalizeHeroSlides(value:unknown):HeroSlide[]{
     const startsAt=when(s.startsAt,'Start'),endsAt=when(s.endsAt,'End');
     if(startsAt&&endsAt&&startsAt>=endsAt)throw new Error('End must be after start'+at+'.');
     // Optional fields are stored only when used, so older slides keep exactly their shape.
-    return {...slide,image,tone:s.tone,...(link?{link}:{}),...(startsAt?{startsAt}:{}),...(endsAt?{endsAt}:{}),...(s.hidden===true?{hidden:true}:{})} as HeroSlide;
+    return {...slide,image,...(mobileImage?{mobileImage}:{}),tone:s.tone,...(link?{link}:{}),...(startsAt?{startsAt}:{}),...(endsAt?{endsAt}:{}),...(s.hidden===true?{hidden:true}:{})} as HeroSlide;
   });
 }
 // Owner-edited storefront text and category cover photos. Stored as one settings row;
@@ -164,7 +168,12 @@ export function statusChangeError(from:string,to:string){
 }
 /** Cash-on-delivery charge per delivery area, in taka. */
 export const deliveryFees = {dhaka:80,outside:150} as const;
-export type Order = {paymentMethod?:'cod'|'bkash'|'nagad'|'advance';email?:string;note?:string;/** Studio-only notes, never shown to the customer. */notes?:string;cancelReason?:string;coupon?:string;discount?:number;gift?:OrderGift;id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};
+/** Where an order came from. Website orders have no source field; the rest are added by hand in the studio. */
+export const orderSources=[{id:'website',label:'Website',short:'Web'},{id:'facebook',label:'Facebook',short:'FB'},{id:'whatsapp',label:'WhatsApp',short:'WA'},{id:'instagram',label:'Instagram',short:'IG'},{id:'phone',label:'Phone call',short:'Call'},{id:'walkin',label:'Walk-in',short:'Shop'}] as const;
+export type OrderSource=typeof orderSources[number]['id'];
+export const manualSources=orderSources.filter(s=>s.id!=='website').map(s=>s.id) as readonly OrderSource[];
+export const orderSourceOf=(o:Pick<Order,'source'>)=>orderSources.find(s=>s.id===(o.source||'website'))||orderSources[0];
+export type Order = {/** Missing = placed on the website. */source?:OrderSource;paymentMethod?:'cod'|'bkash'|'nagad'|'advance';email?:string;note?:string;/** Studio-only notes, never shown to the customer. */notes?:string;cancelReason?:string;coupon?:string;discount?:number;gift?:OrderGift;id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};
 export const photo=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=85`;
 export const money=(n:number)=>'৳'+n.toLocaleString('en-BD');
 export const seed:Product[]=[

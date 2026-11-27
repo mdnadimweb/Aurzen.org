@@ -5,7 +5,7 @@ const stars=(n:number)=><span className="review-stars" aria-label={n+' out of 5 
 function Item({r}:{r:Review}){
   return <figure className="review">
     {r.photo&&<img src={r.photo} alt="" loading="lazy" width={64} height={64}/>}
-    <div>{stars(r.rating)}<blockquote>{r.text}</blockquote><figcaption>— {r.name}</figcaption></div>
+    <div>{stars(r.rating)}<blockquote>{r.text}</blockquote><figcaption>— {r.name}{r.verified&&<span className="review-verified">Verified buyer</span>}</figcaption></div>
   </figure>;
 }
 /** Homepage testimonials: the newest approved reviews (Studio → Reviews). */

@@ -1,4 +1,5 @@
 'use client';
+import DescriptionField from './description-field';
 // Add/edit product on its own page (/admin/products/new/, /admin/products/<id>/). A page cannot be
 // dismissed by a stray click outside it, and leaving with unsaved changes asks first.
 import {useEffect,useRef,useState} from 'react';
@@ -44,7 +45,7 @@ export default function ProductEditor({product,products=[],categories,onSave,onC
           <label>Badge (one per product)<input name="tag" list="badge-presets" defaultValue={product?.tag||'NEW ARRIVAL'} maxLength={40}/><datalist id="badge-presets"><option value=""/><option value="NEW"/><option value="BESTSELLER"/><option value="LIMITED"/><option value="SALE"/><option value="GIFT"/><option value="SELF-CARE"/></datalist><small className="hero-slide__hint">Leave empty for no badge. “% OFF” shows automatically during an offer.</small></label>
         </section>
         <section className="form-section"><h3>Pricing & stock</h3><div className="form-pair"><label>Price (৳)<input name="price" type="number" min="1" step="1" max="1000000" defaultValue={product?.price} onChange={event=>setOfferPrice(Number(event.target.value))} required/></label><label>Stock<input name="stock" type="number" min="0" step="1" max="1000000" defaultValue={product?.stock} required/></label></div></section>
-        <section className="form-section"><h3>Description</h3><label>Description<textarea name="description" defaultValue={product?.description||''} maxLength={3000} rows={6} placeholder="Materials, fit, care instructions and what is included"/></label></section>
+        <section className="form-section"><h3>Description</h3><DescriptionField key={product?.id??'new'} initial={product?.description||''}/></section>
         <AdminVariants product={product} disabled={saving}/>
         <ProductExtraFields product={product} products={products} disabled={saving}/>
       </div>

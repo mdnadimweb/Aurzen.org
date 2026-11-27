@@ -64,7 +64,7 @@ test('customer details and delivery area are validated and saved',async()=>{
   const saved=await edit(o,{name:'Corrected Name',phone:'+8801812345678',address:'Flat 3B, Agrabad, Chattogram',area:'outside'});
   assert.equal(saved.name,'Corrected Name');assert.equal(saved.phone,'01812345678');assert.equal(saved.area,'outside');
   assert.equal(saved.delivery,150);assert.equal(saved.total,490+150);
-  for(const bad of [{phone:'12345'},{address:'short'},{name:'x'},{area:'mars'},{items:[]},{items:[{id:1,qty:0,size:'M'}]},{items:[{id:1,qty:1,size:'XXL'}]},{items:[{id:9999,qty:1,size:'M'}]}])
+  for(const bad of [{phone:'12345'},{address:'abc'},{name:'x'},{area:'mars'},{items:[]},{items:[{id:1,qty:0,size:'M'}]},{items:[{id:1,qty:1,size:'XXL'}]},{items:[{id:9999,qty:1,size:'M'}]}])
     await assert.rejects(edit(saved,bad));
 });
 
@@ -76,4 +76,42 @@ test('shipped, delivered, cancelled and returned orders are locked',async()=>{
   }
   const confirmed=await order([{id:3,qty:1,size:'One size'}]);await setStatus(confirmed.id,'Processing');
   assert.equal((await edit(confirmed,{items:[{id:3,qty:2,size:'One size'}]})).items[0].qty,2,'processing orders can still be corrected');
+});
+
+test('a new area uses the shop delivery charge from Settings; a typed charge wins',async()=>{
+  const {defaultSite}=require('../packages/shared/dist/site.js');
+  const db=await database();
+  await db.prepare("INSERT INTO settings(key,value) VALUES('site',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify({checkout:{...defaultSite.checkout,dhaka:70,outside:130}}));
+  const o=await order([{id:3,qty:1,size:'One size'}],'dhaka');
+  assert.equal(o.delivery,70);
+  const moved=await edit(o,{area:'outside'});
+  assert.equal(moved.delivery,130,'Settings charge, not the old fixed 150');assert.equal(moved.total,490+130);
+  const same=await edit(moved,{name:'Same Area'});
+  assert.equal(same.delivery,130,'same area keeps the charge');
+  const free=await edit(same,{delivery:0});
+  assert.equal(free.delivery,0);assert.equal(free.total,490);
+  await assert.rejects(edit(free,{delivery:-5}),/Delivery charge/);
+  await db.prepare("DELETE FROM settings WHERE key='site'").run();
+});
+
+test('stock per size: a sold-out size is refused, and changing size moves stock between sizes',async()=>{
+  const db=await database();
+  const extraOf=async()=>JSON.parse(String((await db.prepare('SELECT extra FROM products WHERE id=4').get()).extra||'{}'));
+  const start=await extraOf();
+  await db.prepare('UPDATE products SET extra=?,stock=? WHERE id=4').run(JSON.stringify({...start,sizeStock:{S:0,M:3,L:2}}),5);
+  const o=await order([{id:4,qty:1,size:'M'}]);
+  assert.equal((await extraOf()).sizeStock.M,2);
+  await assert.rejects(edit(o,{items:[{id:4,qty:1,size:'S'}]}),/\(S\): only 0 more available/);
+  const moved=await edit(o,{items:[{id:4,qty:2,size:'L'}]});
+  const after=(await extraOf()).sizeStock;
+  assert.equal(after.M,3,'M returned');assert.equal(after.L,0,'L taken');assert.equal(moved.items[0].size,'L');
+  await db.prepare('UPDATE products SET extra=? WHERE id=4').run(JSON.stringify(start));
+});
+
+test('discount and gift wrap stay in the total after an edit',async()=>{
+  const o=await order([{id:1,qty:2,size:'M'}]);
+  const db=await database();o.discount=300;o.coupon='TEST';o.gift={wrap:true,message:'',price:50};
+  await db.prepare('UPDATE orders SET payload=? WHERE id=?').run(JSON.stringify(o),o.id);
+  const saved=await edit(o,{items:[{id:1,qty:1,size:'M'}]});
+  assert.equal(saved.discount,300);assert.equal(saved.total,1490-300+80+50);
 });
