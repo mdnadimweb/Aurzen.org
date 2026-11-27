@@ -1,6 +1,7 @@
 'use client';
 import {useMemo,useState} from 'react';
-import {deliveryFees,money,productOptions,productColors,optionLabel,sameLine,productPricing,type Order,type Product} from '@aurzen/shared/catalog';
+import {money,productOptions,productColors,optionLabel,sameLine,productPricing,sizeAvailable,type Order,type Product} from '@aurzen/shared/catalog';
+import {deliveryCharge,type SiteSettings} from '@aurzen/shared/site';
 import Icon from '../admin-icons';
 import StatusPill from './status-pill';
 
@@ -9,10 +10,11 @@ let nextKey=0;
 const keyFor=()=>'line-'+(++nextKey);
 
 /** Owner correction form for an unshipped order. The server re-validates everything and sets the final total. */
-export default function OrderEditor({order,products,onSave,onCancel}:{order:Order;products:Product[];onSave:(data:Record<string,unknown>)=>Promise<void>;onCancel:()=>void}){
+export default function OrderEditor({order,products,checkout,onSave,onCancel}:{order:Order;products:Product[];checkout:SiteSettings['checkout'];onSave:(data:Record<string,unknown>)=>Promise<void>;onCancel:()=>void}){
   const [name,setName]=useState(order.name),[phone,setPhone]=useState(order.phone),[address,setAddress]=useState(order.address),[area,setArea]=useState(order.area);
   const [lines,setLines]=useState<Line[]>(()=>order.items.map(item=>({key:keyFor(),id:item.id,size:item.size,color:item.color||'',qty:item.qty})));
   const [addId,setAddId]=useState(''),[addSize,setAddSize]=useState(''),[addColor,setAddColor]=useState(''),[addQty,setAddQty]=useState(1);
+  const [deliveryText,setDeliveryText]=useState('');
   const [saving,setSaving]=useState(false),[error,setError]=useState('');
   const [now]=useState(()=>Date.now());
 
@@ -27,11 +29,20 @@ export default function OrderEditor({order,products,onSave,onCancel}:{order:Orde
   const lineName=(id:number)=>order.items.find(i=>i.id===id)?.name||product(id)?.name||'Unavailable product';
   const totals=useMemo(()=>{
     const subtotal=lines.reduce((n,l)=>n+unitPrice(l)*l.qty,0);
-    const delivery=area===order.area?order.delivery:deliveryFees[area];
-    return {subtotal,delivery,total:subtotal+delivery};
-  },[lines,area]);
+    // Same area keeps the charge; a new area uses the shop's charge from Settings; a typed amount wins.
+    const autoDelivery=area===order.area?order.delivery:deliveryCharge(checkout,area,subtotal);
+    const delivery=deliveryText===''?autoDelivery:Math.max(0,Math.floor(Number(deliveryText))||0);
+    const discount=Math.min(order.discount||0,subtotal),gift=order.gift?.wrap?order.gift.price||0:0;
+    return {subtotal,autoDelivery,delivery,discount,gift,total:subtotal-discount+delivery+gift};
+  },[lines,area,deliveryText]);
   const perProduct=new Map<number,number>();for(const l of lines)perProduct.set(l.id,(perProduct.get(l.id)||0)+l.qty);
-  const problems=[...perProduct].filter(([id,qty])=>{const p=product(id);return p?qty>available(id):qty>originalQty(id);});
+  // Stock per size (where the product tracks it): what is on the shelf plus what this order already holds in that size.
+  const sized=(p?:Product)=>!!(p?.extra&&Object.keys(p.extra.sizeStock).length);
+  const originalSizeQty=(id:number,size:string)=>order.items.filter(i=>i.id===id&&i.size===size).reduce((n,i)=>n+i.qty,0);
+  const sizeQty=(id:number,size:string)=>lines.filter(l=>l.id===id&&l.size===size).reduce((n,l)=>n+l.qty,0);
+  const sizeLeft=(id:number,size:string)=>{const p=product(id);return p&&sized(p)?sizeAvailable(p,size)+originalSizeQty(id,size)-sizeQty(id,size):Infinity;};
+  const sizeOver=(line:Line)=>sizeLeft(line.id,line.size)<0;
+  const problems=[...[...perProduct].filter(([id,qty])=>{const p=product(id);return p?qty>available(id):qty>originalQty(id);}),...lines.filter(sizeOver).map(l=>[l.id,l.qty] as [number,number])];
 
   const update=(key:string,change:Partial<Line>)=>setLines(list=>list.map(l=>l.key===key?{...l,...change}:l));
   const addable=products.filter(p=>p.stock>0||originalQty(p.id)>0);
@@ -40,7 +51,7 @@ export default function OrderEditor({order,products,onSave,onCancel}:{order:Orde
 
   return <form className="form-modal order-editor" aria-label={'Edit order '+order.id} onChange={()=>{if(error)setError('');}} onClick={event=>{if(error&&(event.target as HTMLElement).closest('button[type=button]'))setError('');}} onSubmit={async event=>{
     event.preventDefault();if(saving||problems.length)return;setSaving(true);setError('');
-    try{await onSave({id:order.id,name,phone,address,area,items:lines.map(({id,size,color,qty})=>({id,size,...(color?{color}:{}),qty}))});}
+    try{await onSave({id:order.id,name,phone,address,area,...(deliveryText!==''?{delivery:totals.delivery}:{}),items:lines.map(({id,size,color,qty})=>({id,size,...(color?{color}:{}),qty}))});}
     catch(e){setError((e as Error).message);}finally{setSaving(false);}
   }}>
     <div className="form-modal__head"><div><div className="admin-eyebrow">Correct an order</div><h2>Edit order</h2><p className="order-editor__ref"><span className="admin-mono">{order.id}</span><StatusPill status={order.status}/></p></div><button type="button" aria-label="Close order editor" className="a-btn a-btn--icon close" disabled={saving} onClick={onCancel}><Icon name="close"/></button></div>
@@ -52,13 +63,13 @@ export default function OrderEditor({order,products,onSave,onCancel}:{order:Orde
           <small id="order-phone-hint" className="order-editor__hint">Bangladesh mobile number, e.g. 01712345678 or +8801712345678. The customer tracks the order with this number.</small>
         </section>
         <section className="form-section"><h3>Delivery</h3>
-          <label>Delivery area<select name="area" value={area} onChange={e=>setArea(e.target.value as Order['area'])}><option value="dhaka">Dhaka city — {money(deliveryFees.dhaka)}</option><option value="outside">Outside Dhaka — {money(deliveryFees.outside)}</option></select></label>
-          <label>Delivery address<textarea name="address" value={address} onChange={e=>setAddress(e.target.value)} required minLength={10} maxLength={500} rows={4}/></label>
+          <label>Delivery area<select name="area" value={area} onChange={e=>setArea(e.target.value as Order['area'])}><option value="dhaka">Dhaka city — {money(checkout.dhaka)}</option><option value="outside">Outside Dhaka — {money(checkout.outside)}</option></select></label>
+          <label>Delivery address<textarea name="address" value={address} onChange={e=>setAddress(e.target.value)} required minLength={5} maxLength={500} rows={4}/></label>
         </section>
       </div>
       <div className="form-modal__side">
         <section className="form-section"><h3>Items</h3>
-          <ul className="order-lines">{lines.map(line=>{const p=product(line.id),options=p?productOptions(p):[line.size],over=(perProduct.get(line.id)||0)>(p?available(line.id):originalQty(line.id));
+          <ul className="order-lines">{lines.map(line=>{const p=product(line.id),options=p?productOptions(p):[line.size],overSize=sizeOver(line),over=overSize||(perProduct.get(line.id)||0)>(p?available(line.id):originalQty(line.id));
             return <li key={line.key} className={over?'is-over':''}>
               <div className="order-lines__name"><strong>{lineName(line.id)}</strong><small>{money(unitPrice(line))} each{!p?' · product removed':''}</small></div>
               <label className="order-lines__field">Size or style<select value={line.size} disabled={!p} onChange={e=>update(line.key,{size:e.target.value})} aria-label={'Size or style for '+lineName(line.id)}>{options.includes(line.size)?null:<option value={line.size}>{line.size}</option>}{options.map(o=><option key={o}>{o}</option>)}</select></label>
@@ -66,26 +77,29 @@ export default function OrderEditor({order,products,onSave,onCancel}:{order:Orde
               <div className="order-lines__qty"><span className="order-lines__label">Qty</span><div className="quantity-controls order-stepper" role="group" aria-label={'Quantity for '+lineName(line.id)}>
                 <button type="button" aria-label={'Decrease quantity for '+lineName(line.id)} disabled={line.qty<=1} onClick={()=>update(line.key,{qty:line.qty-1})}>−</button>
                 <span aria-live="polite">{line.qty}</span>
-                <button type="button" aria-label={'Increase quantity for '+lineName(line.id)} disabled={line.qty>=100||!p||(perProduct.get(line.id)||0)>=available(line.id)} onClick={()=>update(line.key,{qty:line.qty+1})}>+</button>
+                <button type="button" aria-label={'Increase quantity for '+lineName(line.id)} disabled={line.qty>=100||!p||(perProduct.get(line.id)||0)>=available(line.id)||sizeLeft(line.id,line.size)<=0} onClick={()=>update(line.key,{qty:line.qty+1})}>+</button>
               </div></div>
               <strong className="order-lines__total">{money(unitPrice(line)*line.qty)}</strong>
               <button type="button" className="a-btn a-btn--danger-ghost a-btn--sm order-lines__remove" disabled={lines.length<=1} aria-label={'Remove '+lineName(line.id)+', '+optionLabel(line)} onClick={()=>setLines(list=>list.filter(l=>l.key!==line.key))}><Icon name="trash"/></button>
-              {over&&<p className="order-lines__warn" role="alert">{p?`Only ${available(line.id)} available for ${p.name}.`:'This product was removed; its quantity can only be reduced.'}</p>}
+              {over&&<p className="order-lines__warn" role="alert">{p&&overSize?`Only ${sizeAvailable(p,line.size)+originalSizeQty(line.id,line.size)} available in ${line.size}.`:p?`Only ${available(line.id)} available for ${p.name}.`:'This product was removed; its quantity can only be reduced.'}</p>}
             </li>;})}</ul>
           {lines.length<=1&&<small className="order-editor__hint">An order needs at least one item. To remove everything, set the status to Cancelled instead.</small>}
           <div className="order-add"><h4>Add a product</h4>
             <div className="order-add__row">
               <label>Product<select value={addId} onChange={e=>{setAddId(e.target.value);const p=product(Number(e.target.value));setAddSize(p?productOptions(p)[0]:'');setAddColor(p?productColors(p)[0]||'':'');}}><option value="">Choose a product</option>{addable.map(p=><option key={p.id} value={p.id}>{p.name} — {money(productPricing(p,now).unitPrice)} ({available(p.id)-(perProduct.get(p.id)||0)} available)</option>)}</select></label>
-              <label>Size or style<select value={addSize} disabled={!chosen} onChange={e=>setAddSize(e.target.value)}>{chosen?productOptions(chosen).map(o=><option key={o}>{o}</option>):<option value="">—</option>}</select></label>
+              <label>Size or style<select value={addSize} disabled={!chosen} onChange={e=>setAddSize(e.target.value)}>{chosen?productOptions(chosen).map(o=>{const left=sizeLeft(chosen.id,o);return <option key={o} value={o} disabled={left<=0}>{o}{left<=0?' (sold out)':sized(chosen)?` (${left} left)`:''}</option>;}):<option value="">—</option>}</select></label>
               {chosen&&productColors(chosen).length>0&&<label>Colour<select value={addColor} onChange={e=>setAddColor(e.target.value)}>{productColors(chosen).map(c=><option key={c}>{c}</option>)}</select></label>}
               <label>Qty<input type="number" min={1} max={100} value={addQty} disabled={!chosen} onChange={e=>setAddQty(Math.max(1,Math.min(100,Math.floor(Number(e.target.value))||1)))}/></label>
-              <button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={!chosen||!addSize} onClick={addLine}><Icon name="plus"/>Add</button>
+              <button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={!chosen||!addSize||sizeLeft(chosen.id,addSize)<addQty} onClick={addLine}><Icon name="plus"/>Add</button>
             </div>
           </div>
         </section>
         <section className="form-section order-summary" aria-live="polite"><h3>New total</h3>
           <p><span>Items</span><strong>{money(totals.subtotal)}</strong></p>
-          <p><span>Delivery</span><strong>{money(totals.delivery)}</strong></p>
+          {totals.discount>0&&<p><span>Discount{order.coupon?' ('+order.coupon+')':''}</span><strong>−{money(totals.discount)}</strong></p>}
+          {totals.gift>0&&<p><span>Gift wrap</span><strong>{money(totals.gift)}</strong></p>}
+          <label className="order-create__amount">Delivery (৳)<input type="number" min={0} max={100000} step={1} inputMode="numeric" value={deliveryText} placeholder={String(totals.autoDelivery)} onChange={e=>setDeliveryText(e.target.value)}/></label>
+          <small className="order-editor__hint">{deliveryText!==''?'Custom delivery charge.':area===order.area?'The charge on this order. Type another amount to change it (0 = free).':'Your shop’s charge for the new area. Type another amount to change it.'}</small>
           <p className="order-summary__total"><span>Total to collect</span><strong>{money(totals.total)}</strong></p>
           <small className="order-editor__hint">Was {money(order.total)}. Existing items keep their original price; added products use today&apos;s price. The server recalculates the final total and stock when you save.</small>
         </section>

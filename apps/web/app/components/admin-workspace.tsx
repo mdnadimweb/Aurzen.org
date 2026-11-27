@@ -200,7 +200,7 @@ export default function AdminWorkspace() {
         </div>
     </div>
     <Modal open={creatingOrder} onClose={()=>setCreatingOrder(false)} label="New order" className="admin-edit-dialog admin-edit-dialog--order">{creatingOrder&&<OrderCreate products={products} checkout={site.checkout} onCancel={()=>setCreatingOrder(false)} onSave={async data=>{await mutate({action:'createOrder',...data});setCreatingOrder(false);setNotice('Order added');}}/>}</Modal>
-    <Modal open={!!editingOrder} onClose={()=>setEditingOrder(null)} label={editingOrder?'Edit order '+editingOrder.id:'Edit order'} className="admin-edit-dialog admin-edit-dialog--order">{editingOrder&&<OrderEditor key={editingOrder.id} order={editingOrder} products={products} onCancel={()=>setEditingOrder(null)} onSave={async data=>{await mutate({action:'editOrder',...data});setEditingOrder(null);setNotice('Order updated');}}/>}</Modal>
+    <Modal open={!!editingOrder} onClose={()=>setEditingOrder(null)} label={editingOrder?'Edit order '+editingOrder.id:'Edit order'} className="admin-edit-dialog admin-edit-dialog--order">{editingOrder&&<OrderEditor key={editingOrder.id} order={editingOrder} products={products} checkout={site.checkout} onCancel={()=>setEditingOrder(null)} onSave={async data=>{await mutate({action:'editOrder',...data});setEditingOrder(null);setNotice('Order updated');}}/>}</Modal>
     {notice && <div role={notice.kind==='error'?'alert':'status'} className={'admin-toast admin-toast--'+notice.kind}><Icon name={notice.kind==='error'?'alert':'check'}/><span>{notice.text}</span><button type="button" className="a-btn a-btn--icon a-btn--sm" aria-label="Dismiss notification" onClick={()=>setNoticeState(null)}><Icon name="close"/></button></div>}
     </div>;
 }
