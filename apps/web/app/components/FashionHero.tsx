@@ -160,14 +160,25 @@ export default function FashionHero() {
                       {slide.image === "box" ? (
                         <div className="lux-hero__box-art" aria-hidden="true"><BoxArt /></div>
                       ) : !active && !pageLoaded ? null : (
-                        <ProductImage
-                          className="lux-hero__photo"
-                          src={slide.image}
-                          category={slide.category}
-                          alt={slide.alt}
-                          sizes="(max-width: 900px) 90vw, 45vw"
-                          eager={index === 0}
-                        />
+                        <>
+                          <ProductImage
+                            className={"lux-hero__photo" + (slide.mobileImage ? " lux-hero__photo--desktop" : "")}
+                            src={slide.image}
+                            category={slide.category}
+                            alt={slide.alt}
+                            sizes="(max-width: 900px) 90vw, 45vw"
+                            eager={index === 0}
+                          />
+                          {/* Optional phone photo: shown instead of the main photo on small screens. */}
+                          {slide.mobileImage && <ProductImage
+                            className="lux-hero__photo lux-hero__photo--mobile"
+                            src={slide.mobileImage}
+                            category={slide.category}
+                            alt={slide.alt}
+                            sizes="90vw"
+                            eager={index === 0}
+                          />}
+                        </>
                       )}
                       <div className="lux-hero__image-glow" />
                       {(slide.caption || slide.note) && <div className="lux-hero__image-caption">

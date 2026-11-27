@@ -173,3 +173,7 @@
 .related-products .section-heading{margin-bottom:28px}
 .related-products h2{margin:6px 0 0}
 @media (max-width:640px){.related-products{margin-top:48px;padding-top:36px}}
+
+/* Hero: optional phone photo per slide (Studio → Homepage → slide → Phone photo). */
+.lux-hero__photo--mobile{display:none}
+@media (max-width:640px){.lux-hero__photo--desktop{display:none}.lux-hero__photo--mobile{display:block}}

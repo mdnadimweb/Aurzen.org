@@ -229,6 +229,7 @@ export async function POST(request: Request) {
                 for(const [index,slide] of slides.entries()){
                     assert(await db.prepare('SELECT name FROM categories WHERE name=?').get(slide.category),`Choose an existing category for slide ${index+1}.`);
                     if(imagePath.test(slide.image))assert(await db.prepare('SELECT id FROM images WHERE id=?').get(slide.image.slice('/media/'.length)),`The photo on slide ${index+1} is unavailable. Upload it again.`);
+                    if(slide.mobileImage&&imagePath.test(slide.mobileImage))assert(await db.prepare('SELECT id FROM images WHERE id=?').get(slide.mobileImage.slice('/media/'.length)),`The phone photo on slide ${index+1} is unavailable. Upload it again.`);
                 }
                 await db.prepare("INSERT INTO settings(key,value) VALUES('heroSlides',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(slides));
             }

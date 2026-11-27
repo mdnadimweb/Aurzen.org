@@ -71,7 +71,7 @@ export function normalizeOffer(value:unknown):Offer|null{
 // gift box illustration, an uploaded /media/ photo, or an HTTPS image URL.
 export const heroTones=['rose','sand','plum'] as const;
 export const maxHeroSlides=6;
-export type HeroSlide={eyebrow:string;title:string;emphasis:string;description:string;image:string;alt:string;caption:string;note:string;category:string;cta:string;tone:typeof heroTones[number];
+export type HeroSlide={eyebrow:string;title:string;emphasis:string;description:string;image:string;/** Optional photo for phones (else `image`). */mobileImage?:string;alt:string;caption:string;note:string;category:string;cta:string;tone:typeof heroTones[number];
   /** Optional: where the button goes (else the category), and when the slide shows. */
   link?:{type:string;value:string}|null;startsAt?:string|null;endsAt?:string|null;hidden?:boolean};
 const heroLinkTypes=['home','shop','collections','sale','tracking','category','product','page','faq','url'];
@@ -95,6 +95,10 @@ export function normalizeHeroSlides(value:unknown):HeroSlide[]{
     let valid=image==='box'||/^\/media\/[a-f0-9-]{36}\.webp$/.test(image)||/^\/images\/[a-z0-9-]+\.(?:jpe?g|png|webp)$/.test(image);
     if(!valid&&image.length<=2000)try{valid=new URL(image).protocol==='https:';}catch{}
     if(!valid)throw new Error(`Upload a photo, use an HTTPS image URL or choose the gift box${at}.`);
+    const mobileImage=typeof s.mobileImage==='string'?s.mobileImage.trim():'';
+    let mobileValid=!mobileImage||/^\/media\/[a-f0-9-]{36}\.webp$/.test(mobileImage)||/^\/images\/[a-z0-9-]+\.(?:jpe?g|png|webp)$/.test(mobileImage);
+    if(!mobileValid&&mobileImage.length<=2000)try{mobileValid=new URL(mobileImage).protocol==='https:';}catch{}
+    if(!mobileValid)throw new Error(`Upload a valid phone photo or use an HTTPS image URL${at}.`);
     if(!heroTones.includes(s.tone as HeroSlide['tone']))throw new Error(`Choose a colour mood${at}.`);
     const l=s.link as Record<string,unknown>|null|undefined;
     let link:HeroSlide['link']=null;
@@ -108,7 +112,7 @@ export function normalizeHeroSlides(value:unknown):HeroSlide[]{
     const startsAt=when(s.startsAt,'Start'),endsAt=when(s.endsAt,'End');
     if(startsAt&&endsAt&&startsAt>=endsAt)throw new Error('End must be after start'+at+'.');
     // Optional fields are stored only when used, so older slides keep exactly their shape.
-    return {...slide,image,tone:s.tone,...(link?{link}:{}),...(startsAt?{startsAt}:{}),...(endsAt?{endsAt}:{}),...(s.hidden===true?{hidden:true}:{})} as HeroSlide;
+    return {...slide,image,...(mobileImage?{mobileImage}:{}),tone:s.tone,...(link?{link}:{}),...(startsAt?{startsAt}:{}),...(endsAt?{endsAt}:{}),...(s.hidden===true?{hidden:true}:{})} as HeroSlide;
   });
 }
 // Owner-edited storefront text and category cover photos. Stored as one settings row;

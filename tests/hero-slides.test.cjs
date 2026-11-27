@@ -60,3 +60,12 @@ test('saving slides requires admin, checks categories and photos, and reset rest
     assert.equal((await catalog()).hero,null);
   }finally{auth.requireAdmin=original;}
 });
+
+test('a slide can have an optional phone photo; an invalid one is refused',()=>{
+  const base={eyebrow:'E',title:'T',emphasis:'x',description:'',image:'/images/fashion-hero.jpeg',alt:'A',caption:'',note:'',category:'Clothing',cta:'Shop',tone:'rose'};
+  assert.equal(normalizeHeroSlides([base])[0].mobileImage,undefined,'no phone photo by default');
+  assert.equal(normalizeHeroSlides([{...base,mobileImage:'https://example.com/tall.jpg'}])[0].mobileImage,'https://example.com/tall.jpg');
+  assert.equal(normalizeHeroSlides([{...base,mobileImage:'  '}])[0].mobileImage,undefined,'blank means none');
+  assert.throws(()=>normalizeHeroSlides([{...base,mobileImage:'javascript:alert(1)'}]),/phone photo/);
+  assert.throws(()=>normalizeHeroSlides([{...base,mobileImage:'http://example.com/x.jpg'}]),/phone photo/);
+});

@@ -839,3 +839,10 @@ main.admin.admin--login{display:grid;grid-template-columns:minmax(320px,42%) min
   .sales-report__table tfoot{display:block}.sales-report__table tfoot tr{display:flex;justify-content:space-between;padding:0 16px}
   .sales-report__table tfoot th,.sales-report__table tfoot td{border:0;background:none;padding:12px 0!important}
 }
+
+/* Hero editor: optional phone photo under the main photo. */
+.hero-slide__photo--mobile{margin-top:14px;padding-top:14px;border-top:1px dashed var(--a-line)}
+.hero-slide__mobile-title{margin:0 0 8px;font-size:.875rem}
+.hero-slide__mobile-title small{color:var(--a-muted);font-weight:400}
+.hero-slide__photo--mobile .hero-slide__preview{max-width:140px}
+.hero-slide__empty{display:grid;place-items:center;min-height:120px;margin:0;padding:12px;color:var(--a-muted);font-size:.8125rem;text-align:center}
