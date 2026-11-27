@@ -19,11 +19,11 @@ type FadeInProps = {
 let observer: IntersectionObserver | null = null;
 function reveal(element: Element) {
   if (typeof IntersectionObserver === "undefined") { element.classList.add("is-visible"); return () => {}; }
-  // Reveal a little before an element scrolls in (the bottom margin), and at once for anything already
+  // Reveal as an element scrolls into view (so the motion is seen), and at once for anything already
   // above the screen (fast scrolls, jumps, back navigation), so sections never sit blank while scrolling.
   observer ??= new IntersectionObserver(entries => {
     for (const entry of entries) if (entry.isIntersecting || entry.boundingClientRect.top < 0) { entry.target.classList.add("is-visible"); observer?.unobserve(entry.target); }
-  }, { rootMargin: "0px 0px 15% 0px" });
+  }, { rootMargin: "0px 0px -6% 0px" });
   observer.observe(element);
   return () => observer?.unobserve(element);
 }
@@ -33,7 +33,7 @@ export default function FadeIn({ children, as = "div", className, delay = 0, ...
   const ref = useRef<HTMLElement>(null);
   useEffect(() => { if (ref.current) return reveal(ref.current); }, []);
   const Component = as;
-  const style = { "--fade-delay": Math.min(Math.max(delay, 0), 120) + "ms" } as CSSProperties;
+  const style = { "--fade-delay": Math.min(Math.max(delay, 0), 240) + "ms" } as CSSProperties;
   return <Component ref={ref as never} className={className} data-fade="" style={style} {...rest}>{children}</Component>;
 }
 
