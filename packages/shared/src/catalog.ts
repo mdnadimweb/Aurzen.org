@@ -164,7 +164,12 @@ export function statusChangeError(from:string,to:string){
 }
 /** Cash-on-delivery charge per delivery area, in taka. */
 export const deliveryFees = {dhaka:80,outside:150} as const;
-export type Order = {paymentMethod?:'cod'|'bkash'|'nagad'|'advance';email?:string;note?:string;/** Studio-only notes, never shown to the customer. */notes?:string;cancelReason?:string;coupon?:string;discount?:number;gift?:OrderGift;id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};
+/** Where an order came from. Website orders have no source field; the rest are added by hand in the studio. */
+export const orderSources=[{id:'website',label:'Website',short:'Web'},{id:'facebook',label:'Facebook',short:'FB'},{id:'whatsapp',label:'WhatsApp',short:'WA'},{id:'instagram',label:'Instagram',short:'IG'},{id:'phone',label:'Phone call',short:'Call'},{id:'walkin',label:'Walk-in',short:'Shop'}] as const;
+export type OrderSource=typeof orderSources[number]['id'];
+export const manualSources=orderSources.filter(s=>s.id!=='website').map(s=>s.id) as readonly OrderSource[];
+export const orderSourceOf=(o:Pick<Order,'source'>)=>orderSources.find(s=>s.id===(o.source||'website'))||orderSources[0];
+export type Order = {/** Missing = placed on the website. */source?:OrderSource;paymentMethod?:'cod'|'bkash'|'nagad'|'advance';email?:string;note?:string;/** Studio-only notes, never shown to the customer. */notes?:string;cancelReason?:string;coupon?:string;discount?:number;gift?:OrderGift;id:string;name:string;phone:string;address:string;area:'dhaka'|'outside';items:OrderItem[];total:number;delivery:number;status:typeof statuses[number];date:string;history?:{status:typeof statuses[number];date:string}[];courier?:string;trackingReference?:string;editedAt?:string;readAt?:string};
 export const photo=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=85`;
 export const money=(n:number)=>'৳'+n.toLocaleString('en-BD');
 export const seed:Product[]=[
