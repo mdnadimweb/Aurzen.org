@@ -1,14 +1,13 @@
 'use client';
 // Homepage → Mystery box section: several photos (uploaded in one go), shown in turn on the storefront.
 import {useId,useState} from 'react';
-import {maxImageBytes,maxImageMegabytes} from '@aurzen/shared/upload-limits';
+import {shrinkPhoto,photoTypes as types} from './shrink-photo';
 import {mysteryImageLimit} from '@aurzen/shared/site';
 import Icon from '../admin-icons';
 
-const types=['image/jpeg','image/png','image/webp'];
-
 async function uploadOne(file:File){
-  const form=new FormData();form.append('photo',file);
+  const photo=await shrinkPhoto(file);
+  const form=new FormData();form.append('photo',photo);
   const response=await fetch('/api/admin/images/',{method:'POST',body:form,credentials:'same-origin'});
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(result.error||'Unable to upload '+file.name+'. Please try again.');
@@ -23,8 +22,8 @@ export default function MysteryPhotos({images,interval,onImages,onInterval}:{ima
   async function add(files:File[]){
     setError('');
     const chosen=files.slice(0,room),skipped=files.length-chosen.length;
-    const bad=chosen.find(f=>!types.includes(f.type)||f.size===0||f.size>maxImageBytes);
-    if(bad){setError(bad.name+': choose a JPG, PNG or WebP photo up to '+maxImageMegabytes+' MB.');return;}
+    const bad=chosen.find(f=>!types.includes(f.type)||f.size===0);
+    if(bad){setError(bad.name+': choose a JPG, PNG or WebP photo.');return;}
     let list=images;
     try{
       for(const [i,file] of chosen.entries()){
@@ -50,7 +49,7 @@ export default function MysteryPhotos({images,interval,onImages,onInterval}:{ima
     <div className="mystery-photos__add">
       <label className="a-btn a-btn--secondary a-btn--sm" htmlFor={id} aria-disabled={room<=0}><Icon name="plus"/>Add photos</label>
       <input id={id} className="sr-only" type="file" multiple accept={types.join(',')} disabled={room<=0||!!busy} onChange={e=>{const files=[...(e.currentTarget.files||[])];e.currentTarget.value='';if(files.length)void add(files);}}/>
-      <small>Pick several at once. JPG, PNG or WebP, up to {maxImageMegabytes} MB each · {images.length}/{mysteryImageLimit} photos.</small>
+      <small>Pick several at once. JPG, PNG or WebP, any size · {images.length}/{mysteryImageLimit} photos.</small>
     </div>
     <label className="mystery-photos__interval">Change photo every
       <span><input type="number" min={2} max={30} step={1} value={interval} onChange={e=>onInterval(Math.round(Number(e.target.value)||5))}/> seconds</span>
