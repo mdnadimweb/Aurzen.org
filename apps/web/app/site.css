@@ -207,3 +207,7 @@
 @media (max-width:640px){.review-form{padding:18px}.review-form__row{grid-template-columns:1fr}.review-form__actions{justify-content:space-between}}
 .review-form__open{min-height:44px;padding:0 22px;border-radius:999px;border:1px solid var(--plum,#432b3b);background:transparent;color:var(--plum,#432b3b);font:inherit;font-weight:600;cursor:pointer}
 .review-form__open:hover{background:var(--plum,#432b3b);color:#fff}
+.review-form label,.review-form__row>*{min-width:0}
+.review-form input:not([type=radio]),.review-form textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.review-form__stars label{position:relative}
+.review-form__stars input{width:1px;height:1px;inset:0}
