@@ -167,3 +167,9 @@
   .site-footer__newsletter{flex-direction:column;align-items:stretch}
   .site-footer__bottom{flex-direction:column;align-items:flex-start}
 }
+
+/* Product page: "You may also like" row. */
+.related-products{margin-top:72px;padding-top:48px;border-top:1px solid var(--line,#ebe4de)}
+.related-products .section-heading{margin-bottom:28px}
+.related-products h2{margin:6px 0 0}
+@media (max-width:640px){.related-products{margin-top:48px;padding-top:36px}}
