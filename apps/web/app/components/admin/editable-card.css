@@ -64,14 +64,16 @@
 .sale-products{max-height:260px;overflow:auto}
 .ec .size-guide__table input{min-width:70px}
 /* Overview: at-a-glance strip. */
-.ov-extras{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+/* Two rows: the five figures (always filling the width, however wide the screen), then the two lists. */
+.ov-extras{display:grid;gap:12px;margin-bottom:18px}
+.ov-extras__stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 .ov-extras__stat{display:grid;gap:2px;padding:14px 16px;text-align:left;font:inherit}
 .ov-extras__stat small{color:#7d6f7a;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
 .ov-extras__stat strong{font-size:22px}
 .ov-extras__stat span{font-size:13px;color:#6f6170}
 .ov-extras__pending{cursor:pointer;border:1px solid #e3cfa2}
 /* Top products and Low stock share the full row, half each, so no empty gap is left beside them. */
-.ov-extras__lists{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px}
+.ov-extras__lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px}
 .ov-extras__list{padding:14px 16px}
 .ov-extras__list h3{margin:0 0 8px;font-size:15px}
 .ov-extras__list ol,.ov-extras__list ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
