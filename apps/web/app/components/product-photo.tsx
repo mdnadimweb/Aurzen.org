@@ -1,7 +1,7 @@
 ﻿'use client';
 import {useId,useRef,useState} from 'react';
 import ProductImage from './product-image';
-import {maxImageBytes,maxImageMegabytes} from '@aurzen/shared/upload-limits';
+import {shrinkPhoto} from './admin/shrink-photo';
 
 const maxPhotos=8;
 type FailedUpload={file:File;message:string};
@@ -19,9 +19,9 @@ export default function ProductPhoto({initialImage='box',initialImages=[],disabl
       for(const file of files){
         if(remaining===0){failures.push({file,message:'The gallery is full. Remove a photo before retrying.'});continue;}
         if(!['image/jpeg','image/png','image/webp'].includes(file.type)){failures.push({file,message:'Choose a JPG, PNG or WebP photo.'});continue;}
-        if(file.size===0||file.size>maxImageBytes){failures.push({file,message:`Choose a photo between 1 byte and ${maxImageMegabytes} MB.`});continue;}
         try{
-          const form=new FormData();form.append('photo',file);
+          const photo=await shrinkPhoto(file);
+          const form=new FormData();form.append('photo',photo);
           const response=await fetch('/api/admin/images/',{method:'POST',body:form,credentials:'same-origin'});
           const result=await response.json();
           if(!response.ok)throw new Error(result.error||'Unable to upload this photo.');
@@ -48,7 +48,7 @@ export default function ProductPhoto({initialImage='box',initialImages=[],disabl
       </div></div>
     </li>)}</ol>:<div className="upload-placeholder">No photos yet. Add photos to your product gallery.</div>}
     <input id={id} type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={disabled||busy||images.length>=maxPhotos} aria-describedby={id+'-help'} onChange={e=>{const files=Array.from(e.currentTarget.files||[]);e.currentTarget.value='';if(files.length)void upload(files);}}/>
-    <p id={id+'-help'} className="upload-help">Up to 8 JPG, PNG or WebP photos, {maxImageMegabytes} MB each. Photos are optimized automatically. The first photo is the cover used throughout the store. Removing a photo here keeps its stored file safe for other products.</p>
+    <p id={id+'-help'} className="upload-help">Up to 8 JPG, PNG or WebP photos, any size: large photos are made smaller before upload and optimized automatically. The first photo is the cover used throughout the store. Removing a photo here keeps its stored file safe for other products.</p>
     {busy&&<p role="status">Uploading photos… Please keep this form open.</p>}
     {message&&<p role="status">{message}</p>}
     {!!failed.length&&<div className="form-error" role="alert"><p>Some photos need attention:</p><ul>{failed.map(({file,message},index)=><li key={index}>{file.name}: {message}</li>)}</ul><div className="photo-retry"><button type="button" className="a-btn a-btn--secondary a-btn--sm" disabled={disabled||busy||images.length>=maxPhotos} onClick={()=>void upload(failed.map(item=>item.file))}>Retry unsuccessful uploads</button><button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy} onClick={()=>setFailed([])}>Dismiss unsuccessful uploads</button></div></div>}

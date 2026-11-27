@@ -4,7 +4,7 @@ import {heroFieldLimits,heroTones,maxHeroSlides,type Category,type HeroSlide,typ
 import type {ContentPage,SiteLink} from '@aurzen/shared/site';
 import LinkPicker from './link-picker';
 const localTime=(v?:string|null)=>v?new Date(new Date(v).getTime()-new Date(v).getTimezoneOffset()*60000).toISOString().slice(0,16):'';
-import {maxImageBytes,maxImageMegabytes} from '@aurzen/shared/upload-limits';
+import {shrinkPhoto} from './shrink-photo';
 import ProductImage from '../product-image';
 import {FoldToggle,openInvalid} from './fold';
 import BoxArt from '../box-art';
@@ -24,10 +24,10 @@ function SlidePhoto({slide,index,disabled,onChange,onBusy,mobile=false}:{slide:H
     if(uploading.current||disabled)return;
     setError('');
     if(!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Choose a JPG, PNG or WebP photo.');return;}
-    if(file.size===0||file.size>maxImageBytes){setError(`Choose a photo between 1 byte and ${maxImageMegabytes} MB.`);return;}
     uploading.current=true;setBusy(true);onBusy(true);
     try{
-      const form=new FormData();form.append('photo',file);
+      const photo=await shrinkPhoto(file);
+      const form=new FormData();form.append('photo',photo);
       const response=await fetch('/api/admin/images/',{method:'POST',body:form,credentials:'same-origin'});
       const result=await response.json();
       if(!response.ok)throw new Error(result.error||'Unable to upload this photo.');
@@ -43,7 +43,7 @@ function SlidePhoto({slide,index,disabled,onChange,onBusy,mobile=false}:{slide:H
     </div>
     <label htmlFor={id}>{mobile?'Upload a phone photo':'Upload a new photo'}</label>
     <input id={id} type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled||busy} aria-describedby={id+'-help'} onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';if(file)void upload(file);}}/>
-    <p id={id+'-help'} className="upload-help">JPG, PNG or WebP, up to {maxImageMegabytes} MB. {mobile?' Use a tall photo cropped for phones; leave empty to use the main photo.':' A tall (portrait) photo looks best.'}</p>
+    <p id={id+'-help'} className="upload-help">JPG, PNG or WebP, any size (large photos are made smaller before upload). {mobile?' Use a tall photo cropped for phones; leave empty to use the main photo.':' A tall (portrait) photo looks best.'}</p>
     <label>Or paste an HTTPS image link<input type="url" inputMode="url" placeholder="https://…" value={isUrl?value:''} disabled={disabled||busy} maxLength={2000} onChange={e=>onChange(e.target.value.trim())}/></label>
     {mobile?<button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||!value} onClick={()=>onChange('')}><Icon name="trash"/>Remove phone photo</button>
     :<button type="button" className="a-btn a-btn--ghost a-btn--sm" disabled={disabled||busy||slide.image==='box'} onClick={()=>onChange('box')}><Icon name="box"/>Use the gift box illustration</button>}
