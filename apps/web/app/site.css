@@ -140,24 +140,30 @@
 .mystery-details__worth{font-weight:600;color:var(--plum);margin:0}
 .promo-banner[data-transition=fade] .promo-slide{transform:none!important;animation:none!important;transition:opacity .9s ease!important}.promo-banner[data-transition=fade] .promo-slide[data-active=false]{opacity:0}
 
-/* Footer alignment: equal columns for however many there are, everything centred. */
-.site-footer{grid-template-columns:1.3fr repeat(var(--footer-cols,3),minmax(0,1fr));text-align:center;justify-items:center}
-.site-footer>*{width:100%}
-.site-footer ul{justify-items:center}
-.site-footer li>a,.site-footer li>span{justify-content:center}
-.site-footer .brand-logo{margin:0 auto;justify-content:center}
-.site-footer__brand{display:flex;flex-direction:column;align-items:center}
-.site-footer__social{justify-content:center}
-.site-footer h4 button{justify-content:center;gap:10px}
-.site-footer__newsletter{justify-content:center;text-align:center;flex-direction:column}
-.site-footer__signup{width:100%;margin:0 auto}
-.site-footer__bottom{justify-content:center;flex-direction:column;align-items:center;text-align:center}
-.site-footer__payments{justify-content:center}
-@media (max-width:900px){.site-footer{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Footer layout: brand on the left, then equal link columns, everything left-aligned (premium-shop style).
+   Phones: brand on top, link columns two side by side and always open, Contact across the full width. */
+.site-footer{grid-template-columns:1.4fr repeat(var(--footer-cols,3),minmax(0,1fr));gap:40px 48px;text-align:left;justify-items:stretch;align-items:start}
+.site-footer>*{width:100%;min-width:0}
+.site-footer ul{justify-items:start}
+.site-footer li>a,.site-footer li>span{justify-content:flex-start;text-align:left;overflow-wrap:anywhere}
+.site-footer .brand-logo{margin:0;justify-content:flex-start}
+.site-footer__brand{display:flex;flex-direction:column;align-items:flex-start;max-width:340px}
+.site-footer__social{justify-content:flex-start}
+.site-footer h4 button{justify-content:flex-start;gap:10px}
+.site-footer__newsletter{justify-content:space-between;text-align:left;flex-direction:row}
+.site-footer__bottom{justify-content:space-between;flex-direction:row;align-items:center;text-align:left}
+.site-footer__payments{justify-content:flex-start}
+.site-footer__bottom nav{justify-content:flex-start;flex-wrap:wrap}
+@media (max-width:900px){.site-footer{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}.site-footer__brand{grid-column:1/-1;max-width:none}}
 @media (max-width:640px){
-  .site-footer{grid-template-columns:1fr}
-  .site-footer__col h4 button{justify-content:center;position:relative}
-  .site-footer__col h4 button span{position:absolute;right:4px}
-  .site-footer__bottom{align-items:center}
+  .site-footer{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 20px;padding-top:40px}
+  .site-footer__brand{padding-bottom:4px}
+  .site-footer__col{border-top:0}
+  .site-footer__col h4{margin:0 0 10px}
+  .site-footer__col h4 button{cursor:default;min-height:0;position:static}
+  .site-footer__col h4 button span{display:none}
+  .site-footer__list,.site-footer__col .site-footer__list{display:block;padding-bottom:0}
+  .site-footer__col[data-col=contact]{grid-column:1/-1}
+  .site-footer__newsletter{flex-direction:column;align-items:stretch}
+  .site-footer__bottom{flex-direction:column;align-items:flex-start}
 }
-.site-footer__bottom nav{justify-content:center;flex-wrap:wrap;width:100%}
