@@ -13,6 +13,7 @@ import * as media from './app/media/[id]/route';
 import * as content from './app/api/content/route';
 import * as subscribe from './app/api/subscribe/route';
 import * as redirects from './app/api/redirects/route';
+import * as reviews from './app/api/reviews/route';
 
 const token=process.env.INTERNAL_API_TOKEN;
 if(!token||token.length<32)throw new Error('INTERNAL_API_TOKEN must contain at least 32 characters.');
@@ -25,7 +26,7 @@ const routes:Record<string,Record<string,Handler>>={
   '/api/tracking':{POST:tracking.POST},'/api/admin':{GET:admin.GET,POST:admin.POST},
   '/api/admin/session':{GET:session.GET,POST:session.POST,DELETE:session.DELETE},
   '/api/admin/images':{POST:images.POST},
-  '/api/content':{GET:content.GET},'/api/subscribe':{POST:subscribe.POST},'/api/redirects':{GET:redirects.GET},
+  '/api/content':{GET:content.GET},'/api/subscribe':{POST:subscribe.POST},'/api/reviews':{POST:reviews.POST},'/api/redirects':{GET:redirects.GET},
 };
 async function readBody(message:IncomingMessage,limit:number){
   if(Number(message.headers['content-length']||0)>limit)throw new Error('PAYLOAD_LIMIT');

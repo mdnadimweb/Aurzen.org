@@ -404,7 +404,10 @@ export const extraMessageTemplates={'Ask for details':'Hi {name}, this is AURZÉ
 // ---- Content pages, FAQ and reviews (separate rows: larger, not needed on every page) ----
 export type ContentPage={slug:string;title:string;body:string;seoTitle:string;seoDescription:string;published:boolean};
 export type FaqGroup={id:string;title:string;hidden:boolean;items:{id:string;q:string;a:string;hidden:boolean}[]};
-export type Review={id:string;name:string;rating:number;text:string;photo:string;product:number|null;date:string;approved:boolean};
+export type Review={id:string;name:string;rating:number;text:string;photo:string;product:number|null;date:string;approved:boolean;
+  /** Written by a customer on the shop (not typed in by the owner). */fromCustomer?:boolean;
+  /** That phone has a delivered order with this product. */verified?:boolean;
+  /** Private: the customer's phone, never shown on the shop. */phone?:string};
 export type Content={pages:ContentPage[];faq:FaqGroup[];reviews:Review[]};
 export const reservedPageSlugs=['admin','api','shop','sale','cart','tracking','products','collections','pages','faq'];
 const page=(slug:string,title:string,body:string):ContentPage=>({slug,title,body,seoTitle:'',seoDescription:'',published:true});
@@ -456,7 +459,8 @@ export function normalizeContentSection<K extends keyof Content>(section:K,value
       const r=obj(input,'review'),at=` on review ${i+1}`;const reviewId=id(r.id);if(ids.has(reviewId))fail('Duplicate review'+at+'.');ids.add(reviewId);
       const product=r.product===null||r.product===undefined||r.product===''?null:int(r.product,1,1e9,'Product'+at);
       const when=date(r.date,'Date'+at)||new Date().toISOString();
-      return {id:reviewId,name:str(r.name,60,'Name'+at,{required:true}),rating:int(r.rating,1,5,'Rating'+at),text:str(r.text,1000,'Review'+at,{required:true,multiline:true}),photo:safeImage(r.photo,'Photo'+at),product,date:when,approved:r.approved===true};
+      return {id:reviewId,name:str(r.name,60,'Name'+at,{required:true}),rating:int(r.rating,1,5,'Rating'+at),text:str(r.text,1000,'Review'+at,{required:true,multiline:true}),photo:safeImage(r.photo,'Photo'+at),product,date:when,approved:r.approved===true,
+        ...(r.fromCustomer===true?{fromCustomer:true}:{}),...(r.verified===true?{verified:true}:{}),...(typeof r.phone==='string'&&/^01[3-9]\d{8}$/.test(r.phone)?{phone:r.phone}:{})};
     }) as Content[K];
   }catch(error){if(error instanceof Invalid)throw new Error(error.message);throw error;}
 }

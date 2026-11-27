@@ -247,10 +247,13 @@ export function FaqEditor(p:SiteProps){
 }
 export function ReviewsEditor(p:SiteProps){
   const reviews=p.content.reviews,save=(next:Review[])=>p.saveContent('reviews',next);
+  // Customer reviews waiting for approval come first.
+  const waiting=reviews.filter(r=>r.fromCustomer&&!r.approved).length;
+  const ordered=[...reviews].sort((a,b)=>Number(!!(b.fromCustomer&&!b.approved))-Number(!!(a.fromCustomer&&!a.approved)));
   return <EditableGroup>
-    <p className="hero-slide__hint">Approved reviews appear on the homepage and on the linked product’s page.</p>
+    <p className="hero-slide__hint">Approved reviews appear on the homepage and on the linked product’s page. Reviews customers write on a product page wait here until you approve them.{waiting>0&&<strong> {waiting} waiting for you.</strong>}</p>
     {!reviews.length&&<div className="admin-empty"><h3>No reviews yet.</h3><p>Add reviews customers sent you by message or phone.</p></div>}
-    {reviews.map(r=><EditableCard key={r.id} title={r.name+' · '+'★'.repeat(r.rating)} thumb={r.photo} summary={r.text.slice(0,90)} badge={r.approved?{text:'Approved',tone:'on'}:{text:'Hidden',tone:'off'}} initial={r}
+    {ordered.map(r=><EditableCard key={r.id} title={r.name+' · '+'★'.repeat(r.rating)} thumb={r.photo} summary={(r.fromCustomer?'From the shop'+(r.verified?' · Verified buyer':'')+' · ':'')+r.text.slice(0,90)} badge={r.approved?{text:'Approved',tone:'on'}:r.fromCustomer?{text:'Waiting',tone:'off'}:{text:'Hidden',tone:'off'}} initial={r}
       actions={<><button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={()=>void save(reviews.map(x=>x.id===r.id?{...x,approved:!x.approved}:x))}>{r.approved?'Hide':'Approve'}</button><button type="button" className="a-btn a-btn--danger-ghost a-btn--sm" onClick={()=>{if(confirm('Delete this review?'))void save(reviews.filter(x=>x.id!==r.id));}}>Delete</button></>}
       onSave={v=>save(reviews.map(x=>x.id===r.id?v:x))} render={(d,set)=><ReviewFields d={d} set={set} products={p.products}/>}/>)}
     <button type="button" className="a-btn a-btn--secondary a-btn--sm" onClick={()=>void save([{id:newId('review'),name:'Customer',rating:5,text:'Lovely quality.',photo:'',product:null,date:new Date().toISOString(),approved:false},...reviews])}>+ Add review</button>
@@ -259,6 +262,7 @@ export function ReviewsEditor(p:SiteProps){
 function ReviewFields({d,set,products}:{d:Review;set:(r:Review)=>void;products:Product[]}){
   const [busy,setBusy]=useState(false);
   return <>
+    {d.fromCustomer&&<p className="hero-slide__hint">Written on the shop{d.phone?<> by <a href={'tel:'+d.phone}>{d.phone}</a> (never shown on the shop)</>:null}.{d.verified?' Verified buyer: this phone has a delivered order with this product.':''}</p>}
     <Pair><Text label="Customer name" draft={d} set={set} k="name" max={60} required/><label>Rating<select value={d.rating} onChange={e=>set({...d,rating:Number(e.target.value)})}>{[5,4,3,2,1].map(n=><option key={n} value={n}>{'★'.repeat(n)} ({n})</option>)}</select></label></Pair>
     <Text label="Review" draft={d} set={set} k="text" max={1000} area required/>
     <Pair><label>Product (optional)<select value={d.product??''} onChange={e=>set({...d,product:e.target.value?Number(e.target.value):null})}><option value="">Not linked</option>{products.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><DateTime label="Date" value={d.date} onChange={v=>set({...d,date:v||new Date().toISOString()})}/></Pair>
